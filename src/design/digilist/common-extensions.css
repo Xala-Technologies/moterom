@@ -1,0 +1,1034 @@
+/**
+ * Common Theme Extensions (Shared)
+ *
+ * This file contains shared token aliases and component CSS loaded by ALL themes.
+ * It extracts the non-color, theme-agnostic portions that every theme needs:
+ * spacing aliases, font tokens, responsive layouts, component styles, shadows, etc.
+ *
+ * Brand-specific color overrides (accent, sidebar, chart, WCAG AAA) live in
+ * each theme's own color file (e.g. digilist-theme.css, xala-navy-theme.css).
+ *
+ * @layer ds.app - Loaded after ds.theme layers
+ */
+
+@layer ds.app {
+
+  /* ==========================================================================
+   * SMOOTH THEME TRANSITIONS
+   *
+   * Adds smooth transitions when switching between light and dark modes.
+   * Applies to background, text, and border colors for a polished experience.
+   * ========================================================================== */
+
+  *, *::before, *::after {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.15s ease,
+      box-shadow 0.3s ease,
+      fill 0.3s ease,
+      stroke 0.3s ease;
+  }
+
+  /* Exclude elements that shouldn't transition (performance) */
+  img, video, canvas, svg path, svg rect, svg circle {
+    transition: none;
+  }
+
+  /* Faster transition for interactive elements */
+  button, a, input, select, textarea {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.1s ease,
+      box-shadow 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  /* ==========================================================================
+   * SHARED LAYOUT TOKENS
+   * ========================================================================== */
+
+  :root, [data-size] {
+    /* Container widths */
+    --ds-container-max-width: 1600px;
+    --ds-container-narrow: 800px;
+    --ds-container-wide: 1400px;
+
+    /* Font size semantic aliases: --ds-font-size-{name} maps to --ds-font-size-{N} */
+    --ds-font-size-xs: var(--ds-font-size-1);   /* 0.75rem base */
+    --ds-font-size-sm: var(--ds-font-size-2);   /* 0.875rem base */
+    --ds-font-size-md: var(--ds-font-size-3);   /* 1rem base */
+    --ds-font-size-lg: var(--ds-font-size-4);   /* 1.125rem base */
+    --ds-font-size-xl: var(--ds-font-size-5);   /* 1.3125rem base */
+    --ds-font-size-2xl: var(--ds-font-size-6);  /* 1.5rem base */
+    --ds-font-size-3xl: var(--ds-font-size-7);  /* 1.875rem base */
+    --ds-font-size-4xl: var(--ds-font-size-8);  /* 2.25rem base */
+    --ds-font-size-5xl: var(--ds-font-size-9);  /* 3rem base */
+    --ds-font-size-6xl: var(--ds-font-size-10); /* 3.75rem base */
+
+    /* Font weight alias */
+    --ds-font-weight-bold: 700;
+
+    /* Font family alias */
+    --ds-font-family: var(--ds-font-family-default, 'Inter', system-ui, sans-serif);
+
+    /* Transition tokens — used by DS component CSS modules */
+    --ds-transition-duration-fast: 150ms;
+    --ds-transition-duration-normal: 200ms;
+    --ds-transition-duration-slow: 320ms;
+    --ds-transition-timing-default: ease;
+    --ds-transition-timing-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* Missing token aliases (Phase 1a) - components rely on these */
+    --ds-color-neutral-background-backdrop: rgba(0, 0, 0, 0.45);
+    --ds-color-neutral-background-subtle: var(--ds-color-neutral-background-tinted, var(--ds-color-neutral-surface-subtle));
+    --ds-color-danger-background-subtle: var(--ds-color-danger-background-tinted, var(--ds-color-danger-surface-tinted));
+    --ds-color-success-background-subtle: var(--ds-color-success-background-tinted, var(--ds-color-success-surface-tinted));
+    --ds-font-size-heading-1: var(--ds-font-size-4xl, var(--ds-font-size-8));
+    --ds-color-neutral-contrast-default: var(--ds-color-accent-base-contrast-default);
+  }
+
+  /* ==========================================================================
+   * BORDER RADIUS OVERRIDE
+   *
+   * Digdir default is 0.25rem (borderRadius: 4). Platform uses 0.3125rem (5).
+   * ========================================================================== */
+
+  :root {
+    --ds-border-radius-base: 0.3125rem;
+  }
+
+  /* ==========================================================================
+   * BUTTON BORDER RADIUS
+   *
+   * Add slightly more rounded corners to buttons (+5px from default)
+   * ========================================================================== */
+
+  /* Apply rounded corners + subtle shadow — same elevation language as cards */
+  .ds-button {
+    border-radius: calc(var(--ds-border-radius-md) + 5px);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  /* Tertiary (ghost) buttons have a transparent background — shadow looks wrong */
+  .ds-button[data-variant="tertiary"] {
+    box-shadow: none;
+  }
+
+  /* Reset radius for toggle group buttons to preserve their connected appearance */
+  .ds-toggle-group .ds-button,
+  .ds-togglegroup .ds-button,
+  [class*="toggle-group"] .ds-button {
+    border-radius: var(--ds-border-radius-md) !important;
+    box-shadow: none !important;
+  }
+
+  /* ==========================================================================
+   * FORM CONTROL HEIGHTS
+   * Consistent control sizing across custom components
+   * ========================================================================== */
+
+  :root {
+    --digilist-control-height-sm: 2.5rem;    /* 40px */
+    --digilist-control-height-md: 2.875rem;  /* 46px */
+    --digilist-control-height-lg: 3.25rem;   /* 52px */
+  }
+
+  /* ==========================================================================
+   * LINE HEIGHT TOKENS
+   * Additional line-height values for tight text layouts
+   * ========================================================================== */
+
+  :root {
+    /* Condensed line-height for logo text and tight headings */
+    --ds-line-height-condensed: 1.1;
+  }
+
+  /* ==========================================================================
+   * LETTER SPACING TOKENS
+   * Standard letter-spacing values
+   * ========================================================================== */
+
+  :root {
+    --ds-letter-spacing-normal: 0;
+    --ds-letter-spacing-tight: -0.025em;
+    --ds-letter-spacing-wide: 0.025em;
+    --ds-letter-spacing-wider: 0.05em;
+    --ds-letter-spacing-widest: 0.1em;
+    /* Pixel-based for uppercase text badges */
+    --ds-letter-spacing-badge: 0.5px;
+  }
+
+  /* ==========================================================================
+   * LISTING GRID RESPONSIVE STYLES
+   * Enforces max 3 columns on desktop, 2 on tablet, 1 on mobile
+   * ========================================================================== */
+
+  /* Desktop: max 3 columns */
+  @media (min-width: 992px) {
+    .listing-grid[data-max-columns="3"] {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+    .listing-grid[data-max-columns="2"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .listing-grid[data-max-columns="1"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* Tablet: max 2 columns */
+  @media (min-width: 600px) and (max-width: 991px) {
+    .listing-grid[data-max-columns="3"],
+    .listing-grid[data-max-columns="2"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .listing-grid[data-max-columns="1"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* Mobile: 1 column */
+  @media (max-width: 599px) {
+    .listing-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* ==========================================================================
+   * PILLTABS COMPONENT TOKENS
+   * Uses existing neutral tokens that adapt to light/dark mode
+   * ========================================================================== */
+
+  :root {
+    /* Container - uses neutral-surface-hover (slightly darker than page bg) */
+    --ds-color-pilltabs-bg: var(--ds-color-neutral-surface-hover);
+    --ds-color-pilltabs-border: var(--ds-color-neutral-border-default);
+    /* Text */
+    --ds-color-pilltabs-text: var(--ds-color-neutral-text-default);
+    /* Active state */
+    --ds-color-pilltabs-active-bg: var(--ds-color-accent-base-default);
+    --ds-color-pilltabs-active-text: var(--ds-color-accent-base-contrast-default);
+    /* Badge */
+    --ds-color-pilltabs-badge-bg: var(--ds-color-neutral-border-default);
+    --ds-color-pilltabs-badge-text: var(--ds-color-neutral-text-default);
+  }
+
+  /* ==========================================================================
+   * MICRO SPACING TOKENS
+   * Sub-pixel adjustments for optical alignment (smaller than spacing-1)
+   * ========================================================================== */
+
+  :root {
+    /* Micro spacing for fine-tuning optical alignment */
+    --digilist-spacing-micro: 2px;
+    --digilist-spacing-micro-sm: 1px;
+  }
+
+  /* ==========================================================================
+   * BORDER WIDTH TOKENS
+   * Standard border widths for consistent styling
+   * ========================================================================== */
+
+  :root {
+    --ds-border-width-default: 1px;
+    --ds-border-width-thin: 1px;
+    --ds-border-width-medium: 2px;
+    --ds-border-width-thick: 3px;
+  }
+
+  /* ==========================================================================
+   * COMPONENT SIZE TOKENS
+   * Specific sizes for UI components
+   * ========================================================================== */
+
+  :root {
+    /* Header search field constraints */
+    --digilist-size-search-max-width: 520px;
+    --digilist-size-search-min-width: 80px;
+
+    /* Container max widths */
+    --digilist-size-container-max: 1440px;
+  }
+
+  /* ==========================================================================
+   * BREAKPOINT TOKENS (Documentation)
+   *
+   * Note: CSS @media queries cannot use CSS variables.
+   * These tokens are for documentation and JavaScript usage only.
+   * The actual values are used directly in media queries.
+   *
+   * Breakpoints follow Digdir recommendations:
+   * - Mobile: < 600px
+   * - Tablet: 600px - 991px
+   * - Desktop: >= 992px
+   * ========================================================================== */
+
+  :root {
+    /* Breakpoint values for JS usage (CSS @media cannot use these) */
+    --digilist-breakpoint-mobile: 599px;
+    --digilist-breakpoint-tablet: 600px;
+    --digilist-breakpoint-desktop: 992px;
+  }
+
+  /* ==========================================================================
+   * LOGIN PAGE (image overlay only — colors from theme)
+   * Right panel uses --ds-color-accent-* and --ds-color-accent-base-contrast-*
+   * ========================================================================== */
+
+  :root {
+    /* Image overlay gradient — dark to allow white text (uses neutral) */
+    --digilist-login-overlay-gradient: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--ds-color-neutral-base-default) 85%, transparent) 0%,
+      color-mix(in srgb, var(--ds-color-neutral-base-default) 40%, transparent) 50%,
+      color-mix(in srgb, var(--ds-color-neutral-base-default) 25%, transparent) 100%
+    );
+  }
+
+  /* ==========================================================================
+   * ANIMATION TIMING TOKENS
+   * Consistent animation timing across components
+   * ========================================================================== */
+
+  :root {
+    --digilist-animation-duration-fast: 150ms;
+    --digilist-animation-duration-normal: 300ms;
+    --digilist-animation-duration-slow: 500ms;
+    --digilist-animation-duration-slower: 700ms;
+
+    --digilist-animation-delay-fast: 100ms;
+    --digilist-animation-delay-normal: 200ms;
+    --digilist-animation-delay-slow: 400ms;
+    --digilist-animation-delay-slower: 600ms;
+    --digilist-animation-delay-slowest: 800ms;
+  }
+
+  /* ==========================================================================
+   * DECORATIVE EFFECT SIZING
+   * For background orbs and blur effects
+   * ========================================================================== */
+
+  :root {
+    --digilist-size-orb-large: 32rem;
+    --digilist-size-orb-medium: 24rem;
+    --digilist-size-orb-small: 16rem;
+    --digilist-size-blur-large: 100px;
+    --digilist-size-blur-medium: 60px;
+    --digilist-size-blur-small: 30px;
+
+    /* Mobile drawer/sidebar upward shadows (no DS equivalent) */
+    --ds-shadow-drawer-up: 0 -8px 24px rgba(0, 0, 0, 0.3);
+    --ds-shadow-sidebar-up: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ==========================================================================
+   * LISTING DETAIL PAGE TOKENS
+   * Tokens for the listing detail page components
+   * ========================================================================== */
+
+  :root {
+    /* Image gallery */
+    --digilist-gallery-hero-ratio: 7fr;
+    --digilist-gallery-thumb-ratio: 3fr;
+    --digilist-gallery-thumb-height: 120px;
+    --digilist-gallery-counter-bg: rgba(0, 0, 0, 0.6);
+    --digilist-gallery-gap: var(--ds-size-3);
+
+    /* Calendar cell states */
+    --digilist-calendar-cell-available: var(--ds-color-success-surface-default);
+    --digilist-calendar-cell-occupied: var(--ds-color-danger-surface-default);
+    --digilist-calendar-cell-selected: var(--ds-color-accent-surface-default);
+    --digilist-calendar-cell-unavailable: var(--ds-color-neutral-surface-hover);
+
+    /* Calendar sizing */
+    --digilist-calendar-cell-height: 48px;
+    --digilist-calendar-time-column-width: 60px;
+    --digilist-calendar-day-header-height: 56px;
+
+    /* Calendar cell text colors */
+    --digilist-calendar-text-available: var(--ds-color-success-text-default);
+    --digilist-calendar-text-occupied: var(--ds-color-danger-text-default);
+    --digilist-calendar-text-selected: var(--ds-color-accent-text-default);
+
+    /* Stepper */
+    --digilist-stepper-circle-size: 32px;
+    --digilist-stepper-line-height: 2px;
+
+    /* Detail page layout */
+    --digilist-detail-sidebar-width: 320px;
+    --digilist-detail-content-gap: var(--ds-size-6);
+  }
+
+  [data-color-scheme="dark"] {
+    --digilist-gallery-counter-bg: rgba(0, 0, 0, 0.8);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    [data-color-scheme="auto"] {
+      --digilist-gallery-counter-bg: rgba(0, 0, 0, 0.8);
+    }
+  }
+
+}
+
+/* ==========================================================================
+ * RESPONSIVE UTILITIES
+ * Container query support for responsive components
+ * ========================================================================== */
+
+.ds-grid-responsive {
+  --_grid-columns: var(--_grid-sm, 1);
+}
+
+@container ds-container (min-width: 600px) {
+  .ds-grid-responsive {
+    --_grid-columns: var(--_grid-md, 2);
+  }
+}
+
+@container ds-container (min-width: 900px) {
+  .ds-grid-responsive {
+    --_grid-columns: var(--_grid-lg, 3);
+  }
+}
+
+/* Media query fallback for browsers without container query support */
+@media (min-width: 640px) {
+  .ds-grid-responsive {
+    --_grid-columns: var(--_grid-md, 2);
+  }
+}
+
+@media (min-width: 1024px) {
+  .ds-grid-responsive {
+    --_grid-columns: var(--_grid-lg, 3);
+  }
+}
+
+/* ==========================================================================
+ * LISTING GRID - STRICT RESPONSIVE COLUMNS
+ * 3 columns (large 1024px+), 2 columns (tablet 640-1023px), 1 column (mobile <640px)
+ * ========================================================================== */
+
+.listing-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .listing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .listing-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ==========================================================================
+ * LISTING DETAIL PAGE RESPONSIVE LAYOUT
+ * Two-column layout with sidebar
+ * ========================================================================== */
+
+.listing-detail-layout {
+  display: grid;
+  gap: var(--digilist-detail-content-gap, var(--ds-size-6));
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 992px) {
+  .listing-detail-layout {
+    grid-template-columns: 1fr var(--digilist-detail-sidebar-width, 320px);
+  }
+}
+
+/* ==========================================================================
+ * IMAGE GALLERY RESPONSIVE
+ * Hero + thumbnails layout
+ * ========================================================================== */
+
+.image-gallery {
+  display: grid;
+  gap: var(--digilist-gallery-gap, var(--ds-size-3));
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 600px) {
+  .image-gallery {
+    grid-template-columns: var(--digilist-gallery-hero-ratio, 7fr) var(--digilist-gallery-thumb-ratio, 3fr);
+  }
+}
+
+.image-gallery-thumbnails {
+  display: flex;
+  flex-direction: row;
+  gap: var(--ds-size-2);
+  overflow-x: auto;
+}
+
+@media (min-width: 600px) {
+  .image-gallery-thumbnails {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+}
+
+/* ==========================================================================
+ * AVAILABILITY CALENDAR RESPONSIVE
+ * Time grid layout
+ * ========================================================================== */
+
+.availability-calendar-grid {
+  display: grid;
+  grid-template-columns: var(--digilist-calendar-time-column-width, 60px) repeat(7, 1fr);
+  overflow-x: auto;
+}
+
+@media (max-width: 599px) {
+  .availability-calendar-grid {
+    min-width: 600px;
+  }
+}
+
+.availability-calendar-cell {
+  height: var(--digilist-calendar-cell-height, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ds-font-size-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+}
+
+.availability-calendar-cell[data-status="available"] {
+  background-color: var(--digilist-calendar-cell-available);
+  color: var(--digilist-calendar-text-available);
+}
+
+.availability-calendar-cell[data-status="occupied"] {
+  background-color: var(--digilist-calendar-cell-occupied);
+  color: var(--digilist-calendar-text-occupied);
+  cursor: not-allowed;
+}
+
+.availability-calendar-cell[data-status="selected"] {
+  background-color: var(--digilist-calendar-cell-selected);
+  color: var(--digilist-calendar-text-selected);
+}
+
+.availability-calendar-cell[data-status="unavailable"] {
+  background-color: var(--digilist-calendar-cell-unavailable);
+  color: var(--ds-color-neutral-text-subtle);
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+ * BOOKING STEPPER
+ * Horizontal step indicator
+ * ========================================================================== */
+
+.booking-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-size-2);
+}
+
+.booking-stepper-step {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-size-2);
+}
+
+.booking-stepper-circle {
+  width: var(--digilist-stepper-circle-size, 32px);
+  height: var(--digilist-stepper-circle-size, 32px);
+  border-radius: var(--ds-border-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-semibold);
+  border: 2px solid var(--ds-color-neutral-border-default);
+  background-color: var(--ds-color-neutral-background-default);
+  color: var(--ds-color-neutral-text-subtle);
+  transition: all 0.2s ease;
+}
+
+.booking-stepper-circle[data-state="active"] {
+  border-color: var(--ds-color-accent-base-default);
+  background-color: var(--ds-color-accent-base-default);
+  color: var(--ds-color-accent-base-contrast-default);
+}
+
+.booking-stepper-circle[data-state="completed"] {
+  border-color: var(--ds-color-success-base-default);
+  background-color: var(--ds-color-success-base-default);
+  color: var(--ds-color-success-base-contrast-default);
+}
+
+.booking-stepper-line {
+  flex: 1;
+  height: var(--digilist-stepper-line-height, 2px);
+  background-color: var(--ds-color-neutral-border-default);
+  min-width: var(--ds-size-4);
+}
+
+.booking-stepper-line[data-state="completed"] {
+  background-color: var(--ds-color-success-base-default);
+}
+
+/* ==========================================================================
+ * SHARED MOBILE RESPONSIVE STYLES
+ *
+ * Common mobile breakpoint styles used by all themes.
+ * Breakpoints: Mobile < 600px, Tablet 600-991px, Desktop >= 992px
+ * ========================================================================== */
+
+@media (max-width: 599px) {
+  /* Main content padding */
+  .main-content-layout {
+    padding-left: var(--ds-size-3) !important;
+    padding-right: var(--ds-size-3) !important;
+  }
+
+  /* Mobile search wrapper */
+  .mobile-search-wrapper {
+    margin-left: calc(-1 * var(--ds-size-3));
+    margin-right: calc(-1 * var(--ds-size-3));
+    padding: 0 var(--ds-size-3);
+  }
+
+  /* Mobile PillTabs - horizontal scroll with hidden scrollbar */
+  .pill-tabs-container {
+    margin-left: calc(-1 * var(--ds-size-3));
+    margin-right: calc(-1 * var(--ds-size-3));
+    padding-left: var(--ds-size-3) !important;
+    padding-right: var(--ds-size-3) !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .pill-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Show mobile filter button */
+  .mobile-filter-button {
+    display: flex !important;
+  }
+
+  /* Mobile filter panel - bottom drawer style */
+  .listing-filter-panel {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    z-index: 1000;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    border: none !important;
+    border-top: 1px solid var(--ds-color-neutral-border-default) !important;
+    box-shadow: var(--ds-shadow-drawer-up) !important;
+    max-height: 85vh;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background-color: var(--ds-color-neutral-background-default) !important;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    opacity: 0;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  /* When filter is expanded, show drawer */
+  .listing-filter-panel.filter-expanded,
+  .listing-filter-panel:has([aria-expanded="true"]) {
+    transform: translateY(0);
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  /* Drawer handle indicator */
+  .listing-filter-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background-color: var(--ds-color-neutral-border-default);
+    border-radius: 2px;
+    z-index: 1;
+  }
+
+  /* Filter panel header - more padding for drawer */
+  .listing-filter-panel > button:first-child {
+    padding: 24px 16px 16px 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Filter panel animated content wrapper */
+  .listing-filter-panel > div:last-child {
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Filter panel inner content (has ref) */
+  .listing-filter-panel > div:last-child > div {
+    padding: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Filter panel columns container - stack vertically */
+  .listing-filter-panel > div:last-child > div > div {
+    flex-direction: column !important;
+    display: flex !important;
+    width: 100% !important;
+    gap: 0 !important;
+  }
+
+  /* Individual filter columns - remove all padding */
+  .listing-filter-panel > div:last-child > div > div > div {
+    flex: none !important;
+    border-left: none !important;
+    padding: 0 !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* All elements inside filter panel */
+  .listing-filter-panel * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Ensure inputs and sliders fit */
+  .listing-filter-panel input,
+  .listing-filter-panel select,
+  .listing-filter-panel input[type="range"] {
+    width: 100% !important;
+  }
+
+  /* Fix slider value labels from overflowing */
+  .listing-filter-panel span {
+    word-break: break-word;
+  }
+
+  /* Hide view toggle on mobile - only grid view needed */
+  .view-toggle-container {
+    display: none !important;
+  }
+
+  /* Backdrop overlay when drawer is open */
+  .listing-filter-panel.filter-expanded::after,
+  .listing-filter-panel:has([aria-expanded="true"])::after {
+    content: '';
+    position: fixed;
+    top: -100vh;
+    left: 0;
+    right: 0;
+    height: 100vh;
+    background-color: var(--ds-color-neutral-background-backdrop, rgba(0, 0, 0, 0.4));
+    z-index: -1;
+  }
+
+  /* Add bottom padding to page content */
+  .listing-page-content, .listings-page {
+    padding-bottom: 16px !important;
+  }
+
+  /* Mobile listing grid — single column, fills its container.
+     Page gutter (12px on phone) is owned by `.splitOuterPad` /
+     `.ds-container` so cards align with the header logo. */
+  .listing-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--ds-size-3) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Mobile listing cards — fill grid cell. */
+  .listing-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Card image container */
+  .listing-card > div:first-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Card image itself */
+  .listing-card > div:first-child img {
+    width: 100% !important;
+    max-width: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* Mobile card content - prevent overflow */
+  .listing-card > div:last-child {
+    padding: var(--ds-size-4) !important;
+  }
+
+  /* Mobile card title - truncate */
+  .listing-card h3 {
+    font-size: var(--ds-font-size-md) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Mobile card description - limit lines */
+  .listing-card p {
+    font-size: var(--ds-font-size-sm) !important;
+  }
+
+  /* Mobile card footer */
+  .listing-card-footer,
+  .listing-card > div:last-child > div:last-child {
+    padding: var(--ds-size-2) var(--ds-size-4) !important;
+    font-size: var(--ds-font-size-xs) !important;
+  }
+
+  /* Mobile card image - slightly shorter */
+  .listing-card > div:first-child {
+    height: 180px !important;
+  }
+
+  /* Main content area - ensure proper containment */
+  .main-content-layout,
+  .listings-page,
+  .listing-page-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Container - reduce padding on mobile */
+  .ds-container {
+    padding: 12px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Prevent any horizontal overflow at root level. We use `overflow-x:
+     clip` (not `hidden`) deliberately — `hidden` implicitly upgrades
+     `overflow-y` to `auto`, which creates a scroll container on
+     html/body/#root and breaks `position: sticky` on descendants
+     (AppHeader, listings filterBar, etc.). `clip` clips the same way
+     without instantiating a scroll context. */
+  #root, body, html {
+    overflow-x: clip !important;
+    max-width: 100vw !important;
+  }
+
+  /* Mobile breadcrumb - scrollable */
+  .ds-breadcrumb, nav[aria-label*="breadcrumb"], nav[aria-label*="Breadcrumb"] {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: var(--ds-size-2);
+    margin-bottom: calc(-1 * var(--ds-size-2));
+  }
+  .ds-breadcrumb::-webkit-scrollbar, nav[aria-label*="breadcrumb"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile image slider - full width, shorter height */
+  .image-slider {
+    margin-left: calc(-1 * var(--ds-size-3));
+    margin-right: calc(-1 * var(--ds-size-3));
+  }
+  .image-slider .image-slider-main {
+    height: 260px !important;
+    border-radius: 0 !important;
+  }
+  /* Hide thumbnails on mobile to save space */
+  .image-slider .image-slider-thumbnails {
+    display: none;
+  }
+  /* Smaller nav arrows on mobile */
+  .image-slider .image-slider-main button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .image-slider .image-slider-main button svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Mobile listing detail layout - stack columns */
+  .listing-detail-layout {
+    gap: var(--ds-size-4) !important;
+  }
+
+  /* Mobile booking sidebar - sticky bottom */
+  .booking-sidebar-mobile {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background-color: var(--ds-color-neutral-surface-default);
+    border-top: 1px solid var(--ds-color-neutral-border-default);
+    padding: var(--ds-size-3) var(--ds-size-4);
+    box-shadow: var(--ds-shadow-sidebar-up);
+  }
+
+  /* Mobile card footer - smaller text */
+  .listing-card-footer {
+    padding: var(--ds-size-3) !important;
+  }
+
+  /* Mobile tabs - scrollable */
+  .listing-tabs-container {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .listing-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile key facts - horizontal scroll */
+  .key-facts-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    gap: var(--ds-size-2) !important;
+    padding-bottom: var(--ds-size-2);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .key-facts-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .key-facts-grid > * {
+    flex-shrink: 0;
+    min-width: 100px;
+  }
+
+  /* Mobile amenity badges - wrap tighter */
+  .amenity-grid, .amenities-grid {
+    gap: var(--ds-size-2) !important;
+  }
+
+  /* Mobile contact card - smaller padding */
+  .contact-card, .listing-contact-card {
+    padding: var(--ds-size-3) !important;
+  }
+
+  /* Mobile section headers - smaller */
+  .listing-section-header, .section-header {
+    font-size: var(--ds-font-size-lg) !important;
+  }
+
+  /* Mobile detail main title - smaller */
+  .listing-detail-title {
+    font-size: var(--ds-font-size-xl) !important;
+  }
+
+  /* Mobile price display - inline */
+  .price-display {
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: var(--ds-size-2) !important;
+  }
+
+  /* Mobile map - shorter height */
+  .listing-map-container {
+    margin-left: calc(-1 * var(--ds-size-3));
+    margin-right: calc(-1 * var(--ds-size-3));
+    border-radius: 0 !important;
+  }
+
+  /* Mobile rules/FAQ - full width cards */
+  .rules-list, .faq-list {
+    margin-left: calc(-1 * var(--ds-size-3));
+    margin-right: calc(-1 * var(--ds-size-3));
+    padding-left: var(--ds-size-3);
+    padding-right: var(--ds-size-3);
+  }
+
+  /* Mobile opening hours table - compact */
+  .opening-hours-table td {
+    padding: var(--ds-size-2) !important;
+    font-size: var(--ds-font-size-sm) !important;
+  }
+}
+
+/* Tablet breakpoint (600px - 991px) */
+@media (min-width: 600px) and (max-width: 991px) {
+  /* Tablet listing grid - 2 columns */
+  .listing-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .listing-grid[data-max-columns="1"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tablet image slider - medium height */
+  .image-slider .image-slider-main {
+    height: 320px !important;
+  }
+
+  /* Tablet key facts - wrap on 2 rows */
+  .key-facts-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: var(--ds-size-3) !important;
+  }
+  .key-facts-grid > * {
+    flex: 0 0 calc(33.333% - var(--ds-size-3));
+    min-width: 120px;
+  }
+}
+
+/* List view responsive */
+@media (max-width: 767px) {
+  .listing-list-item {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .listing-list-item > div:first-child {
+    width: 100% !important;
+    min-width: unset !important;
+    max-height: 200px;
+  }
+
+  .listing-list-item > div:last-child:not(:nth-child(2)) {
+    display: none !important;
+  }
+}
+

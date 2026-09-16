@@ -1,0 +1,95 @@
+/**
+ * Mobile touch-target enforcement.
+ *
+ * Apple HIG / WCAG 2.5.5 require ≥44×44 px tappable areas. Digdir's
+ * `data-size="sm"` shrinks min-height below that on phone, and native
+ * <input>/<select> at sub-16px font triggers iOS auto-zoom on focus.
+ *
+ * On phones (≤767px) we:
+ *   1. Force min-height of 44px on every `.ds-button`, regardless of
+ *      data-size, so secondary/tertiary actions stay tappable.
+ *   2. Force min-height 56px and font-size 16px on text inputs / selects
+ *      to prevent iOS pinch-zoom on focus and to match the dashboard's
+ *      mobile input contract (`--ds-input-min-height-mobile`).
+ *   3. Extend the tappable surface of native checkbox / radio / switch
+ *      inputs via `padding` + `margin` trickery — the visual remains the
+ *      digdir-rendered chrome, but the ::before pseudo-element gives a
+ *      44×44 invisible hit area centered on the control. Pointer events
+ *      pass through to the input.
+ */
+
+@media (max-width: 767px) {
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .ds-button {
+        min-height: var(--ds-touch-target-min, 44px);
+    }
+
+    /* Icon-only buttons stay square. */
+    .ds-button[data-icon] {
+        min-width: var(--ds-touch-target-min, 44px);
+        min-height: var(--ds-touch-target-min, 44px);
+    }
+
+    /* ── Text inputs / selects / textareas ───────────────────────── */
+    .ds-input[type="text"],
+    .ds-input[type="email"],
+    .ds-input[type="search"],
+    .ds-input[type="tel"],
+    .ds-input[type="url"],
+    .ds-input[type="password"],
+    .ds-input[type="number"],
+    .ds-input[type="date"],
+    .ds-input[type="time"],
+    .ds-input[type="datetime-local"],
+    .ds-input:not([type]),
+    .ds-textfield input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    .ds-textfield textarea,
+    .ds-textarea,
+    .ds-native-select select {
+        min-height: var(--ds-input-min-height-mobile, 56px) !important;
+        font-size: 16px !important; /* prevents iOS focus zoom */
+    }
+
+    /* ── Checkbox / Radio tap surface ────────────────────────────── */
+    /* The visual control stays its digdir size (≈24px); we extend the
+       hit area via a transparent ::before. Wrap the input in a label
+       (digdir does this in <Checkbox label="...">) and the label itself
+       gets 44px min-height. For bare <Checkbox> with no label, the
+       input sits inside `.ds-field` — give the field row 44px. */
+    .ds-input[type="checkbox"],
+    .ds-input[type="radio"] {
+        position: relative;
+    }
+
+    .ds-input[type="checkbox"]::before,
+    .ds-input[type="radio"]::before {
+        content: '';
+        position: absolute;
+        inset: 50% 50%;
+        width: var(--ds-touch-target-min, 44px);
+        height: var(--ds-touch-target-min, 44px);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+
+    /* Field rows that contain a checkbox/radio get a 44px min-height
+       so the tap surface is finger-friendly even when the visual
+       control is smaller. */
+    .ds-field:has(> .ds-input[type="checkbox"]),
+    .ds-field:has(> .ds-input[type="radio"]),
+    label:has(> .ds-input[type="checkbox"]),
+    label:has(> .ds-input[type="radio"]) {
+        min-height: var(--ds-touch-target-min, 44px);
+        align-items: center;
+    }
+
+    /* ── Switch (role=switch on checkbox) ────────────────────────── */
+    .ds-input[role="switch"] {
+        /* Digdir renders the track at 2× toggle-size width. The track is
+           tall enough at md-mode (~24px), but on phones the data-size=sm
+           track collapses to ~20px. Floor it to 28px so the tap surface
+           plus the ::before pseudo gets us to 44×44 comfortably. */
+        min-height: 28px;
+    }
+}
+

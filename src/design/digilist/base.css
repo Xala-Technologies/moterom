@@ -1,0 +1,119 @@
+/**
+ * Base document styles for XalaBaaS apps using Designsystemet.
+ * Import once in app entry (main.tsx) after @xala/ds/styles and theme CSS.
+ *
+ * IMPORTANT: Do NOT use `padding: 0` on * selector—it breaks
+ * Designsystemet component padding (buttons, inputs, etc.).
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+html {
+  font-family: var(--ds-font-family-base, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif);
+  line-height: 1.5;
+  font-weight: 400;
+  font-feature-settings: "cv05" 1;
+  /* per Designsystemet guidance */
+
+  /* Always reserve space for the vertical scrollbar so navigating between
+   * pages / category filters with different content heights doesn't shift
+   * the viewport width when the scrollbar appears / disappears. Without
+   * this, picking a category with fewer results (page becomes shorter)
+   * widens the layout by ~17 px and every grid column reflows. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  min-width: 320px;
+  color: var(--ds-color-neutral-text-default);
+  background-color: var(--ds-color-neutral-background-default);
+}
+
+/* ===================================
+   WCAG accessibility
+   =================================== */
+
+/* Focus indicators (WCAG 2.4.7) – keyboard only */
+*:focus {
+  outline: 2px solid var(--ds-color-focus-outer);
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--ds-color-focus-outer);
+  outline-offset: 2px;
+}
+
+/* Reduced motion (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode (WCAG 1.4.6) */
+@media (prefers-contrast: high) {
+  *:focus-visible {
+    outline-width: 4px;
+    outline-offset: 3px;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  a {
+    border: 2px solid currentColor !important;
+  }
+}
+
+/* Interactive elements */
+a,
+button,
+[role="button"],
+[role="link"] {
+  cursor: pointer;
+}
+
+a:not([class]) {
+  text-decoration-skip-ink: auto;
+  color: var(--ds-color-accent-base-default);
+}
+
+a:not([class]):hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

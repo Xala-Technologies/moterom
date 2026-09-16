@@ -1,0 +1,117 @@
+/**
+ * Global input overrides for the Digilist app.
+ *
+ * Removes the resting border on every digdir-rendered text input,
+ * textarea, and native select so the dashboard's input fields stop
+ * looking like outlined boxes against dark surfaces. The focused
+ * state keeps a subtle accent ring so keyboard navigation stays
+ * visible (WCAG 2.4.7).
+ *
+ * Selectors target digdir's class hooks (`.ds-input`, `.ds-textfield`,
+ * `.ds-textarea`, `.ds-native-select`) so this applies to Textfield,
+ * Textarea, NativeSelect and SearchBar's inner <input> uniformly.
+ *
+ * NO `!important` HERE. These rules used to carry it on every declaration,
+ * which was redundant and actively harmful:
+ *
+ *   - Redundant, because digdir ships its field styles inside
+ *     `@layer ds.components` and this file is UNLAYERED. Unlayered styles beat
+ *     layered ones outright — regardless of specificity or source order — so
+ *     these selectors already win without it.
+ *   - Harmful, because `!important` can only be answered with `!important`.
+ *     A component that legitimately needs a different field (the login OTP
+ *     overlay in packages/digilist/src/auth/CodeInput.module.css is the one
+ *     that surfaced it, rendering as an opaque white box over the six code
+ *     cells) had no way to override these without escalating in turn.
+ *
+ * A component may now out-rank this file on plain specificity: these
+ * selectors are (0,2,0), so `.thing input[type]` at (0,2,1) wins. Keep it
+ * that way — if a new rule here seems to need `!important`, the real problem
+ * is elsewhere.
+ */
+
+/* IMPORTANT: scope to TEXT-LIKE inputs only.
+   Digdir renders Checkbox / Radio / Switch / file inputs with the same
+   `.ds-input` class hook. A naked `.ds-input` selector reshapes their
+   native chrome into rounded rectangles, which made the terms-checkboxes
+   render as un-tickable circles in the booking summary. Explicit
+   `[type=...]` filters keep the override tied to text fields. */
+.ds-input[type="text"],
+.ds-input[type="email"],
+.ds-input[type="search"],
+.ds-input[type="tel"],
+.ds-input[type="url"],
+.ds-input[type="password"],
+.ds-input[type="number"],
+.ds-input[type="date"],
+.ds-input[type="time"],
+.ds-input[type="datetime-local"],
+.ds-input:not([type]),
+.ds-textfield input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.ds-textfield textarea,
+.ds-textarea,
+.ds-native-select select,
+.ds-native-select {
+    background: var(--ds-color-neutral-background-default);
+    border: 1px solid var(--ds-color-neutral-border-default);
+    border-radius: var(--digilist-radius-lg, 12px);
+    box-shadow: none;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ds-input[type="text"]:hover:not(:disabled):not(:focus),
+.ds-input[type="email"]:hover:not(:disabled):not(:focus),
+.ds-input[type="search"]:hover:not(:disabled):not(:focus),
+.ds-input[type="tel"]:hover:not(:disabled):not(:focus),
+.ds-input[type="url"]:hover:not(:disabled):not(:focus),
+.ds-input[type="password"]:hover:not(:disabled):not(:focus),
+.ds-input[type="number"]:hover:not(:disabled):not(:focus),
+.ds-input[type="date"]:hover:not(:disabled):not(:focus),
+.ds-input[type="time"]:hover:not(:disabled):not(:focus),
+.ds-input[type="datetime-local"]:hover:not(:disabled):not(:focus),
+.ds-input:not([type]):hover:not(:disabled):not(:focus),
+.ds-textfield input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover:not(:disabled):not(:focus),
+.ds-textfield textarea:hover:not(:disabled):not(:focus),
+.ds-textarea:hover:not(:disabled):not(:focus),
+.ds-native-select select:hover:not(:disabled):not(:focus) {
+    /* Hover keeps the resting border — no pulse before click. Focus
+       is the only state that surfaces a stronger outline. */
+    border-color: var(--ds-color-neutral-border-default);
+}
+
+.ds-input[type="text"]:focus,
+.ds-input[type="text"]:focus-visible,
+.ds-input[type="email"]:focus,
+.ds-input[type="email"]:focus-visible,
+.ds-input[type="search"]:focus,
+.ds-input[type="search"]:focus-visible,
+.ds-input[type="tel"]:focus,
+.ds-input[type="tel"]:focus-visible,
+.ds-input[type="url"]:focus,
+.ds-input[type="url"]:focus-visible,
+.ds-input[type="password"]:focus,
+.ds-input[type="password"]:focus-visible,
+.ds-input[type="number"]:focus,
+.ds-input[type="number"]:focus-visible,
+.ds-input[type="date"]:focus,
+.ds-input[type="date"]:focus-visible,
+.ds-input[type="time"]:focus,
+.ds-input[type="time"]:focus-visible,
+.ds-input[type="datetime-local"]:focus,
+.ds-input[type="datetime-local"]:focus-visible,
+.ds-input:not([type]):focus,
+.ds-input:not([type]):focus-visible,
+.ds-textfield input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.ds-textfield input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus-visible,
+.ds-textfield textarea:focus,
+.ds-textfield textarea:focus-visible,
+.ds-textarea:focus,
+.ds-textarea:focus-visible,
+.ds-native-select select:focus,
+.ds-native-select select:focus-visible {
+    border-color: var(--ds-color-accent-border-default);
+    box-shadow: 0 0 0 3px var(--ds-color-accent-surface-default);
+    outline: none;
+}
+
