@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DemoStore } from "../server/demo";
 import rooms from "../config/rooms.json";
 import { addDays, today } from "../shared/time";
-import type { BookingInput, User } from "../shared/types";
+import type { BookingInput, Room, User } from "../shared/types";
 const customer: User = {
   id: "customer",
   name: "Test",
@@ -24,7 +24,7 @@ const input: BookingInput = {
 describe("persistent demo booking rules", () => {
   let store: DemoStore;
   beforeEach(() => {
-    store = new DemoStore(":memory:", rooms, false);
+    store = new DemoStore(":memory:", rooms as Room[], false);
   });
   afterEach(() => store.db.close());
   it("replays a request without creating another reservation", () => {

@@ -34,10 +34,23 @@ export function Shell() {
     const headings: Record<string, string> = {
       "/": "Finn rom",
       "/mine-bookinger": "Mine bookinger",
-      "/admin": "Administrasjon",
+      "/admin": "Oversikt",
+      "/admin/calendar": "Romkalender",
+      "/admin/bookings": "Bookinger",
+      "/admin/rooms": "Rom",
+      "/admin/settings": "Innstillinger",
       "/login": "Logg inn",
     };
-    document.title = `${headings[location.pathname] || "Booking"} · ${config?.buildingName || "Møterom"}`;
+    const fallback = location.pathname.startsWith("/rom/")
+      ? "Rom"
+      : location.pathname.startsWith("/bestill/")
+        ? "Bekreft booking"
+        : location.pathname.startsWith("/booking/")
+          ? "Booking"
+          : location.pathname.startsWith("/admin")
+            ? "Administrasjon"
+            : "Booking";
+    document.title = `${headings[location.pathname] || fallback} · ${config?.buildingName || "Møterom"}`;
     document.querySelector<HTMLElement>("#main-content")?.focus();
   }, [location.pathname, config?.buildingName]);
   const logout = async () => {
@@ -142,7 +155,7 @@ export function Shell() {
         {user?.isAdmin && (
           <NavLink to="/admin">
             <LayoutDashboard size={21} />
-            Admin
+            Administrasjon
           </NavLink>
         )}
       </nav>

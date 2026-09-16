@@ -175,6 +175,8 @@ export class Digilist {
         const images = Array.isArray(source.images) ? source.images : [];
         const image =
           typeof images[0] === "string" ? images[0] : str(row(images[0]).url);
+        const liveImage =
+          image && /^https:\/\//.test(image) ? image : undefined;
         return {
           ...definition,
           sourceId: str(source._id),
@@ -183,7 +185,8 @@ export class Digilist {
           description: str(source.description, definition.description),
           capacity: z.number().int().positive().parse(source.capacity),
           capacityLabel: `${source.capacity} personer`,
-          image: image && /^https:\/\//.test(image) ? image : undefined,
+          image: liveImage || definition.image,
+          imageKind: liveImage ? "actual" : definition.imageKind,
           amenities: Array.isArray(source.amenities)
             ? source.amenities.flatMap((x) => {
                 const name = typeof x === "string" ? x : str(row(x).name);

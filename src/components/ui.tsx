@@ -68,10 +68,15 @@ export function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
+    opener.current = document.activeElement as HTMLElement | null;
     const d = ref.current!;
     d.showModal();
-    return () => d.close();
+    return () => {
+      d.close();
+      opener.current?.focus?.();
+    };
   }, []);
   return (
     <dialog
@@ -83,16 +88,7 @@ export function Modal({
         close();
       }}
       onClick={(e) => {
-        if (e.target === ref.current) {
-          const r = ref.current.getBoundingClientRect();
-          if (
-            e.clientX < r.left ||
-            e.clientX > r.right ||
-            e.clientY < r.top ||
-            e.clientY > r.bottom
-          )
-            close();
-        }
+        if (e.target === e.currentTarget) close();
       }}
     >
       <header>
@@ -113,12 +109,15 @@ export function Status({ status }: { status: string }) {
     rejected: "Avslått",
     completed: "Fullført",
     reserved: "Reservert",
+    blocked: "Blokkert",
   };
   const tone = ["confirmed", "completed"].includes(status)
     ? "success"
     : status === "pending"
       ? "warning"
-      : "neutral";
+      : status === "blocked"
+        ? "blocked"
+        : "neutral";
   return (
     <span className={`status status-${tone}`}>
       {status === "confirmed" ? (

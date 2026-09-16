@@ -29,7 +29,7 @@ class ErrorBoundary extends Component<
   }
   render() {
     return this.state.failed ? (
-      <div className="container">
+      <div className="container" role="alert">
         <h1>Vi klarte ikke å vise siden</h1>
         <p>
           Last siden på nytt. Eventuelle bookinger finner du i Mine bookinger.

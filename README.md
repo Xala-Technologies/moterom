@@ -39,7 +39,7 @@ The application uses **Inter**, Digilist's navy **#003057**, its actual theme to
 
 The unchanged files in `src/design/digilist/` and `public/digilist-logo.svg` were sourced from the private `Xala-Technologies/digilist` repository at commit `16a8025d52cc69b917f9c255cc3ef5e1637bb0c7`. See [the design source record](docs/design-source.md). Application styling is kept in `src/styles.css` so the source tokens remain reviewable. These internal brand files are not being relicensed as an open-source design system.
 
-The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pdf_. The demo conservatively uses the lower capacity bound. The PDF contains two rooms called Eidefossen; they are temporarily distinguished by capacity. No equipment, room photographs, prices or building address were invented.
+The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pdf_. The demo conservatively uses the lower capacity bound. The PDF contains two rooms called Eidefossen; they are temporarily distinguished by capacity. No equipment, prices or building address were invented. Catalogue images are licensed **illustrative** photographs, labelled in the UI and recorded in [docs/room-images.md](docs/room-images.md), until approved building photographs exist.
 
 | Room               | Source capacity | Demo capacity |
 | ------------------ | --------------- | ------------- |

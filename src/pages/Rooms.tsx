@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   Building2,
   CalendarDays,
@@ -74,7 +74,7 @@ export function Rooms() {
         <div>
           <div className="eyebrow heading-eyebrow">
             <Building2 size={16} />
-            ET STED Å MØTES
+            Et sted å møtes
           </div>
           <h1>Finn rommet til ditt neste møte</h1>
           <p>Velg et rom, eller finn ut hva som er ledig når du trenger det.</p>
@@ -132,7 +132,7 @@ export function Rooms() {
               : `${rooms.data?.length ?? 7} rom · små møter og større samlinger`}
           </span>
         </div>
-        <div className="view-switch" aria-label="Visning">
+        <div className="view-switch" role="group" aria-label="Visning">
           <button
             aria-label="Kortvisning"
             aria-pressed={view === "grid"}
@@ -150,12 +150,7 @@ export function Rooms() {
         </div>
       </div>
       {rooms.error ? (
-        <>
-          <ErrorState error={rooms.error} retry={rooms.reload} />
-          <Link className="text-link" to="/login">
-            Logg inn for å se rommene
-          </Link>
-        </>
+        <ErrorState error={rooms.error} retry={rooms.reload} />
       ) : rooms.loading || availability.loading ? (
         <Loading label="Henter rom og ledighet …" />
       ) : (
@@ -217,8 +212,8 @@ export function Rooms() {
       {config?.mode === "demo" && (
         <p className="inventory-note">
           Romnavn og kapasitetsintervaller er hentet fra romoversikten. Demoen
-          bruker nedre kapasitetsgrense. Bilder og utstyr legges til når de er
-          bekreftet.
+          bruker nedre kapasitetsgrense. Rommene vises med illustrasjonsfoto,
+          ikke fotografier av byggets rom.
         </p>
       )}
       {floorplan && (

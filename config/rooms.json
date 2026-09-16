@@ -6,6 +6,8 @@
     "capacity": 12,
     "capacityLabel": "12–14 personer",
     "description": "Et møterom for samtaler, samarbeid og mindre samlinger.",
+    "image": "/rooms/sauda-1.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false
   },
@@ -16,6 +18,8 @@
     "capacity": 10,
     "capacityLabel": "10–12 personer",
     "description": "Et mindre møterom med plass til teamet ditt.",
+    "image": "/rooms/sauda-2.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false
   },
@@ -26,6 +30,8 @@
     "capacity": 24,
     "capacityLabel": "24–26 personer",
     "description": "Plass til større møter og felles arbeidsøkter.",
+    "image": "/rooms/tysso.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false
   },
@@ -36,6 +42,8 @@
     "capacity": 44,
     "capacityLabel": "44–56 personer",
     "description": "Byggets største møterom, for samlinger med mange deltakere.",
+    "image": "/rooms/glomma-1.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false
   },
@@ -46,6 +54,8 @@
     "capacity": 26,
     "capacityLabel": "26–28 personer",
     "description": "Et romslig alternativ for møter og presentasjoner.",
+    "image": "/rooms/glomma-2.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false
   },
@@ -56,6 +66,8 @@
     "capacity": 12,
     "capacityLabel": "12–14 personer",
     "description": "Det største av de to rommene merket Eidefossen i romoversikten.",
+    "image": "/rooms/eidefossen-a.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false,
     "nameNeedsConfirmation": true
@@ -67,6 +79,8 @@
     "capacity": 10,
     "capacityLabel": "10–12 personer",
     "description": "Det minste av de to rommene merket Eidefossen i romoversikten.",
+    "image": "/rooms/eidefossen-b.webp",
+    "imageKind": "illustrative",
     "amenities": [],
     "requiresApproval": false,
     "nameNeedsConfirmation": true

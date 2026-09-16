@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Meeting-room booking powered by Digilist",
   "scripts": {
-    "dev": "node --watch --import tsx server/index.ts",
+    "dev": "node --watch-path=server --watch-path=src --watch-path=shared --watch-path=config --watch-path=index.html --watch-path=vite.config.ts --import tsx server/index.ts",
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production node --import tsx server/index.ts",
     "typecheck": "tsc --noEmit",

@@ -6,6 +6,7 @@ export interface Room {
   capacityLabel: string;
   description: string;
   image?: string;
+  imageKind?: "illustrative" | "actual";
   amenities: string[];
   requiresApproval: boolean;
   nameNeedsConfirmation?: boolean;
