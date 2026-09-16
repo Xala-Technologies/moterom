@@ -21,6 +21,8 @@ npm run check
 npm run format:check
 ```
 
+Day-to-day work lands on `dev`; releases are pull requests from `dev` into `main`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 The test suite covers booking conflicts, idempotency, ownership, role checks, signed quotes, cancellation, calendar exports, Oslo daylight-saving transitions, and selected Digilist adapter contracts.
 
 ## Product flow
