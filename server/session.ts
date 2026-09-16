@@ -9,6 +9,7 @@ export interface Session {
   accessToken?: string;
   expiresAt?: number;
   demoRole?: "customer" | "admin";
+  demoGuest?: { id: string; name: string; email: string };
 }
 export async function readSession(req: Request): Promise<Session | undefined> {
   const raw = req.headers.cookie

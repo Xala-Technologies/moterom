@@ -20,6 +20,8 @@ const input: BookingInput = {
   title: "",
   notes: "",
   quoteToken: "",
+  name: "Test",
+  email: "test@example.invalid",
 };
 describe("persistent demo booking rules", () => {
   let store: DemoStore;
@@ -27,6 +29,21 @@ describe("persistent demo booking rules", () => {
     store = new DemoStore(":memory:", rooms as Room[], false);
   });
   afterEach(() => store.db.close());
+  it("stores the submitted name, email and phone on the booking", () => {
+    const booking = store.create(
+      {
+        ...input,
+        name: "Ola Nordmann",
+        email: "ola@example.invalid",
+        phone: "412 34 567",
+      },
+      customer,
+      "guest-name",
+    );
+    expect(booking.name).toBe("Ola Nordmann");
+    expect(booking.email).toBe("ola@example.invalid");
+    expect(booking.phone).toBe("412 34 567");
+  });
   it("replays a request without creating another reservation", () => {
     const first = store.create(input, customer, "one");
     expect(store.create(input, customer, "one").id).toBe(first.id);

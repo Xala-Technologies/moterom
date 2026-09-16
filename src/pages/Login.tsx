@@ -4,17 +4,23 @@ import { ShieldCheck, UserRound, ArrowLeft } from "lucide-react";
 import { Button, Field, Input, Label, ErrorState } from "../components/ui";
 import { useApp } from "../context";
 import { post } from "../api";
+import { useT } from "../i18n";
+
+/** Parked until the customer dashboard is shown again. Set to true to restore «Prøv som kunde». */
+const SHOW_DEMO_CUSTOMER_LOGIN = false;
+
 export function Login() {
   const { config, refresh } = useApp();
+  const { t } = useT();
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const candidate = params.get("returnTo") || "/mine-bookinger";
+  const candidate = params.get("returnTo") || "/";
   const returnTo =
     candidate.startsWith("/") &&
     !candidate.startsWith("//") &&
     !candidate.includes("\\")
       ? candidate
-      : "/mine-bookinger";
+      : "/";
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [verification, setVerification] = useState("");
@@ -31,7 +37,11 @@ export function Login() {
     try {
       await post("/auth/demo", { role });
       await done(
-        role === "admin" && !params.has("returnTo") ? "/admin" : returnTo,
+        role === "admin"
+          ? returnTo.startsWith("/admin")
+            ? returnTo
+            : "/admin"
+          : returnTo,
       );
     } catch (e) {
       setError(e as Error);
@@ -69,98 +79,107 @@ export function Login() {
       setBusy(false);
     }
   };
+  const heading =
+    config?.mode === "demo"
+      ? t("auth.log_in")
+      : mfa
+        ? t("auth.confirm_identity")
+        : verification
+          ? t("auth.check_email")
+          : t("auth.log_in");
+  const body =
+    config?.mode === "demo"
+      ? SHOW_DEMO_CUSTOMER_LOGIN
+        ? t("auth.demo_choose_body")
+        : t("auth.demo_admin_body")
+      : mfa
+        ? t("auth.mfa_body")
+        : verification
+          ? t("auth.code_sent_body", { email })
+          : t("auth.email_login_body");
   return (
     <div className="auth-page">
-      <div className="auth-icon">
-        <ShieldCheck size={28} />
-      </div>
-      <h1>
-        {config?.mode === "demo"
-          ? "Prøv møteromsportalen"
-          : mfa
-            ? "Bekreft identiteten din"
-            : verification
-              ? "Sjekk e-posten din"
-              : "Velkommen tilbake"}
-      </h1>
-      <p className="muted">
-        {config?.mode === "demo"
-          ? "Velg en rolle for å utforske booking og administrasjon."
-          : mfa
-            ? "Skriv inn koden fra autentiseringsappen din."
-            : verification
-              ? `Vi har sendt en engangskode til ${email}.`
-              : "Logg inn med e-post for å bestille rom og se bookingene dine."}
-      </p>
-      {error && <ErrorState error={error} />}
-      {config?.mode === "demo" ? (
-        <div className="demo-options">
-          <Button disabled={busy} onClick={() => demo("customer")}>
-            <UserRound size={20} />
-            Prøv som kunde
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={busy}
-            onClick={() => demo("admin")}
-          >
-            <ShieldCheck size={20} />
-            Prøv som administrator
-          </Button>
-          <p className="caption">Alle opplysninger i demoen er eksempler.</p>
-        </div>
-      ) : (
-        <form onSubmit={submit} className="stack">
-          {verification || mfa ? (
-            <Field>
-              <Label>Engangskode</Label>
-              <Input
-                aria-label="Engangskode"
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoFocus
-                required
-              />
-            </Field>
-          ) : (
-            <Field>
-              <Label>E-postadresse</Label>
-              <Input
-                aria-label="E-postadresse"
-                autoComplete="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </Field>
-          )}
-          <Button type="submit" disabled={busy}>
-            {busy
-              ? "Vennligst vent …"
-              : verification || mfa
-                ? "Bekreft og fortsett"
-                : "Send engangskode"}
-          </Button>
-          {verification && !mfa && (
+      <div className="auth-panel">
+        <span className="eyebrow">{t("auth.eyebrow_admin")}</span>
+        <h1>{heading}</h1>
+        <p className="muted">{body}</p>
+        {error && <ErrorState error={error} />}
+        {config?.mode === "demo" ? (
+          <div className="demo-options">
+            {SHOW_DEMO_CUSTOMER_LOGIN && (
+              <Button
+                type="button"
+                disabled={busy}
+                onClick={() => demo("customer")}
+              >
+                <UserRound size={20} />
+                {t("auth.try_as_customer")}
+              </Button>
+            )}
             <Button
-              variant="tertiary"
               type="button"
-              onClick={() => {
-                setVerification("");
-                setCode("");
-              }}
+              variant={SHOW_DEMO_CUSTOMER_LOGIN ? "secondary" : undefined}
+              disabled={busy}
+              onClick={() => demo("admin")}
             >
-              <ArrowLeft size={16} />
-              Bruk en annen e-post
+              <ShieldCheck size={20} />
+              {busy ? t("auth.logging_in") : t("auth.log_in_as_admin")}
             </Button>
-          )}
-        </form>
-      )}
+            <p className="caption">{t("auth.demo_caption")}</p>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="stack">
+            {verification || mfa ? (
+              <Field>
+                <Label>{t("auth.one_time_code")}</Label>
+                <Input
+                  aria-label={t("auth.one_time_code")}
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </Field>
+            ) : (
+              <Field>
+                <Label>{t("auth.email_address")}</Label>
+                <Input
+                  aria-label={t("auth.email_address")}
+                  autoComplete="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </Field>
+            )}
+            <Button className="full-width" type="submit" disabled={busy}>
+              {busy
+                ? t("auth.please_wait")
+                : verification || mfa
+                  ? t("auth.confirm_continue")
+                  : t("auth.send_code")}
+            </Button>
+            {verification && !mfa && (
+              <Button
+                variant="tertiary"
+                type="button"
+                onClick={() => {
+                  setVerification("");
+                  setCode("");
+                }}
+              >
+                <ArrowLeft size={16} />
+                {t("auth.use_other_email")}
+              </Button>
+            )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }

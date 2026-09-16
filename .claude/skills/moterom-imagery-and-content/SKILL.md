@@ -18,9 +18,9 @@ Prefer verified actual room assets. Label anything else as illustration.
 
 1. Prefer a Digilist HTTPS room image (`imageKind: "actual"`) over a local file.
 2. If using illustration, verify the license, store a compressed file under `public/rooms/`, and record source, photographer, date, and kind in `docs/room-images.md`.
-3. Keep **Illustrasjonsfoto** visible whenever `imageKind` is not `actual`.
+3. Keep **Illustrasjonsfoto** / **Illustrative photo** (via i18n) visible whenever `imageKind` is not `actual`.
 4. Keep current card/detail proportions (`--ds-size-card-image-*`). Add `loading="lazy"`, stable width/height, and a placeholder on error.
-5. Write concise Norwegian Bokmål. Do not invent equipment, accessibility, prices, addresses, or Eidefossen names.
+5. Write concise Norwegian Bokmål and matching English for curated room `description` / `descriptionEn` (and capacity labels). Do not invent equipment, accessibility, prices, addresses, or Eidefossen names. Room proper names stay untranslated.
 6. Never commit a building floor plan; use `FLOORPLAN_PATH`.
 
 ## Non-negotiable

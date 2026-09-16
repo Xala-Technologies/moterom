@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { i18n } from "./i18n";
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -17,20 +18,21 @@ export async function api<T>(
     res = await fetch(`/api${path}`, {
       credentials: "same-origin",
       ...options,
-      headers: { "Content-Type": "application/json", ...options.headers },
+      headers: {
+        "Content-Type": "application/json",
+        "Accept-Language": i18n.language,
+        ...options.headers,
+      },
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError")
       throw error;
-    throw new ApiError(
-      "Vi fikk ikke kontakt. Sjekk forbindelsen og prøv igjen.",
-      0,
-    );
+    throw new ApiError(i18n.t("errors.network_unreachable"), 0);
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok)
     throw new ApiError(
-      body.message || "Noe gikk galt. Prøv igjen.",
+      body.message || i18n.t("errors.request_failed"),
       res.status,
       body.code,
     );
