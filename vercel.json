@@ -5,10 +5,9 @@
   "framework": null,
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
   "functions": {
-    "api/index.ts": {
-      "runtime": "nodejs22.x",
+    "api/index.js": {
       "maxDuration": 30,
-      "includeFiles": "{dist/**,config/**,public/rooms/**}"
+      "includeFiles": "{dist/**,config/**,public/rooms/**,api/app.bundle.js}"
     }
   }
 }
