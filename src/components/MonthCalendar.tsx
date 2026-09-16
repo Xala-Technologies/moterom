@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./ui";
 import { today } from "../../shared/time";
+import { useFormatters, useT } from "../i18n";
 export function MonthCalendar({
   value,
   onChange,
@@ -9,6 +10,8 @@ export function MonthCalendar({
   value: string;
   onChange: (date: string) => void;
 }) {
+  const { t } = useT();
+  const { bcp47 } = useFormatters();
   const [month, setMonth] = useState(() => {
     const parsed = new Date(`${value}T12:00:00Z`);
     return Number.isFinite(parsed.getTime())
@@ -20,11 +23,20 @@ export function MonthCalendar({
   const days = new Date(
     Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0),
   ).getUTCDate();
-  const heading = new Intl.DateTimeFormat("nb-NO", {
+  const heading = new Intl.DateTimeFormat(bcp47, {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   }).format(start);
+  const weekdays = [
+    t("rooms.weekday_mon"),
+    t("rooms.weekday_tue"),
+    t("rooms.weekday_wed"),
+    t("rooms.weekday_thu"),
+    t("rooms.weekday_fri"),
+    t("rooms.weekday_sat"),
+    t("rooms.weekday_sun"),
+  ];
   const move = (delta: number) => {
     const next = new Date(start);
     next.setUTCMonth(next.getUTCMonth() + delta);
@@ -36,7 +48,7 @@ export function MonthCalendar({
         <Button
           variant="tertiary"
           icon
-          aria-label="Forrige måned"
+          aria-label={t("a11y.previous_month")}
           disabled={month <= today().slice(0, 7)}
           onClick={() => move(-1)}
         >
@@ -46,18 +58,18 @@ export function MonthCalendar({
         <Button
           variant="tertiary"
           icon
-          aria-label="Neste måned"
+          aria-label={t("a11y.next_month")}
           onClick={() => move(1)}
         >
           <ChevronRight size={18} />
         </Button>
       </div>
       <div className="month-weekdays" aria-hidden="true">
-        {["ma", "ti", "on", "to", "fr", "lø", "sø"].map((day) => (
+        {weekdays.map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
-      <div className="month-days" role="group" aria-label="Velg dato">
+      <div className="month-days" role="group" aria-label={t("a11y.pick_date")}>
         {Array.from({ length: offset }, (_, i) => (
           <span key={`empty-${i}`} />
         ))}
@@ -67,7 +79,7 @@ export function MonthCalendar({
             <button
               type="button"
               key={date}
-              aria-label={new Intl.DateTimeFormat("nb-NO", {
+              aria-label={new Intl.DateTimeFormat(bcp47, {
                 dateStyle: "full",
                 timeZone: "UTC",
               }).format(new Date(`${date}T12:00:00Z`))}
@@ -81,7 +93,7 @@ export function MonthCalendar({
           );
         })}
       </div>
-      <p className="caption">Ledighet sjekkes for valgt dato og tid.</p>
+      <p className="caption">{t("rooms.calendar_availability_hint")}</p>
     </div>
   );
 }

@@ -10,11 +10,14 @@ import {
 import { AlertCircle, ArrowRight, Check, X } from "lucide-react";
 import type { Search } from "../../shared/types";
 import { interval, today } from "../../shared/time";
-export function Loading({ label = "Henter innhold …" }: { label?: string }) {
+import { i18n, useT } from "../i18n";
+export function Loading({ label }: { label?: string }) {
+  const { t } = useT();
+  const text = label ?? t("common.loading");
   return (
     <div className="state" role="status">
-      <Spinner aria-label={label} data-size="md" />
-      <span>{label}</span>
+      <Spinner aria-label={text} data-size="md" />
+      <span>{text}</span>
     </div>
   );
 }
@@ -25,6 +28,7 @@ export function ErrorState({
   error: Error | string;
   retry?: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="error-state" role="alert">
       <AlertCircle size={22} />
@@ -32,7 +36,7 @@ export function ErrorState({
         <p>{typeof error === "string" ? error : error.message}</p>
         {retry && (
           <Button variant="secondary" data-size="sm" onClick={retry}>
-            Prøv igjen
+            {t("common.retry")}
           </Button>
         )}
       </div>
@@ -67,6 +71,7 @@ export function Modal({
   close: () => void;
   wide?: boolean;
 }) {
+  const { t } = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -93,7 +98,12 @@ export function Modal({
     >
       <header>
         <h2 id="modal-title">{title}</h2>
-        <Button variant="tertiary" icon aria-label="Lukk" onClick={close}>
+        <Button
+          variant="tertiary"
+          icon
+          aria-label={t("common.close")}
+          onClick={close}
+        >
           <X size={22} />
         </Button>
       </header>
@@ -102,14 +112,15 @@ export function Modal({
   );
 }
 export function Status({ status }: { status: string }) {
+  const { t } = useT();
   const labels: Record<string, string> = {
-    confirmed: "Bekreftet",
-    pending: "Venter på godkjenning",
-    cancelled: "Kansellert",
-    rejected: "Avslått",
-    completed: "Fullført",
-    reserved: "Reservert",
-    blocked: "Blokkert",
+    confirmed: t("common.status.confirmed"),
+    pending: t("common.status.pending"),
+    cancelled: t("common.status.cancelled"),
+    rejected: t("common.status.rejected"),
+    completed: t("common.status.completed"),
+    reserved: t("common.status.reserved"),
+    blocked: t("common.status.blocked"),
   };
   const tone = ["confirmed", "completed"].includes(status)
     ? "success"
@@ -133,32 +144,39 @@ export function SearchFields({
   value,
   onChange,
   compact = false,
+  hideDate = false,
   minDate = today(),
 }: {
   value: Search;
   onChange: (value: Search) => void;
   compact?: boolean;
+  hideDate?: boolean;
   minDate?: string;
 }) {
+  const { t } = useT();
   const change = <K extends keyof Search>(key: K, val: Search[K]) =>
-    onChange({ ...value, [key]: val });
+    onChange({ ...value, [key]: val, people: 1 });
   return (
-    <div className={`search-fields ${compact ? "compact-fields" : ""}`}>
+    <div
+      className={`search-fields ${compact ? "compact-fields" : ""}${hideDate ? " hide-date" : ""}`}
+    >
+      {!hideDate && (
+        <Field>
+          <Label>{t("common.date")}</Label>
+          <Input
+            aria-label={t("common.date")}
+            type="date"
+            required
+            min={minDate}
+            value={value.date}
+            onChange={(e) => change("date", e.target.value)}
+          />
+        </Field>
+      )}
       <Field>
-        <Label>Dato</Label>
+        <Label>{t("common.time_from")}</Label>
         <Input
-          aria-label="Dato"
-          type="date"
-          required
-          min={minDate}
-          value={value.date}
-          onChange={(e) => change("date", e.target.value)}
-        />
-      </Field>
-      <Field>
-        <Label>Fra kl.</Label>
-        <Input
-          aria-label="Fra kl."
+          aria-label={t("common.time_from")}
           type="time"
           required
           step={900}
@@ -167,9 +185,9 @@ export function SearchFields({
         />
       </Field>
       <Field>
-        <Label>Til kl.</Label>
+        <Label>{t("common.time_to")}</Label>
         <Input
-          aria-label="Til kl."
+          aria-label={t("common.time_to")}
           type="time"
           required
           step={900}
@@ -177,28 +195,16 @@ export function SearchFields({
           onChange={(e) => change("end", e.target.value)}
         />
       </Field>
-      <Field>
-        <Label>Personer</Label>
-        <Input
-          aria-label="Personer"
-          type="number"
-          min={1}
-          max={500}
-          required
-          value={value.people}
-          onChange={(e) => change("people", Number(e.target.value))}
-        />
-      </Field>
     </div>
   );
 }
-export function validateSearch(search: Search): string | undefined {
+export function validateSearch(
+  search: Search,
+  translate: (key: string) => string = (key) => i18n.t(key),
+): string | undefined {
   try {
     const span = interval(search);
-    if (span.startTime < Date.now())
-      return "Velg et tidspunkt som ikke har passert.";
-    if (!Number.isInteger(search.people) || search.people < 1)
-      return "Legg inn antall deltakere.";
+    if (span.startTime < Date.now()) return translate("validation.time_past");
   } catch (e) {
     return (e as Error).message;
   }

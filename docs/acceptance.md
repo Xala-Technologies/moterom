@@ -4,25 +4,38 @@
 
 Run `npm run check` and `npm run format:check` on Node 24. The suite covers:
 
-- Oslo UTC offsets; nonexistent and ambiguous DST times; adjacent and overlapping intervals.
+- Oslo UTC offsets; nonexistent and ambiguous DST times; adjacent and overlapping intervals; insights clipping, pending exclusion, truncation and previous-period zero change.
 - One booking for repeated idempotent submissions; changed-body rejection; capacity, ownership and admin access.
 - Maintenance blocks and cancellation releasing availability; edit requests preserving original reservations.
 - HTTP authentication, Origin enforcement, HttpOnly cookie, signed quote binding, booking creation/retry, ICS export and cancellation.
-- Administrator approve, reject, block create/delete, and room PATCH, including customer 403s.
+- Administrator approve, reject, block create/delete, room PATCH, and insights reads, including customer 403s.
 - Digilist approval configuration, cross-tenant rejection, failure-versus-unavailability and preserving existing room rules when editing.
 - Dashboard-to-listing URL mapping for hosted payment handoff.
 
-## Manual browser — this quality pass (local demo, Chromium in Cursor)
+## Manual browser — quality polish (local demo, Chromium in Cursor)
 
 Verified on 16 September 2026 against `http://localhost:4173` in demo mode:
 
 1. Date-first search for 17 Sep 2026 09:00–10:00 showed 6 available rooms and hid occupied Tysso, with error vs occupied still distinct.
-2. Room-first path preserved the interval into Sauda 1 detail and checkout (`Bekreft booking · Møterom`). Confirmation banner after submit: “Bookingen er bekreftet”.
-3. Illustrative WebP images loaded (`naturalWidth` 1600) and showed **Illustrasjonsfoto**.
-4. Admin overview used “Rom uten aktivitet nå”. Week view prev/next were “Forrige uke” / “Neste uke”. Dark theme toggled. Mobile nav labelled Administrasjon.
-5. Viewports 360, 390, 768, 1024, 1440: `documentElement.scrollWidth` did not exceed the viewport on the booking detail and admin overview (including 360px admin).
+2. Clicking a room card (photo, name or **Book nå**) opened `/ny-booking?rom=tysso`. `/rom/tysso` redirected to the same wizard. Wizard without `rom` (admin **Ny booking** URL) showed a room list on step 1 after a date was chosen, then slots. Wizard **Tilbake** from a card returned to the listing.
+3. Wizard stepper was **Dato og tid → Kontakt → Bekreft**. Date empty until chosen; Sauda 2 stayed on step 1 slots; occupied 09:00–10:00 could not continue; step 2 required name and email, phone optional, and did not claim SMS or e-post; demo guest confirmed (`Bookingen er bekreftet`) with phone shown on the confirmation page.
+4. `/bestill/sauda-1?…` redirected into step 2 Kontakt. Dark theme and light theme both remained usable. Viewport 360: `documentElement.scrollWidth` did not exceed the viewport on Kontakt or Bekreft.
+5. Illustrative WebP images loaded and showed **Illustrasjonsfoto**. Admin overview used “Pågår nå”. Week view prev/next were “Forrige uke” / “Neste uke”.
+6. Listing cards, search panel and results heading used stronger existing Digilist borders, type and shadows (no new palette). Light and dark on `/` both kept cards distinct from the page background. Viewport 360: listing `scrollWidth` did not exceed the viewport.
+
+## Manual browser — admin insights (local demo, Chromium in Cursor)
+
+Verified on 16 September 2026 against `http://localhost:4173` in demo mode:
+
+1. Oversikt showed **Pågår nå** (not “Rom ledige akkurat nå”), today’s schedule empty-state, and the room calendar.
+2. Sidebar **Innsikt** (`/admin/innsikt`) showed the Demodata coverage banner, period/room filters (room scopes the trend), compare checkbox with dual bars, Recharts weekly/monthly trend with detail panel (hours + booking count + date range), and room table. Reloading `/admin/innsikt?periode=7d&sammenlign=1` restored the same filters. Legacy `/admin?visning=innsikt` redirected to `/admin/innsikt`.
+3. Dark theme on Innsikt remained readable. Device-metrics override did not shrink the Cursor browser below ~600px; no horizontal overflow was measured at that width.
 
 Not claimed: VoiceOver/NVDA, Safari/Firefox, 200% zoom measurement, physical device keyboard, live Digilist, or production.
+
+## Languages (nb / en)
+
+UI catalogs live in `src/i18n/locales/{nb,en}.json`. Default locale is **nb**. Explicit choice is stored in `localStorage` (`moterom.locale`) and cookie `moterom_locale`. Header switcher cycles NB ↔ EN. API errors and insights prose resolve from the cookie / `Accept-Language`. Room names and customer-entered fields are not translated; curated room copy uses `descriptionEn` / `capacityLabelEn`.
 
 ## Manual browser acceptance — still outstanding for launch
 

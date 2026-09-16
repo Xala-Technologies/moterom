@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import {
-  Building2,
-  CalendarDays,
-  LayoutDashboard,
-  LogOut,
-  Moon,
-  Sun,
-} from "lucide-react";
+import { Building2, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { Button } from "./ui";
 import { useApp } from "../context";
 import { post } from "../api";
+import { useI18nLocale, useT } from "../i18n";
 export function Shell() {
   const { config, user, refresh, notify } = useApp();
+  const { t } = useT();
+  const { label, nativeLabel, cycleLocale } = useI18nLocale();
   const location = useLocation();
   const admin = location.pathname.startsWith("/admin");
+  const login = location.pathname === "/login";
+  const building = config?.buildingName || t("common.app_name");
   const [dark, setDark] = useState(() => {
     try {
       return localStorage.getItem("moterom-theme") === "dark";
@@ -32,32 +30,37 @@ export function Shell() {
   }, [dark]);
   useEffect(() => {
     const headings: Record<string, string> = {
-      "/": "Finn rom",
-      "/mine-bookinger": "Mine bookinger",
-      "/admin": "Oversikt",
-      "/admin/calendar": "Romkalender",
-      "/admin/bookings": "Bookinger",
-      "/admin/rooms": "Rom",
-      "/admin/settings": "Innstillinger",
-      "/login": "Logg inn",
+      "/": t("rooms.document_title_find"),
+      "/ny-booking": t("booking.document_title_new"),
+      "/admin": t("admin.document.overview"),
+      "/admin/innsikt": t("admin.document.insights"),
+      "/admin/calendar": t("admin.document.calendar"),
+      "/admin/bookings": t("admin.document.bookings"),
+      "/admin/rooms": t("admin.document.rooms"),
+      "/admin/settings": t("admin.document.settings"),
+      "/login": t("auth.document_title"),
     };
-    const fallback = location.pathname.startsWith("/rom/")
-      ? "Rom"
+    const fallback = location.pathname.startsWith("/ny-booking")
+      ? t("booking.document_title_new")
       : location.pathname.startsWith("/bestill/")
-        ? "Bekreft booking"
+        ? t("booking.document_title_new")
         : location.pathname.startsWith("/booking/")
-          ? "Booking"
+          ? t("booking.document_title_detail")
           : location.pathname.startsWith("/admin")
-            ? "Administrasjon"
-            : "Booking";
-    document.title = `${headings[location.pathname] || fallback} · ${config?.buildingName || "Møterom"}`;
-    document.querySelector<HTMLElement>("#main-content")?.focus();
-  }, [location.pathname, config?.buildingName]);
+            ? t("admin.document.administration")
+            : t("common.booking");
+    document.title = `${headings[location.pathname] || fallback} · ${building}`;
+  }, [location.pathname, building, t]);
+  useEffect(() => {
+    document
+      .querySelector<HTMLElement>("#main-content")
+      ?.focus({ preventScroll: true });
+  }, [location.pathname]);
   const logout = async () => {
     try {
       await post("/auth/logout");
       await refresh();
-      notify("Du er logget ut.");
+      notify(t("auth.logged_out"));
     } catch (e) {
       notify((e as Error).message);
     }
@@ -65,28 +68,40 @@ export function Shell() {
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">
-        Hopp til innhold
+        {t("a11y.skip_to_content")}
       </a>
       <header className="app-header">
-        <NavLink to="/" className="brand" aria-label="Møterom – forsiden">
+        <NavLink to="/" className="brand" aria-label={t("a11y.brand_home")}>
           <img src="/digilist-logo.svg" alt="" />
           <span>
-            {config?.buildingName || "Møterom"}
-            <small>drevet av Digilist</small>
+            {building}
+            <small>{t("common.powered_by_digilist")}</small>
           </span>
         </NavLink>
-        <nav aria-label="Hovedmeny" className="desktop-nav">
-          <NavLink to="/" end>
-            Finn rom
-          </NavLink>
-          <NavLink to="/mine-bookinger">Mine bookinger</NavLink>
-          {user?.isAdmin && <NavLink to="/admin">Administrasjon</NavLink>}
-        </nav>
+        {user?.isAdmin && (
+          <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
+            <NavLink to="/" end>
+              {t("common.find_rooms")}
+            </NavLink>
+            <NavLink to="/admin">{t("common.administration")}</NavLink>
+          </nav>
+        )}
         <div className="header-actions">
           <Button
             variant="tertiary"
+            className="language-switch"
+            data-testid="language-switcher"
+            aria-label={t("a11y.language_switch", { label: nativeLabel })}
+            onClick={cycleLocale}
+          >
+            {label}
+          </Button>
+          <Button
+            variant="tertiary"
             icon
-            aria-label={dark ? "Bruk lyst tema" : "Bruk mørkt tema"}
+            aria-label={
+              dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")
+            }
             onClick={() => setDark(!dark)}
           >
             {dark ? <Sun size={20} /> : <Moon size={20} />}
@@ -97,68 +112,61 @@ export function Shell() {
               <Button
                 variant="tertiary"
                 icon
-                aria-label="Logg ut"
+                aria-label={t("a11y.log_out")}
                 onClick={logout}
               >
                 <LogOut size={20} />
               </Button>
             </>
           ) : (
-            <NavLink
-              className="ds-button"
-              data-variant="secondary"
-              data-size="sm"
-              to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
-            >
-              Logg inn
-            </NavLink>
+            !login && (
+              <NavLink
+                className="ds-button"
+                data-variant="secondary"
+                data-size="sm"
+                to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
+              >
+                {t("auth.log_in")}
+              </NavLink>
+            )
           )}
         </div>
       </header>
-      {config?.mode === "demo" && (
-        <div className="demo-banner">
-          <span className="demo-dot" />
-          <span>
-            Demoversjon · Fiktive bookinger. Ingen e-post eller betaling.
-          </span>
-          <NavLink to="/login">Bytt demorolle</NavLink>
-        </div>
-      )}
       <main
         id="main-content"
         tabIndex={-1}
-        className={admin ? "admin-main" : "page-main"}
+        className={
+          admin ? "admin-main" : login ? "page-main auth-main" : "page-main"
+        }
       >
         <Outlet />
       </main>
-      {!admin && (
+      {!admin && !login && (
         <footer className="app-footer">
           <span>
-            {config?.buildingName || "Møterom"} <span aria-hidden>·</span>{" "}
-            Drevet av Digilist
+            {building} <span aria-hidden>·</span>{" "}
+            {t("common.powered_by_digilist_footer")}
           </span>
-          <span>{config?.address || "Alle tidspunkt vises i norsk tid"}</span>
+          <span>{config?.address || t("common.default_timezone_note")}</span>
           {config?.contactEmail && (
-            <a href={`mailto:${config.contactEmail}`}>Kontakt oss</a>
+            <a href={`mailto:${config.contactEmail}`}>
+              {t("common.contact_us")}
+            </a>
           )}
         </footer>
       )}
-      <nav className="mobile-nav" aria-label="Mobilmeny">
-        <NavLink to="/" end>
-          <Building2 size={21} />
-          Finn rom
-        </NavLink>
-        <NavLink to="/mine-bookinger">
-          <CalendarDays size={21} />
-          Mine bookinger
-        </NavLink>
-        {user?.isAdmin && (
+      {user?.isAdmin && (
+        <nav className="mobile-nav" aria-label={t("a11y.mobile_nav")}>
+          <NavLink to="/" end>
+            <Building2 size={21} />
+            {t("common.find_rooms")}
+          </NavLink>
           <NavLink to="/admin">
             <LayoutDashboard size={21} />
-            Administrasjon
+            {t("common.administration")}
           </NavLink>
-        )}
-      </nav>
+        </nav>
+      )}
     </div>
   );
 }

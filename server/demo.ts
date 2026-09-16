@@ -8,12 +8,16 @@ import type {
   Block,
   Booking,
   BookingInput,
+  InsightsBlock,
+  InsightsBooking,
   Room,
   Search,
   User,
 } from "../shared/types";
 import { addDays, interval, overlaps, today } from "../shared/time";
 import { AppError } from "../shared/validation";
+import { translateMessage } from "../shared/i18n/messages";
+import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
 export class DemoStore {
   db: DatabaseSync;
   constructor(
@@ -101,16 +105,26 @@ export class DemoStore {
   rooms() {
     return this.all<Room>("rooms").map((room) => {
       const seed = this.seedRooms.find((item) => item.id === room.id);
-      if (!seed?.image || room.image) return room;
-      return { ...room, image: seed.image, imageKind: seed.imageKind };
+      return {
+        ...room,
+        image: room.image || seed?.image,
+        imageKind: room.imageKind || seed?.imageKind,
+        descriptionEn: room.descriptionEn || seed?.descriptionEn || "",
+        capacityLabelEn:
+          room.capacityLabelEn || seed?.capacityLabelEn || room.capacityLabel,
+      };
     });
   }
   room(id: string) {
     const room = this.rooms().find((r) => r.id === id);
-    if (!room) throw new AppError(404, "Rommet ble ikke funnet.");
+    if (!room)
+      throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
     return room;
   }
-  availability(search: Search): Availability[] {
+  availability(
+    search: Search,
+    locale: Locale = DEFAULT_LOCALE,
+  ): Availability[] {
     const span = interval(search);
     return this.rooms().map((room) => {
       const occupied =
@@ -125,15 +139,15 @@ export class DemoStore {
         );
       const reason =
         span.startTime < Date.now()
-          ? "Tidspunktet har passert."
+          ? translateMessage(locale, "time_past")
           : search.people > room.capacity
-            ? "For mange deltakere."
+            ? translateMessage(locale, "too_many_participants")
             : occupied
-              ? "Opptatt i deler av tidsrommet."
+              ? translateMessage(locale, "room_busy_partial")
               : undefined;
       return {
         roomId: room.id,
-        state: reason ? "unavailable" : "available",
+        state: reason ? ("unavailable" as const) : ("available" as const),
         reason,
       };
     });
@@ -146,7 +160,11 @@ export class DemoStore {
   booking(id: string, user: User) {
     const b = this.all<Booking>("bookings").find((b) => b.id === id);
     if (!b || (!user.isAdmin && b.userId !== user.id))
-      throw new AppError(404, "Bookingen ble ikke funnet.");
+      throw new AppError(
+        404,
+        "Bookingen ble ikke funnet.",
+        "booking_not_found",
+      );
     return b;
   }
   create(input: BookingInput, user: User, key: string): Booking {
@@ -166,6 +184,7 @@ export class DemoStore {
           throw new AppError(
             409,
             "Bestillingen ble endret. Kontroller opplysningene på nytt.",
+            "booking_fingerprint_mismatch",
           );
         this.db.exec("COMMIT");
         return this.booking(String(old.booking), user);
@@ -178,6 +197,7 @@ export class DemoStore {
         throw new AppError(
           409,
           availability?.reason || "Rommet er ikke ledig.",
+          "room_unavailable",
         );
       const id = randomUUID();
       const booking: Booking = {
@@ -186,8 +206,9 @@ export class DemoStore {
         roomId: room.id,
         roomName: room.name,
         userId: user.id,
-        name: user.name,
-        email: user.email,
+        name: input.name,
+        email: input.email,
+        phone: input.phone || "",
         ...interval(input),
         people: input.people,
         title: input.title,
@@ -217,9 +238,17 @@ export class DemoStore {
   ): Booking {
     const b = this.booking(id, user);
     if (action !== "cancel" && !user.isAdmin)
-      throw new AppError(403, "Du har ikke tilgang til denne handlingen.");
+      throw new AppError(
+        403,
+        "Du har ikke tilgang til denne handlingen.",
+        "action_forbidden",
+      );
     if (action !== "cancel" && b.status !== "pending")
-      throw new AppError(409, "Bookingen venter ikke på godkjenning.");
+      throw new AppError(
+        409,
+        "Bookingen venter ikke på godkjenning.",
+        "booking_not_pending",
+      );
     b.status =
       action === "approve"
         ? "confirmed"
@@ -233,9 +262,17 @@ export class DemoStore {
   requestEdit(id: string, search: Search, user: User) {
     const b = this.booking(id, user);
     if (["cancelled", "rejected"].includes(b.status))
-      throw new AppError(409, "Denne bookingen kan ikke endres.");
+      throw new AppError(
+        409,
+        "Denne bookingen kan ikke endres.",
+        "booking_not_editable",
+      );
     if (interval(search).startTime < Date.now())
-      throw new AppError(400, "Velg et fremtidig tidspunkt.");
+      throw new AppError(
+        400,
+        "Velg et fremtidig tidspunkt.",
+        "future_time_required",
+      );
     // The original interval remains reserved until the request is approved in Digilist.
     b.editRequested = true;
     b.notes =
@@ -253,20 +290,75 @@ export class DemoStore {
       truncated: false,
     };
   }
+  listForInsights(
+    user: User,
+    opts: { fetchFrom: number; fetchTo: number },
+  ): { bookings: InsightsBooking[]; truncated: boolean } {
+    this.assertAdmin(user);
+    return {
+      truncated: false,
+      bookings: this.all<Booking>("bookings")
+        .filter((b) => b.endTime > opts.fetchFrom && b.startTime < opts.fetchTo)
+        .map((b) => ({
+          id: b.id,
+          roomId: b.roomId,
+          startTime: b.startTime,
+          endTime: b.endTime,
+          status: b.status,
+        })),
+    };
+  }
+  listBlocksForInsights(user: User): InsightsBlock[] {
+    this.assertAdmin(user);
+    return this.all<Block>("blocks");
+  }
   assertAdmin(user: User) {
     if (!user.isAdmin)
-      throw new AppError(403, "Du har ikke administratortilgang.");
+      throw new AppError(
+        403,
+        "Du har ikke administratortilgang.",
+        "admin_required",
+      );
   }
   updateRoom(
     id: string,
-    patch: Pick<Room, "name" | "capacity" | "description" | "requiresApproval">,
+    patch: {
+      name: string;
+      capacity: number;
+      description: string;
+      descriptionEn?: string;
+      capacityLabel?: string;
+      capacityLabelEn?: string;
+      requiresApproval: boolean;
+      image?: string;
+      imageKind?: "illustrative" | "actual";
+      amenities?: string[];
+      arrivalInfo?: string;
+    },
     user: User,
   ) {
     this.assertAdmin(user);
+    const current = this.room(id);
+    const image =
+      patch.image !== undefined
+        ? patch.image.trim() || undefined
+        : current.image;
     const room = {
-      ...this.room(id),
+      ...current,
       ...patch,
-      capacityLabel: `${patch.capacity} personer`,
+      image,
+      imageKind: image
+        ? (patch.imageKind ?? current.imageKind ?? "illustrative")
+        : undefined,
+      amenities: patch.amenities ?? current.amenities ?? [],
+      arrivalInfo: patch.arrivalInfo?.trim() || undefined,
+      capacityLabel:
+        patch.capacityLabel?.trim() || `${patch.capacity} personer`,
+      capacityLabelEn:
+        patch.capacityLabelEn?.trim() ||
+        current.capacityLabelEn ||
+        `${patch.capacity} people`,
+      descriptionEn: patch.descriptionEn ?? current.descriptionEn ?? "",
     };
     this.save("rooms", room);
     this.audit(user, "room.updated", id);
@@ -277,7 +369,11 @@ export class DemoStore {
     this.room(roomId);
     const span = interval(search);
     if (span.startTime < Date.now())
-      throw new AppError(400, "Velg et fremtidig tidspunkt.");
+      throw new AppError(
+        400,
+        "Velg et fremtidig tidspunkt.",
+        "future_time_required",
+      );
     if (
       this.availability({ ...search, people: 1 }).find(
         (r) => r.roomId === roomId,
@@ -286,6 +382,7 @@ export class DemoStore {
       throw new AppError(
         409,
         "Tidsrommet overlapper en booking eller blokkering.",
+        "interval_overlaps",
       );
     const block: Block = { id: randomUUID(), roomId, title, ...span };
     this.save("blocks", block);

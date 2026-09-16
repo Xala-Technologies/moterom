@@ -2,44 +2,60 @@ import { Link } from "react-router-dom";
 import { ArrowRight, UsersRound } from "lucide-react";
 import type { Availability, Room } from "../../shared/types";
 import { RoomPhoto } from "./RoomPhoto";
+import { roomCopy, useI18nLocale, useT } from "../i18n";
+export function bookHref(roomId: string, query = "") {
+  const params = new URLSearchParams(query);
+  params.set("rom", roomId);
+  return `/ny-booking?${params}`;
+}
 export function RoomCard({
   room,
   availability,
   query = "",
   list = false,
+  selected = false,
+  action,
 }: {
   room: Room;
   availability?: Availability;
   query?: string;
   list?: boolean;
+  selected?: boolean;
+  action?: { to: string; label: string; ariaLabel: string };
 }) {
-  const href = `/rom/${room.id}${query ? `?${query}` : ""}`;
+  const { t } = useT();
+  const { locale } = useI18nLocale();
+  const copy = roomCopy(room, locale);
+  const href = action?.to ?? bookHref(room.id, query);
+  const label = action?.label ?? t("rooms.book_now");
+  const ariaLabel =
+    action?.ariaLabel ?? t("rooms.book_room_aria", { name: room.name });
   return (
-    <article className={`room-card ${list ? "room-row" : ""}`}>
-      <Link to={href} className="room-media" tabIndex={-1} aria-hidden="true">
-        <RoomPhoto room={room} variant="card" />
-      </Link>
+    <article
+      className={`room-card ${list ? "room-row" : ""}${selected ? " is-selected" : ""}`}
+    >
+      <div className="room-media">
+        <RoomPhoto room={room} />
+      </div>
       <div className="room-card-content">
         <div className="room-card-top">
-          <span className="eyebrow">Møterom</span>
+          <span className="eyebrow">{t("common.meeting_room")}</span>
           {availability && (
             <span className={`availability-badge ${availability.state}`}>
               {availability.state === "available"
-                ? "Ledig"
+                ? t("rooms.available")
                 : availability.state === "error"
-                  ? "Ukjent ledighet"
-                  : "Ikke ledig"}
+                  ? t("rooms.availability_unknown")
+                  : t("rooms.unavailable")}
             </span>
           )}
         </div>
-        <h2>
-          <Link to={href}>{room.name}</Link>
-        </h2>
+        <h2>{room.name}</h2>
         <p className="room-capacity">
           <UsersRound size={17} />
-          {room.capacityLabel}
+          {copy.capacityLabel}
         </p>
-        <p className="room-description">{room.description}</p>
+        <p className="room-description">{copy.description}</p>
         {room.amenities.length > 0 && (
           <div className="amenities">
             {room.amenities.slice(0, 3).map((item) => (
@@ -50,19 +66,15 @@ export function RoomCard({
         <div className="room-card-footer">
           <span className="caption">
             {availability?.state === "available"
-              ? "Ledig hele tidsrommet"
+              ? t("rooms.caption_available")
               : availability?.state === "unavailable"
-                ? "Se andre tidspunkt"
+                ? t("rooms.caption_unavailable")
                 : availability?.state === "error"
-                  ? "Prøv ledighetssøket igjen"
-                  : "Velg tidspunkt for ledighet"}
+                  ? t("rooms.caption_error")
+                  : t("rooms.caption_default")}
           </span>
-          <Link
-            to={href}
-            className="room-action"
-            aria-label={`Se ${room.name}`}
-          >
-            {availability?.state === "available" ? "Velg rom" : "Se rom"}
+          <Link to={href} className="room-action" aria-label={ariaLabel}>
+            {label}
             <ArrowRight size={17} />
           </Link>
         </div>
