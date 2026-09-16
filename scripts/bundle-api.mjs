@@ -1,8 +1,8 @@
 import * as esbuild from "esbuild";
 
 await esbuild.build({
-  entryPoints: ["api/entry.ts"],
-  outfile: "api/app.bundle.js",
+  entryPoints: ["server/vercel-entry.ts"],
+  outfile: "api/_app.bundle.js",
   bundle: true,
   platform: "node",
   format: "esm",

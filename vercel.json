@@ -7,7 +7,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 30,
-      "includeFiles": "{dist/**,config/**,public/rooms/**,api/app.bundle.js}"
+      "includeFiles": "{dist/**,config/**,public/rooms/**,api/_app.bundle.js}"
     }
   }
 }
