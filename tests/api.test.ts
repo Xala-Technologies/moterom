@@ -48,8 +48,15 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     await request(app)
       .post("/api/auth/demo")
       .set("Origin", "https://other.invalid")
+      .set("Host", "localhost:4173")
       .send({ role: "admin" })
       .expect(403);
+    await request(app)
+      .post("/api/auth/demo")
+      .set("Origin", "https://moterom.vercel.app")
+      .set("Host", "moterom.vercel.app")
+      .send({ role: "admin" })
+      .expect(200);
     await customer.get("/api/admin").expect(403);
     await administrator.get("/api/admin").expect(200);
     await customer.get("/api/bookings/example-1").expect(404);
