@@ -10,5 +10,7 @@ playwright-report/
 *.tsbuildinfo
 assets/floor-plan.png
 .vercel
+api/_app.bundle.js
+api/_app.bundle.js.map
 api/app.bundle.js
 api/app.bundle.js.map
