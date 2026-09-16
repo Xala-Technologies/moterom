@@ -8,13 +8,13 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
-  Building2,
   CalendarDays,
   CheckCircle2,
   Clock3,
   Download,
   Edit3,
   RotateCcw,
+  UsersRound,
   X,
 } from "lucide-react";
 import { useApp } from "../context";
@@ -30,9 +30,26 @@ import {
   validateSearch,
 } from "../components/ui";
 import { bookHref } from "../components/RoomCard";
-import type { Booking, Search } from "../../shared/types";
+import { RoomPhoto } from "../components/RoomPhoto";
+import type { Booking, Room, Search } from "../../shared/types";
 import { addDays, searchParams, toSearch, today } from "../../shared/time";
 import { useFormatters, useT } from "../i18n";
+
+function roomFallback(booking: Booking): Room {
+  return {
+    id: booking.roomId,
+    name: booking.roomName,
+    slug: booking.roomId,
+    capacity: 0,
+    capacityLabel: "",
+    capacityLabelEn: "",
+    description: "",
+    descriptionEn: "",
+    amenities: [],
+    requiresApproval: false,
+  };
+}
+
 export function BookingDetail() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -41,6 +58,7 @@ export function BookingDetail() {
   const { t } = useT();
   const { displayDate, shortTime, money } = useFormatters();
   const result = useApi<Booking>(user ? `/bookings/${id}` : null);
+  const rooms = useApi<Room[]>(user ? "/rooms" : null);
   const [modal, setModal] = useState<"cancel" | "edit" | null>(null);
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
@@ -69,6 +87,9 @@ export function BookingDetail() {
   const active =
     !["cancelled", "rejected", "completed"].includes(b.status) &&
     b.endTime > Date.now();
+  const room =
+    rooms.data?.find((entry) => entry.id === b.roomId) ?? roomFallback(b);
+  const showPeople = typeof b.people === "number" && b.people > 0;
   const action = async () => {
     if (!modal) return;
     setBusy(true);
@@ -106,14 +127,14 @@ export function BookingDetail() {
         {t("common.find_rooms")}
       </Link>
       {params.has("ny") && (
-        <div className="confirmation-banner">
-          <CheckCircle2 size={32} />
+        <div className="confirmation-banner" role="status">
+          <CheckCircle2 size={28} aria-hidden="true" />
           <div>
-            <h1>
+            <p className="confirmation-banner-title">
               {b.status === "confirmed"
                 ? t("booking.confirmed_banner")
                 : t("booking.request_sent_banner")}
-            </h1>
+            </p>
             <p>
               {b.status === "confirmed"
                 ? t("booking.confirmed_body")
@@ -122,29 +143,40 @@ export function BookingDetail() {
           </div>
         </div>
       )}
-      <div className="booking-detail-heading">
-        <div>
+      <div className="booking-detail-summary">
+        <div className="booking-detail-photo">
+          <RoomPhoto room={room} />
+        </div>
+        <div className="booking-detail-heading">
           <Status status={b.status} />
           <h1>{b.roomName}</h1>
           <p className="muted">
             {t("booking.reference", { reference: b.reference })}
           </p>
         </div>
-        <Building2 size={40} strokeWidth={1.2} />
       </div>
-      <div className="booking-facts">
+      <div
+        className={`booking-facts${showPeople ? " booking-facts-three" : ""}`}
+      >
         <div>
-          <CalendarDays />
+          <CalendarDays aria-hidden="true" />
           <span>{t("common.date")}</span>
           <strong>{displayDate(b.startTime, true)}</strong>
         </div>
         <div>
-          <Clock3 />
+          <Clock3 aria-hidden="true" />
           <span>{t("booking.time_label")}</span>
           <strong>
             {shortTime(b.startTime)}–{shortTime(b.endTime)}
           </strong>
         </div>
+        {showPeople ? (
+          <div>
+            <UsersRound aria-hidden="true" />
+            <span>{t("booking.participants")}</span>
+            <strong>{b.people}</strong>
+          </div>
+        ) : null}
       </div>
       <div className="detail-action-bar">
         <a
@@ -198,7 +230,7 @@ export function BookingDetail() {
         </div>
       )}
       <div className="booking-information">
-        <section>
+        <section className="booking-info-panel">
           <h2>{t("booking.details")}</h2>
           <dl className="simple-dl">
             <div>
@@ -240,7 +272,7 @@ export function BookingDetail() {
           </dl>
           {b.notes && <p className="preserve-lines">{b.notes}</p>}
         </section>
-        <section>
+        <section className="booking-info-panel">
           <h2>{t("booking.before_you_arrive")}</h2>
           <p>{config?.address || t("booking.access_fallback")}</p>
           {config?.contactEmail && (

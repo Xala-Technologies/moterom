@@ -1,4 +1,10 @@
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   Link,
   NavLink,
@@ -16,6 +22,7 @@ import {
   ChevronRight,
   ClipboardList,
   Clock3,
+  Download,
   LayoutDashboard,
   LockKeyhole,
   Plus,
@@ -81,6 +88,22 @@ export function Admin() {
   const result = useApi<AdminData>(user?.isAdmin ? "/admin" : null);
   const [date, setDate] = useState(today());
   const [view, setView] = useState<"day" | "week">("day");
+  const dateControlsRef = useRef<HTMLDivElement>(null);
+  const dateControlsViewportTop = useRef<number | null>(null);
+  const changeDate = (next: string) => {
+    if (next === date) return;
+    dateControlsViewportTop.current =
+      dateControlsRef.current?.getBoundingClientRect().top ?? null;
+    setDate(next);
+  };
+  useLayoutEffect(() => {
+    const top = dateControlsViewportTop.current;
+    const el = dateControlsRef.current;
+    dateControlsViewportTop.current = null;
+    if (top == null || !el) return;
+    const delta = el.getBoundingClientRect().top - top;
+    if (delta !== 0) window.scrollBy(0, delta);
+  }, [date]);
   const [status, setStatus] = useState("all");
   const [term, setTerm] = useState("");
   const [event, setEvent] = useState<CalendarEvent>();
@@ -224,18 +247,18 @@ export function Admin() {
   const calendar = (
     <>
       <div className="calendar-toolbar">
-        <div className="date-controls">
+        <div className="date-controls" ref={dateControlsRef}>
           <Button
             variant="secondary"
             icon
             aria-label={
               view === "week" ? t("a11y.previous_week") : t("a11y.previous_day")
             }
-            onClick={() => setDate(addDays(date, view === "week" ? -7 : -1))}
+            onClick={() => changeDate(addDays(date, view === "week" ? -7 : -1))}
           >
             <ChevronLeft size={18} />
           </Button>
-          <Button variant="secondary" onClick={() => setDate(today())}>
+          <Button variant="secondary" onClick={() => changeDate(today())}>
             {t("admin.today")}
           </Button>
           <Button
@@ -244,7 +267,7 @@ export function Admin() {
             aria-label={
               view === "week" ? t("a11y.next_week") : t("a11y.next_day")
             }
-            onClick={() => setDate(addDays(date, view === "week" ? 7 : 1))}
+            onClick={() => changeDate(addDays(date, view === "week" ? 7 : 1))}
           >
             <ChevronRight size={18} />
           </Button>
@@ -253,7 +276,7 @@ export function Admin() {
             type="date"
             value={date}
             onChange={(e) => {
-              if (e.target.value) setDate(e.target.value);
+              if (e.target.value) changeDate(e.target.value);
             }}
           />
         </div>
@@ -619,9 +642,9 @@ export function Admin() {
                   const copy = roomCopy(room, locale);
                   return (
                     <article className="admin-room" key={room.id}>
-                      <span className="room-icon">
-                        <Building2 size={25} />
-                      </span>
+                      <div className="admin-room-media">
+                        <RoomPhoto room={room} />
+                      </div>
                       <div>
                         <h2>{room.name}</h2>
                         <p>
@@ -790,13 +813,14 @@ export function Admin() {
               </Button>
             ) : (
               <>
-                <Link
+                <a
                   className="ds-button"
                   data-variant="secondary"
-                  to={`/booking/${event.id}`}
+                  href={`/api/bookings/${event.id}/calendar.ics`}
                 >
-                  {t("admin.open_booking")}
-                </Link>
+                  <Download size={18} />
+                  {t("booking.add_to_calendar")}
+                </a>
                 {event.status === "pending" && (
                   <>
                     <Button
