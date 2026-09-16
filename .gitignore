@@ -9,3 +9,6 @@ playwright-report/
 *.log
 *.tsbuildinfo
 assets/floor-plan.png
+.vercel
+api/app.bundle.js
+api/app.bundle.js.map
