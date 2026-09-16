@@ -1,0 +1,14 @@
+/**
+ * Platform base bundle — everything except the color theme.
+ * Use this when you need dynamic/multi-tenant theme switching.
+ *
+ * The color theme CSS should be loaded separately based on tenant settings.
+ *
+ * Usage: import '@xala/ds/platform-base';
+ */
+@import '@digdir/designsystemet-css/theme.css';
+/* Native Digdir tokens (sizes, typography, colors) */
+@import './common-extensions.css';
+/* Platform tokens + component CSS + mobile */
+@import './base.css';
+/* Base document styles */

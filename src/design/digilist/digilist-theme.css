@@ -1,0 +1,778 @@
+/**
+ * Xala Navy Color Theme
+ *
+ * Navy color scheme overrides for the Xala design system.
+ * Primary: #003057 (Navy Blue)
+ *
+ * This file contains ONLY color tokens. Shared layout tokens,
+ * component CSS, and responsive utilities live in common-extensions.css.
+ *
+ * @layer ds.app - Loaded after ds.theme layers
+ */
+
+@layer ds.app {
+
+  /* ==========================================================================
+   * XALA NAVY THEME - LIGHT MODE
+   * Primary: #003057 (Navy Blue)
+   * Ring/Focus: #1e40af (Blue)
+   * ========================================================================== */
+
+  /* DIGLIST-49: `[data-color-scheme="auto"]` joined this selector list so
+     when DesignsystemetProvider stamps a child div with auto and the OS
+     prefers light, Digilist light tokens apply instead of falling through
+     to Digdir blue (#0062ba). The dark override below
+     (`@media (prefers-color-scheme: dark) { [data-color-scheme="auto"] }`)
+     still wins when the OS prefers dark. */
+  :root, [data-color-scheme="light"], [data-color-scheme="auto"] {
+
+    /* ── Global spacing scale — shrink only spacing tokens by ~10% ──
+       Digdir derives `--ds-size-unit` (which drives every --ds-size-N
+       spacing token) from `--ds-size-step / --ds-size-base`. Lowering
+       just the step from 4 → 3.6 shrinks padding/margin/gap uniformly
+       by 10% while leaving `--ds-font-size-*` untouched — typography
+       remains at Digdir defaults for readability. */
+    --ds-size-step: 3.6;
+
+    /* ── Card size tokens — reused by ListingCard, ListingMap popups.
+       Kept as semantic aliases so a single edit rescales every card. */
+    --ds-size-card-detailed: 520px;
+    --ds-size-card-popup: 440px;       /* map click popup */
+    --ds-size-card-hover: 330px;       /* map hover card */
+    --ds-size-card-compact-content-padding: var(--ds-size-4);
+
+    /* ── Icon button size tokens (circular controls) ───────────── */
+    --ds-size-icon-btn-sm: 26px;
+    --ds-size-icon-btn-md: 32px;
+    --ds-size-icon-btn-lg: 36px;
+
+    /* ── Listing card image aspect heights ─────────────────────── */
+    --ds-size-card-image-desktop: 180px;
+    --ds-size-card-image-tablet: 160px;
+    --ds-size-card-image-compact: 160px;
+
+    /* ── Border radius scale — referenced throughout the codebase
+       via `var(--digilist-radius-*, NNpx)` fallback pattern. Defining
+       them here lets a single edit rescale every radius consumer. */
+    --digilist-radius-sm: 4px;
+    --digilist-radius-md: 8px;
+    --digilist-radius-lg: 12px;
+    --digilist-radius-pill: 999px;
+
+    /* ── Booking-status palette ────────────────────────────────────
+       Single source of truth for availability calendars, slot grids,
+       and block-type chips. The palette follows a "soft background +
+       strong border/dot + dark text" pattern (Tailwind-ish: 100 / 600
+       / 800) so cells stay legible at a glance without screaming for
+       attention.
+
+       Each status exposes:
+         --digilist-status-<name>-bg            cell background
+         --digilist-status-<name>-bg-hover      hover background
+         --digilist-status-<name>-border        strong border / legend dot
+         --digilist-status-<name>-fg            text on cell
+         --digilist-status-selected-ring        glow shadow for selected
+
+       "Valgt" uses a DEEP EMERALD cell with a BRIGHT GREEN border and a
+       subtle ring so it stays in the green-booking color family while
+       being unmistakably different from the soft-green "Ledig" state.
+       Light/Dark variants are emitted below for [data-color-scheme]
+       and prefers-color-scheme. */
+    --digilist-status-available-bg: #DCFCE7;
+    --digilist-status-available-bg-hover: #BBF7D0;
+    --digilist-status-available-border: #16A34A;
+    --digilist-status-available-fg: #166534;
+
+    --digilist-status-reserved-bg: #FEF3C7;
+    --digilist-status-reserved-bg-hover: #FDE68A;
+    --digilist-status-reserved-border: #F59E0B;
+    --digilist-status-reserved-fg: #92400E;
+
+    --digilist-status-booked-bg: #FEE2E2;
+    --digilist-status-booked-bg-hover: #FECACA;
+    --digilist-status-booked-border: #DC2626;
+    --digilist-status-booked-fg: #991B1B;
+
+    --digilist-status-selected-bg: #052E16;
+    --digilist-status-selected-bg-hover: #064E3B;
+    --digilist-status-selected-border: #22C55E;
+    --digilist-status-selected-fg: #DCFCE7;
+    --digilist-status-selected-ring: 0 0 0 2px rgba(34, 197, 94, 0.35);
+
+    /* Utilgjengelig — light grey (past / outside hours) */
+    --digilist-status-unavailable-bg: #E5E7EB;
+    --digilist-status-unavailable-bg-hover: #D1D5DB;
+    --digilist-status-unavailable-border: #9CA3AF;
+    --digilist-status-unavailable-fg: #374151;
+
+    /* Owner block — same black as Stengt on the interactive calendar legend (XAL-1230) */
+    --digilist-status-blocked-bg: #111827;
+    --digilist-status-blocked-bg-hover: #020617;
+    --digilist-status-blocked-border: #020617;
+    --digilist-status-blocked-fg: #F9FAFB;
+
+    --digilist-status-closed-bg: #111827;
+    --digilist-status-closed-bg-hover: #020617;
+    --digilist-status-closed-border: #020617;
+    --digilist-status-closed-fg: #F9FAFB;
+
+    /* ── Accent (Navy #003057) ────────────────────────────────── */
+    --ds-color-accent-background-default: #ffffff;
+    --ds-color-accent-background-tinted: #eef4fb;
+    --ds-color-accent-surface-default: #ffffff;
+    --ds-color-accent-surface-tinted: #dce7f3;
+    --ds-color-accent-surface-hover: #c8d8e8;
+    --ds-color-accent-surface-active: #b3c8dd;
+    --ds-color-accent-border-subtle: #93c5fd;
+    --ds-color-accent-border-default: #1e40af;
+    --ds-color-accent-border-strong: #003057;
+    --ds-color-accent-text-subtle: #003057;
+    --ds-color-accent-text-default: #0f172a;
+    --ds-color-accent-base-default: #003057;
+    --ds-color-accent-base-hover: #002244;
+    --ds-color-accent-base-active: #001a33;
+    --ds-color-accent-base-contrast-subtle: #e0f2fe;
+    --ds-color-accent-base-contrast-default: #ffffff;
+    --ds-color-accent-contrast-default: #ffffff;
+
+    /* ── Neutral (Slate) ──────────────────────────────────────── */
+    --ds-color-neutral-background-default: #ffffff;
+    --ds-color-neutral-background-tinted: #f8fafc;
+    --ds-color-neutral-surface-default: #ffffff;
+    --ds-color-neutral-surface-tinted: #e2e8f0;
+    --ds-color-neutral-surface-subtle: #f8fafc;
+    --ds-color-neutral-surface-hover: #f1f5f9;
+    --ds-color-neutral-surface-active: #cbd5e1;
+    --ds-color-neutral-border-subtle: #e2e8f0;
+    --ds-color-neutral-border-default: #cbd5e1;
+    --ds-color-neutral-border-strong: #94a3b8;
+    --ds-color-neutral-text-subtle: #556173;
+    --ds-color-neutral-text-default: #0f172a;
+    --ds-color-neutral-base-default: #0f172a;
+    --ds-color-neutral-base-hover: #1e293b;
+    --ds-color-neutral-base-active: #334155;
+    --ds-color-neutral-base-contrast-subtle: #f8fafc;
+    --ds-color-neutral-base-contrast-default: #ffffff;
+
+    /* ── Success (Teal #0d9488) ───────────────────────────────── */
+    --ds-color-success-background-default: #ffffff;
+    --ds-color-success-background-tinted: #f0fdfa;
+    --ds-color-success-surface-default: #ffffff;
+    --ds-color-success-surface-tinted: #ccfbf1;
+    --ds-color-success-surface-hover: #99f6e4;
+    --ds-color-success-surface-active: #5eead4;
+    --ds-color-success-border-subtle: #5eead4;
+    --ds-color-success-border-default: #14b8a6;
+    --ds-color-success-border-strong: #0d9488;
+    --ds-color-success-text-subtle: #0d9488;
+    --ds-color-success-text-default: #134e4a;
+    --ds-color-success-base-default: #0d9488;
+    --ds-color-success-base-hover: #0f766e;
+    --ds-color-success-base-active: #115e59;
+    --ds-color-success-base-contrast-subtle: #ccfbf1;
+    --ds-color-success-base-contrast-default: #ffffff;
+
+    /* ── Warning (Orange #ea580c) ─────────────────────────────── */
+    --ds-color-warning-background-default: #ffffff;
+    --ds-color-warning-background-tinted: #fff7ed;
+    --ds-color-warning-surface-default: #ffffff;
+    --ds-color-warning-surface-tinted: #ffedd5;
+    --ds-color-warning-surface-hover: #fed7aa;
+    --ds-color-warning-surface-active: #fdba74;
+    --ds-color-warning-border-subtle: #fdba74;
+    --ds-color-warning-border-default: #f97316;
+    --ds-color-warning-border-strong: #ea580c;
+    --ds-color-warning-text-subtle: #ea580c;
+    --ds-color-warning-text-default: #7c2d12;
+    --ds-color-warning-base-default: #ea580c;
+    --ds-color-warning-base-hover: #c2410c;
+    --ds-color-warning-base-active: #9a3412;
+    --ds-color-warning-base-contrast-subtle: #ffedd5;
+    --ds-color-warning-base-contrast-default: #ffffff;
+
+    /* ── Danger (Red #dc2626) ─────────────────────────────────── */
+    --ds-color-danger-background-default: #ffffff;
+    --ds-color-danger-background-tinted: #fef2f2;
+    --ds-color-danger-surface-default: #ffffff;
+    --ds-color-danger-surface-tinted: #fee2e2;
+    --ds-color-danger-surface-hover: #fecaca;
+    --ds-color-danger-surface-active: #fca5a5;
+    --ds-color-danger-border-subtle: #fca5a5;
+    --ds-color-danger-border-default: #ef4444;
+    --ds-color-danger-border-strong: #dc2626;
+    --ds-color-danger-text-subtle: #dc2626;
+    --ds-color-danger-text-default: #7f1d1d;
+    --ds-color-danger-base-default: #dc2626;
+    --ds-color-danger-base-hover: #b91c1c;
+    --ds-color-danger-base-active: #991b1b;
+    --ds-color-danger-base-contrast-subtle: #fee2e2;
+    --ds-color-danger-base-contrast-default: #ffffff;
+
+    /* ── Info (Blue #2563eb) ───────────────────────────────────── */
+    --ds-color-info-background-default: #ffffff;
+    --ds-color-info-background-tinted: #eff6ff;
+    --ds-color-info-surface-default: #ffffff;
+    --ds-color-info-surface-tinted: #dbeafe;
+    --ds-color-info-surface-hover: #bfdbfe;
+    --ds-color-info-surface-active: #93c5fd;
+    --ds-color-info-border-subtle: #93c5fd;
+    --ds-color-info-border-default: #3b82f6;
+    --ds-color-info-border-strong: #2563eb;
+    --ds-color-info-text-subtle: #2563eb;
+    --ds-color-info-text-default: #1e3a8a;
+    --ds-color-info-base-default: #2563eb;
+    --ds-color-info-base-hover: #1d4ed8;
+    --ds-color-info-base-active: #1e40af;
+    --ds-color-info-base-contrast-subtle: #dbeafe;
+    --ds-color-info-base-contrast-default: #ffffff;
+
+    /* ── Brand 1 (Blue #2563eb) ───────────────────────────────── */
+    --ds-color-brand1-background-default: #ffffff;
+    --ds-color-brand1-background-tinted: #eff6ff;
+    --ds-color-brand1-surface-default: #ffffff;
+    --ds-color-brand1-surface-tinted: #dbeafe;
+    --ds-color-brand1-surface-hover: #bfdbfe;
+    --ds-color-brand1-surface-active: #93c5fd;
+    --ds-color-brand1-border-subtle: #93c5fd;
+    --ds-color-brand1-border-default: #3b82f6;
+    --ds-color-brand1-border-strong: #2563eb;
+    --ds-color-brand1-text-subtle: #2563eb;
+    --ds-color-brand1-text-default: #1e3a8a;
+    --ds-color-brand1-base-default: #2563eb;
+    --ds-color-brand1-base-hover: #1d4ed8;
+    --ds-color-brand1-base-active: #1e40af;
+    --ds-color-brand1-base-contrast-subtle: #dbeafe;
+    --ds-color-brand1-base-contrast-default: #ffffff;
+
+    /* ── Brand 2 (Purple #9333ea) ─────────────────────────────── */
+    --ds-color-brand2-background-default: #ffffff;
+    --ds-color-brand2-background-tinted: #faf5ff;
+    --ds-color-brand2-surface-default: #ffffff;
+    --ds-color-brand2-surface-tinted: #f3e8ff;
+    --ds-color-brand2-surface-hover: #e9d5ff;
+    --ds-color-brand2-surface-active: #d8b4fe;
+    --ds-color-brand2-border-subtle: #d8b4fe;
+    --ds-color-brand2-border-default: #a855f7;
+    --ds-color-brand2-border-strong: #9333ea;
+    --ds-color-brand2-text-subtle: #9333ea;
+    --ds-color-brand2-text-default: #581c87;
+    --ds-color-brand2-base-default: #9333ea;
+    --ds-color-brand2-base-hover: #7e22ce;
+    --ds-color-brand2-base-active: #6b21a8;
+    --ds-color-brand2-base-contrast-subtle: #f3e8ff;
+    --ds-color-brand2-base-contrast-default: #ffffff;
+
+    /* ── Brand 3 (Orange #ea580c) ─────────────────────────────── */
+    --ds-color-brand3-background-default: #ffffff;
+    --ds-color-brand3-background-tinted: #fff7ed;
+    --ds-color-brand3-surface-default: #ffffff;
+    --ds-color-brand3-surface-tinted: #ffedd5;
+    --ds-color-brand3-surface-hover: #fed7aa;
+    --ds-color-brand3-surface-active: #fdba74;
+    --ds-color-brand3-border-subtle: #fdba74;
+    --ds-color-brand3-border-default: #f97316;
+    --ds-color-brand3-border-strong: #ea580c;
+    --ds-color-brand3-text-subtle: #ea580c;
+    --ds-color-brand3-text-default: #7c2d12;
+    --ds-color-brand3-base-default: #ea580c;
+    --ds-color-brand3-base-hover: #c2410c;
+    --ds-color-brand3-base-active: #9a3412;
+    --ds-color-brand3-base-contrast-subtle: #ffedd5;
+    --ds-color-brand3-base-contrast-default: #ffffff;
+  }
+
+  /* ==========================================================================
+   * XALA NAVY THEME - DARK MODE
+   * Deep navy palette - unified dark blue tones
+   * Background: #020817 (deep navy)
+   * Surface/Card: #0a1628 (dark navy)
+   * Elevated: #0f1d32 (navy)
+   * ========================================================================== */
+
+  [data-color-scheme="dark"] {
+
+    /* ── Accent (Navy — dark mode) ────────────────────────────── */
+    --ds-color-accent-background-default: #020817;
+    --ds-color-accent-background-tinted: #0a1628;
+    --ds-color-accent-surface-default: #0a1628;
+    --ds-color-accent-surface-tinted: #0f1d32;
+    --ds-color-accent-surface-hover: #0f1d32;
+    --ds-color-accent-surface-active: #152a4a;
+    --ds-color-accent-border-subtle: #1e3a5f;
+    --ds-color-accent-border-default: #3b82f6;
+    --ds-color-accent-border-strong: #60a5fa;
+    --ds-color-accent-text-subtle: #60a5fa;
+    --ds-color-accent-text-default: #93c5fd;
+    --ds-color-accent-base-default: #1e3a5f;
+    --ds-color-accent-base-hover: #2a4a70;
+    --ds-color-accent-base-active: #365a82;
+    --ds-color-accent-base-contrast-subtle: #f0f9ff;
+    --ds-color-accent-base-contrast-default: #ffffff;
+
+    /* ── Neutral (Slate — dark mode) ──────────────────────────── */
+    --ds-color-neutral-background-default: #020817;
+    --ds-color-neutral-background-tinted: #0a1628;
+    --ds-color-neutral-surface-default: #0a1628;
+    --ds-color-neutral-surface-tinted: #0f1d32;
+    --ds-color-neutral-surface-subtle: #0a1628;
+    --ds-color-neutral-surface-hover: #0f1d32;
+    --ds-color-neutral-surface-active: #152a4a;
+    --ds-color-neutral-border-subtle: #0f1d32;
+    --ds-color-neutral-border-default: #1e3a5f;
+    --ds-color-neutral-border-strong: #2a4a70;
+    --ds-color-neutral-text-subtle: #94a3b8;
+    --ds-color-neutral-text-default: #f8fafc;
+    --ds-color-neutral-base-default: #0f1d32;
+    --ds-color-neutral-base-hover: #152a4a;
+    --ds-color-neutral-base-active: #1e3a5f;
+    --ds-color-neutral-base-contrast-subtle: #1e293b;
+    --ds-color-neutral-base-contrast-default: #ffffff;
+
+    /* ── Success (Teal — dark mode) ───────────────────────────── */
+    --ds-color-success-background-default: #020817;
+    --ds-color-success-background-tinted: #042f2e;
+    --ds-color-success-surface-default: #042f2e;
+    --ds-color-success-surface-tinted: #064e45;
+    --ds-color-success-surface-hover: #0a6b5f;
+    --ds-color-success-surface-active: #0d8879;
+    --ds-color-success-border-subtle: #0d9488;
+    --ds-color-success-border-default: #14b8a6;
+    --ds-color-success-border-strong: #2dd4bf;
+    --ds-color-success-text-subtle: #5eead4;
+    --ds-color-success-text-default: #99f6e4;
+    --ds-color-success-base-default: #14b8a6;
+    --ds-color-success-base-hover: #2dd4bf;
+    --ds-color-success-base-active: #5eead4;
+    --ds-color-success-base-contrast-subtle: #042f2e;
+    --ds-color-success-base-contrast-default: #134e4a;
+
+    /* ── Warning (Orange — dark mode) ─────────────────────────── */
+    --ds-color-warning-background-default: #020817;
+    --ds-color-warning-background-tinted: #431407;
+    --ds-color-warning-surface-default: #431407;
+    --ds-color-warning-surface-tinted: #6b2a0c;
+    --ds-color-warning-surface-hover: #8b3e12;
+    --ds-color-warning-surface-active: #a85218;
+    --ds-color-warning-border-subtle: #c2410c;
+    --ds-color-warning-border-default: #ea580c;
+    --ds-color-warning-border-strong: #f97316;
+    --ds-color-warning-text-subtle: #fb923c;
+    --ds-color-warning-text-default: #fed7aa;
+    --ds-color-warning-base-default: #f97316;
+    --ds-color-warning-base-hover: #fb923c;
+    --ds-color-warning-base-active: #fdba74;
+    --ds-color-warning-base-contrast-subtle: #431407;
+    --ds-color-warning-base-contrast-default: #7c2d12;
+
+    /* ── Danger (Red — dark mode) ─────────────────────────────── */
+    --ds-color-danger-background-default: #020817;
+    --ds-color-danger-background-tinted: #450a0a;
+    --ds-color-danger-surface-default: #450a0a;
+    --ds-color-danger-surface-tinted: #7f1d1d;
+    --ds-color-danger-surface-hover: #991b1b;
+    --ds-color-danger-surface-active: #b91c1c;
+    --ds-color-danger-border-subtle: #dc2626;
+    --ds-color-danger-border-default: #ef4444;
+    --ds-color-danger-border-strong: #f87171;
+    --ds-color-danger-text-subtle: #fca5a5;
+    --ds-color-danger-text-default: #fecaca;
+    --ds-color-danger-base-default: #ef4444;
+    --ds-color-danger-base-hover: #f87171;
+    --ds-color-danger-base-active: #fca5a5;
+    --ds-color-danger-base-contrast-subtle: #450a0a;
+    --ds-color-danger-base-contrast-default: #7f1d1d;
+
+    /* ── Info (Blue — dark mode) ──────────────────────────────── */
+    --ds-color-info-background-default: #020817;
+    --ds-color-info-background-tinted: #172554;
+    --ds-color-info-surface-default: #172554;
+    --ds-color-info-surface-tinted: #1e3a8a;
+    --ds-color-info-surface-hover: #1e40af;
+    --ds-color-info-surface-active: #1d4ed8;
+    --ds-color-info-border-subtle: #2563eb;
+    --ds-color-info-border-default: #3b82f6;
+    --ds-color-info-border-strong: #60a5fa;
+    --ds-color-info-text-subtle: #93c5fd;
+    --ds-color-info-text-default: #bfdbfe;
+    --ds-color-info-base-default: #3b82f6;
+    --ds-color-info-base-hover: #60a5fa;
+    --ds-color-info-base-active: #93c5fd;
+    --ds-color-info-base-contrast-subtle: #172554;
+    --ds-color-info-base-contrast-default: #1e3a8a;
+
+    /* ── Brand 1 (Blue — dark mode) ───────────────────────────── */
+    --ds-color-brand1-background-default: #020817;
+    --ds-color-brand1-background-tinted: #172554;
+    --ds-color-brand1-surface-default: #172554;
+    --ds-color-brand1-surface-tinted: #1e3a8a;
+    --ds-color-brand1-surface-hover: #1e40af;
+    --ds-color-brand1-surface-active: #1d4ed8;
+    --ds-color-brand1-border-subtle: #2563eb;
+    --ds-color-brand1-border-default: #3b82f6;
+    --ds-color-brand1-border-strong: #60a5fa;
+    --ds-color-brand1-text-subtle: #93c5fd;
+    --ds-color-brand1-text-default: #bfdbfe;
+    --ds-color-brand1-base-default: #3b82f6;
+    --ds-color-brand1-base-hover: #60a5fa;
+    --ds-color-brand1-base-active: #93c5fd;
+    --ds-color-brand1-base-contrast-subtle: #172554;
+    --ds-color-brand1-base-contrast-default: #1e3a8a;
+
+    /* ── Brand 2 (Purple — dark mode) ─────────────────────────── */
+    --ds-color-brand2-background-default: #020817;
+    --ds-color-brand2-background-tinted: #3b0764;
+    --ds-color-brand2-surface-default: #3b0764;
+    --ds-color-brand2-surface-tinted: #581c87;
+    --ds-color-brand2-surface-hover: #6b21a8;
+    --ds-color-brand2-surface-active: #7e22ce;
+    --ds-color-brand2-border-subtle: #9333ea;
+    --ds-color-brand2-border-default: #a855f7;
+    --ds-color-brand2-border-strong: #c084fc;
+    --ds-color-brand2-text-subtle: #d8b4fe;
+    --ds-color-brand2-text-default: #e9d5ff;
+    --ds-color-brand2-base-default: #a855f7;
+    --ds-color-brand2-base-hover: #c084fc;
+    --ds-color-brand2-base-active: #d8b4fe;
+    --ds-color-brand2-base-contrast-subtle: #3b0764;
+    --ds-color-brand2-base-contrast-default: #581c87;
+
+    /* ── Brand 3 (Orange — dark mode) ─────────────────────────── */
+    --ds-color-brand3-background-default: #020817;
+    --ds-color-brand3-background-tinted: #431407;
+    --ds-color-brand3-surface-default: #431407;
+    --ds-color-brand3-surface-tinted: #6b2a0c;
+    --ds-color-brand3-surface-hover: #8b3e12;
+    --ds-color-brand3-surface-active: #a85218;
+    --ds-color-brand3-border-subtle: #c2410c;
+    --ds-color-brand3-border-default: #ea580c;
+    --ds-color-brand3-border-strong: #f97316;
+    --ds-color-brand3-text-subtle: #fb923c;
+    --ds-color-brand3-text-default: #fed7aa;
+    --ds-color-brand3-base-default: #f97316;
+    --ds-color-brand3-base-hover: #fb923c;
+    --ds-color-brand3-base-active: #fdba74;
+    --ds-color-brand3-base-contrast-subtle: #431407;
+    --ds-color-brand3-base-contrast-default: #7c2d12;
+
+    /* ── Booking-status (dark mode) ─────────────────────────────
+       Cells and legend swatches share the same tokens, so each
+       status must read at-a-glance on dark navy AND match its
+       legend dot. Hue parity:
+         Ledig     → light emerald
+         Reservert → amber/orange (clearly orange, not brown)
+         Booket    → red (clearly red, not maroon)
+         Valgt     → deep emerald + bright ring
+         Utilg.    → neutral grey
+         Stengt    → near-black */
+    --digilist-status-available-bg: #14532D;
+    --digilist-status-available-bg-hover: #166534;
+    --digilist-status-available-border: #22C55E;
+    --digilist-status-available-fg: #DCFCE7;
+
+    --digilist-status-reserved-bg: #D97706;
+    --digilist-status-reserved-bg-hover: #B45309;
+    --digilist-status-reserved-border: #FBBF24;
+    --digilist-status-reserved-fg: #FFFBEB;
+
+    --digilist-status-booked-bg: #DC2626;
+    --digilist-status-booked-bg-hover: #B91C1C;
+    --digilist-status-booked-border: #F87171;
+    --digilist-status-booked-fg: #FEF2F2;
+
+    --digilist-status-selected-bg: #052E16;
+    --digilist-status-selected-bg-hover: #064E3B;
+    --digilist-status-selected-border: #22C55E;
+    --digilist-status-selected-fg: #DCFCE7;
+    --digilist-status-selected-ring: 0 0 0 2px rgba(110, 231, 183, 0.5);
+
+    --digilist-status-blocked-bg: #020617;
+    --digilist-status-blocked-bg-hover: #0F172A;
+    --digilist-status-blocked-border: #1E293B;
+    --digilist-status-blocked-fg: #CBD5E1;
+
+    --digilist-status-closed-bg: #020617;
+    --digilist-status-closed-bg-hover: #0F172A;
+    --digilist-status-closed-border: #1E293B;
+    --digilist-status-closed-fg: #CBD5E1;
+  }
+
+  /* ==========================================================================
+   * AUTO DARK MODE (prefers-color-scheme)
+   * ========================================================================== */
+
+  @media (prefers-color-scheme: dark) {
+    [data-color-scheme="auto"] {
+      /* Auto dark inherits all dark mode tokens */
+
+      /* ── Accent ── */
+      --ds-color-accent-background-default: #020817;
+      --ds-color-accent-background-tinted: #0a1628;
+      --ds-color-accent-surface-default: #0a1628;
+      --ds-color-accent-surface-tinted: #0f1d32;
+      --ds-color-accent-surface-hover: #0f1d32;
+      --ds-color-accent-surface-active: #152a4a;
+      --ds-color-accent-border-subtle: #1e3a5f;
+      --ds-color-accent-border-default: #3b82f6;
+      --ds-color-accent-border-strong: #60a5fa;
+      --ds-color-accent-text-subtle: #60a5fa;
+      --ds-color-accent-text-default: #93c5fd;
+      --ds-color-accent-base-default: #1e3a5f;
+      --ds-color-accent-base-hover: #2a4a70;
+      --ds-color-accent-base-active: #365a82;
+      --ds-color-accent-base-contrast-default: #ffffff;
+
+      /* ── Neutral ── */
+      --ds-color-neutral-background-default: #020817;
+      --ds-color-neutral-background-tinted: #0a1628;
+      --ds-color-neutral-surface-default: #0a1628;
+      --ds-color-neutral-surface-tinted: #0f1d32;
+      --ds-color-neutral-surface-subtle: #0a1628;
+      --ds-color-neutral-surface-hover: #0f1d32;
+      --ds-color-neutral-surface-active: #152a4a;
+      --ds-color-neutral-border-subtle: #0f1d32;
+      --ds-color-neutral-border-default: #1e3a5f;
+      --ds-color-neutral-border-strong: #2a4a70;
+      --ds-color-neutral-text-subtle: #94a3b8;
+      --ds-color-neutral-text-default: #f8fafc;
+      --ds-color-neutral-base-default: #0f1d32;
+      --ds-color-neutral-base-hover: #152a4a;
+      --ds-color-neutral-base-active: #1e3a5f;
+      --ds-color-neutral-base-contrast-subtle: #1e293b;
+      --ds-color-neutral-base-contrast-default: #ffffff;
+
+      /* ── Success ── */
+      --ds-color-success-background-default: #020817;
+      --ds-color-success-background-tinted: #042f2e;
+      --ds-color-success-surface-default: #042f2e;
+      --ds-color-success-surface-tinted: #064e45;
+      --ds-color-success-base-default: #14b8a6;
+      --ds-color-success-text-default: #99f6e4;
+
+      /* ── Warning ── */
+      --ds-color-warning-background-default: #020817;
+      --ds-color-warning-background-tinted: #431407;
+      --ds-color-warning-surface-default: #431407;
+      --ds-color-warning-surface-tinted: #6b2a0c;
+      --ds-color-warning-base-default: #f97316;
+      --ds-color-warning-text-default: #fed7aa;
+
+      /* ── Danger ── */
+      --ds-color-danger-background-default: #020817;
+      --ds-color-danger-background-tinted: #450a0a;
+      --ds-color-danger-surface-default: #450a0a;
+      --ds-color-danger-surface-tinted: #7f1d1d;
+      --ds-color-danger-base-default: #ef4444;
+      --ds-color-danger-text-default: #fecaca;
+
+      /* ── Info ── */
+      --ds-color-info-background-default: #020817;
+      --ds-color-info-background-tinted: #172554;
+      --ds-color-info-surface-default: #172554;
+      --ds-color-info-surface-tinted: #1e3a8a;
+      --ds-color-info-base-default: #3b82f6;
+      --ds-color-info-text-default: #bfdbfe;
+
+      /* ── Brands ── */
+      --ds-color-brand1-base-default: #3b82f6;
+      --ds-color-brand1-text-default: #bfdbfe;
+      --ds-color-brand2-base-default: #a855f7;
+      --ds-color-brand2-text-default: #e9d5ff;
+      --ds-color-brand3-base-default: #f97316;
+      --ds-color-brand3-text-default: #fed7aa;
+
+      /* ── Booking-status (auto dark) ── */
+      --digilist-status-available-bg: #14532D;
+      --digilist-status-available-bg-hover: #166534;
+      --digilist-status-available-border: #22C55E;
+      --digilist-status-available-fg: #DCFCE7;
+
+      --digilist-status-reserved-bg: #D97706;
+      --digilist-status-reserved-bg-hover: #B45309;
+      --digilist-status-reserved-border: #FBBF24;
+      --digilist-status-reserved-fg: #FFFBEB;
+
+      --digilist-status-booked-bg: #DC2626;
+      --digilist-status-booked-bg-hover: #B91C1C;
+      --digilist-status-booked-border: #F87171;
+      --digilist-status-booked-fg: #FEF2F2;
+
+      --digilist-status-selected-bg: #052E16;
+      --digilist-status-selected-bg-hover: #064E3B;
+      --digilist-status-selected-border: #22C55E;
+      --digilist-status-selected-fg: #DCFCE7;
+      --digilist-status-selected-ring: 0 0 0 2px rgba(110, 231, 183, 0.5);
+
+      --digilist-status-blocked-bg: #020617;
+      --digilist-status-blocked-bg-hover: #0F172A;
+      --digilist-status-blocked-border: #1E293B;
+      --digilist-status-blocked-fg: #CBD5E1;
+
+      --digilist-status-closed-bg: #020617;
+      --digilist-status-closed-bg-hover: #0F172A;
+      --digilist-status-closed-border: #1E293B;
+      --digilist-status-closed-fg: #CBD5E1;
+    }
+  }
+
+  /* ==========================================================================
+   * SIDEBAR COMPONENT TOKENS (resolved hex values)
+   * ========================================================================== */
+
+  /* DIGLIST-49: `[data-color-scheme="auto"]` joined this selector list so
+     when DesignsystemetProvider stamps a child div with auto and the OS
+     prefers light, Digilist light tokens apply instead of falling through
+     to Digdir blue (#0062ba). The dark override below
+     (`@media (prefers-color-scheme: dark) { [data-color-scheme="auto"] }`)
+     still wins when the OS prefers dark. */
+  :root, [data-color-scheme="light"], [data-color-scheme="auto"] {
+    --digilist-sidebar-background: #f8fafc;
+    --digilist-sidebar-foreground: #64748b;
+    --digilist-sidebar-primary: #1e40af;
+    --digilist-sidebar-primary-foreground: #ffffff;
+    --digilist-sidebar-accent: #cbd5e1;
+    --digilist-sidebar-accent-foreground: #0f172a;
+    --digilist-sidebar-border: #e2e8f0;
+    --digilist-sidebar-ring: #1e40af;
+  }
+
+  [data-color-scheme="dark"] {
+    --digilist-sidebar-background: #0a1628;
+    --digilist-sidebar-foreground: #94a3b8;
+    --digilist-sidebar-primary: #3b82f6;
+    --digilist-sidebar-primary-foreground: #ffffff;
+    --digilist-sidebar-accent: #0f1d32;
+    --digilist-sidebar-accent-foreground: #f8fafc;
+    --digilist-sidebar-border: #0f1d32;
+    --digilist-sidebar-ring: #3b82f6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    [data-color-scheme="auto"] {
+      --digilist-sidebar-background: #0a1628;
+      --digilist-sidebar-foreground: #94a3b8;
+      --digilist-sidebar-primary: #3b82f6;
+      --digilist-sidebar-primary-foreground: #ffffff;
+      --digilist-sidebar-accent: #0f1d32;
+      --digilist-sidebar-accent-foreground: #f8fafc;
+      --digilist-sidebar-border: #0f1d32;
+      --digilist-sidebar-ring: #3b82f6;
+    }
+  }
+
+  /* ==========================================================================
+   * CHART COLORS (resolved hex values)
+   * ========================================================================== */
+
+  /* DIGLIST-49: `[data-color-scheme="auto"]` joined this selector list so
+     when DesignsystemetProvider stamps a child div with auto and the OS
+     prefers light, Digilist light tokens apply instead of falling through
+     to Digdir blue (#0062ba). The dark override below
+     (`@media (prefers-color-scheme: dark) { [data-color-scheme="auto"] }`)
+     still wins when the OS prefers dark. */
+  :root, [data-color-scheme="light"], [data-color-scheme="auto"] {
+    --digilist-chart-1: #2563eb;
+    --digilist-chart-2: #9333ea;
+    --digilist-chart-3: #0d9488;
+    --digilist-chart-4: #ea580c;
+    --digilist-chart-5: #dc2626;
+  }
+
+  [data-color-scheme="dark"] {
+    --digilist-chart-1: #3b82f6;
+    --digilist-chart-2: #a855f7;
+    --digilist-chart-3: #14b8a6;
+    --digilist-chart-4: #f97316;
+    --digilist-chart-5: #ef4444;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    [data-color-scheme="auto"] {
+      --digilist-chart-1: #3b82f6;
+      --digilist-chart-2: #a855f7;
+      --digilist-chart-3: #14b8a6;
+      --digilist-chart-4: #f97316;
+      --digilist-chart-5: #ef4444;
+    }
+  }
+
+  /* ==========================================================================
+   * MODERN DEPTH & ELEVATION
+   *
+   * Replaces the flat default shadow scale with layered, modern shadows and
+   * lifts every DS card into a richer, polished surface — same look as the
+   * soner zone cards on /listings/:slug. Components consuming the existing
+   * --ds-shadow-* tokens (sidebars, dropdowns, dialogs, toasts, etc.) get the
+   * richer feel automatically; cards rendered as .ds-card pick it up via the
+   * direct selector below.
+   * ========================================================================== */
+
+  /* DIGLIST-49: `[data-color-scheme="auto"]` joined this selector list so
+     when DesignsystemetProvider stamps a child div with auto and the OS
+     prefers light, Digilist light tokens apply instead of falling through
+     to Digdir blue (#0062ba). The dark override below
+     (`@media (prefers-color-scheme: dark) { [data-color-scheme="auto"] }`)
+     still wins when the OS prefers dark. */
+  :root, [data-color-scheme="light"], [data-color-scheme="auto"] {
+    --ds-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --ds-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --ds-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+    --ds-shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06);
+    --ds-shadow-xl: 0 24px 48px rgba(15, 23, 42, 0.16), 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  [data-color-scheme="dark"] {
+    --ds-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --ds-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.4);
+    --ds-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --ds-shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.7), 0 6px 16px rgba(0, 0, 0, 0.5);
+    --ds-shadow-xl: 0 28px 56px rgba(0, 0, 0, 0.75), 0 10px 24px rgba(0, 0, 0, 0.55);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    [data-color-scheme="auto"] {
+      --ds-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+      --ds-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.4);
+      --ds-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+      --ds-shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.7), 0 6px 16px rgba(0, 0, 0, 0.5);
+      --ds-shadow-xl: 0 28px 56px rgba(0, 0, 0, 0.75), 0 10px 24px rgba(0, 0, 0, 0.55);
+    }
+  }
+
+}
+
+/* ==========================================================================
+ * DS CARD SHADOW OVERRIDE — outside @layer so unlayered CSS wins over
+ * Digdir's ds.components layer (layered CSS always loses to unlayered).
+ * A "very little" resting shadow with a gentle hover step-up.
+ * ========================================================================== */
+
+.ds-card {
+  box-shadow: var(--ds-shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+[data-color-scheme="dark"] .ds-card,
+[data-color-scheme="auto"] .ds-card {
+  box-shadow: var(--ds-shadow-xs);
+}
+
+/* ==========================================================================
+ * Mobile design tokens — formalises the px scattering across mobile-only
+ * rules into a single place. Consumed by the @digilist/ds responsive
+ * primitives (ResponsiveList, ResponsiveForm, etc.) and the dashboard
+ * mobile redesign (see docs/architecture/dashboard-mobile-redesign-v1.md).
+ * ========================================================================== */
+:root {
+  /* Minimum pointer-target size on phone (Apple HIG + WCAG 2.5.5 AAA). */
+  --ds-touch-target-min: 44px;
+  /* Form inputs on phone must be ≥ this height + 16px font to prevent
+     iOS Safari's auto-zoom on focus. */
+  --ds-input-min-height-mobile: 56px;
+  /* Default horizontal page gutter on phone. */
+  --ds-mobile-gutter: 16px;
+  /* Vertical gap between dashboard sections on phone. */
+  --ds-mobile-section-gap: 24px;
+  /* Sticky bottom-action-bar height on phone (matches AppHeader + BottomNavigation). */
+  --ds-mobile-action-bar-height: 64px;
+}
+
