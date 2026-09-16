@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowRight,
   CalendarDays,
   Check,
   Clock3,
@@ -659,6 +660,7 @@ export function NewBooking() {
             onClick={() => go((step + 1) as Step)}
           >
             {t("common.next")}
+            <ArrowRight size={17} />
           </Button>
         ) : quote?.paymentMode === "hosted" ? null : (
           <Button
