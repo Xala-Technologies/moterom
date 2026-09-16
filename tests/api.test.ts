@@ -25,6 +25,12 @@ beforeAll(async () => {
     .send({ role: "admin" })
     .expect(200);
   roomId = (await customer.get("/api/rooms").expect(200)).body[0].id;
+  const catalogue = (await customer.get("/api/rooms")).body as Array<{
+    image?: string;
+    imageKind?: string;
+  }>;
+  expect(catalogue[0]?.imageKind).toBe("illustrative");
+  expect(catalogue[0]?.image).toMatch(/\.webp$/);
 });
 describe("HTTP boundaries and complete booking lifecycle", () => {
   it("hides the optional floor plan when no approved asset is configured", async () => {
@@ -108,5 +114,148 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     expect((await customer.get(`/api/bookings/${first.id}`)).body.status).toBe(
       "cancelled",
     );
+  });
+  it("lets an administrator approve, reject, block and update a room", async () => {
+    const search = {
+      roomId,
+      date: addDays(today(), 14),
+      start: "11:00",
+      end: "12:00",
+      people: 2,
+    };
+    const pendingRoom = (await administrator.get("/api/admin").expect(200)).body
+      .rooms[1];
+    const original = (
+      await administrator
+        .patch(`/api/admin/rooms/${pendingRoom.id}`)
+        .set("Origin", origin)
+        .send({
+          name: pendingRoom.name,
+          capacity: pendingRoom.capacity,
+          description: pendingRoom.description,
+          requiresApproval: true,
+        })
+        .expect(200)
+    ).body;
+    expect(original.requiresApproval).toBe(true);
+    const approvalQuote = (
+      await customer
+        .post("/api/quote")
+        .set("Origin", origin)
+        .send({ ...search, roomId: pendingRoom.id })
+        .expect(200)
+    ).body;
+    expect(approvalQuote.requiresApproval).toBe(true);
+    const requested = (
+      await customer
+        .post("/api/bookings")
+        .set("Origin", origin)
+        .set("Idempotency-Key", randomUUID())
+        .send({
+          ...search,
+          roomId: pendingRoom.id,
+          title: "Godkjenning",
+          notes: "",
+          quoteToken: approvalQuote.token,
+        })
+        .expect(201)
+    ).body;
+    expect(requested.status).toBe("pending");
+    await customer
+      .post(`/api/bookings/${requested.id}/approve`)
+      .set("Origin", origin)
+      .send({})
+      .expect(403);
+    expect(
+      (
+        await administrator
+          .post(`/api/bookings/${requested.id}/approve`)
+          .set("Origin", origin)
+          .send({})
+          .expect(200)
+      ).body.status,
+    ).toBe("confirmed");
+    const later = {
+      ...search,
+      date: addDays(today(), 15),
+      start: "13:00",
+      end: "14:00",
+    };
+    const laterQuote = (
+      await customer
+        .post("/api/quote")
+        .set("Origin", origin)
+        .send({ ...later, roomId: pendingRoom.id })
+        .expect(200)
+    ).body;
+    const second = (
+      await customer
+        .post("/api/bookings")
+        .set("Origin", origin)
+        .set("Idempotency-Key", randomUUID())
+        .send({
+          ...later,
+          roomId: pendingRoom.id,
+          title: "Avslag",
+          notes: "",
+          quoteToken: laterQuote.token,
+        })
+        .expect(201)
+    ).body;
+    expect(
+      (
+        await administrator
+          .post(`/api/bookings/${second.id}/reject`)
+          .set("Origin", origin)
+          .send({})
+          .expect(200)
+      ).body.status,
+    ).toBe("rejected");
+    const block = (
+      await administrator
+        .post("/api/admin/blocks")
+        .set("Origin", origin)
+        .send({
+          roomId,
+          date: addDays(today(), 16),
+          start: "09:00",
+          end: "10:00",
+          people: 1,
+          title: "Vedlikehold",
+        })
+        .expect(201)
+    ).body;
+    const availability = (
+      await customer
+        .get("/api/availability")
+        .query({
+          date: addDays(today(), 16),
+          start: "09:00",
+          end: "10:00",
+          people: 1,
+        })
+        .expect(200)
+    ).body as Array<{ roomId: string; state: string }>;
+    expect(availability.find((item) => item.roomId === roomId)?.state).toBe(
+      "unavailable",
+    );
+    await customer
+      .delete(`/api/admin/blocks/${block.id}`)
+      .set("Origin", origin)
+      .expect(403);
+    await administrator
+      .delete(`/api/admin/blocks/${block.id}`)
+      .set("Origin", origin)
+      .expect(200);
+    await administrator
+      .patch(`/api/admin/rooms/${pendingRoom.id}`)
+      .set("Origin", origin)
+      .send({
+        name: pendingRoom.name,
+        capacity: pendingRoom.capacity,
+        description: pendingRoom.description,
+        requiresApproval: false,
+      })
+      .expect(200);
   });
 });

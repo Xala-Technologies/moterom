@@ -54,6 +54,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         className={`toast ${notice ? "visible" : ""}`}
         role="status"
         aria-live="polite"
+        aria-atomic="true"
       >
         {notice}
       </div>

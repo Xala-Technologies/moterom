@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Building2, UsersRound } from "lucide-react";
+import { ArrowRight, UsersRound } from "lucide-react";
 import type { Availability, Room } from "../../shared/types";
+import { RoomPhoto } from "./RoomPhoto";
 export function RoomCard({
   room,
   availability,
@@ -15,24 +16,12 @@ export function RoomCard({
   const href = `/rom/${room.id}${query ? `?${query}` : ""}`;
   return (
     <article className={`room-card ${list ? "room-row" : ""}`}>
-      <Link
-        to={href}
-        className={`room-image ${room.image ? "" : "no-photo"}`}
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        {room.image ? (
-          <img src={room.image} alt="" loading="lazy" />
-        ) : (
-          <>
-            <Building2 size={38} strokeWidth={1.3} />
-            <span>{room.name}</span>
-          </>
-        )}
+      <Link to={href} className="room-media" tabIndex={-1} aria-hidden="true">
+        <RoomPhoto room={room} variant="card" />
       </Link>
       <div className="room-card-content">
         <div className="room-card-top">
-          <span className="eyebrow">MØTEROM</span>
+          <span className="eyebrow">Møterom</span>
           {availability && (
             <span className={`availability-badge ${availability.state}`}>
               {availability.state === "available"

@@ -28,3 +28,5 @@ npm run format:check
 ```
 
 CI runs the same commands on pull requests and on pushes to `main` and `dev`.
+
+Agents should follow [CLAUDE.md](CLAUDE.md) and the skills in `.claude/skills/`.

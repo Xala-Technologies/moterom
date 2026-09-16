@@ -28,12 +28,13 @@ import {
 } from "../components/ui";
 import type { Booking, Quote, Room } from "../../shared/types";
 import { displayDate, money, searchParams } from "../../shared/time";
+import { listingUrl } from "../../shared/urls";
 import { readSearch } from "./Rooms";
 export function Checkout() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const { user, loading } = useApp();
+  const { user, loading, config } = useApp();
   const search = readSearch(params);
   const query = searchParams(search);
   const rooms = useApi<Room[]>("/rooms");
@@ -46,6 +47,7 @@ export function Checkout() {
   const [revision, setRevision] = useState(0);
   const [accepted, setAccepted] = useState(false);
   const request = useRef<{ key: string; body: unknown } | undefined>(undefined);
+  const submitting = useRef(false);
   useEffect(() => {
     request.current = undefined;
   }, [id, query, user?.id]);
@@ -95,7 +97,8 @@ export function Checkout() {
     );
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!quote || !accepted || busy) return;
+    if (!quote || !accepted || submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     setError(undefined);
     // An uncertain network outcome retries the exact body and key. Never generate a second attempt on retry.
@@ -110,9 +113,12 @@ export function Checkout() {
       nav(`/booking/${booking.id}?ny=1`, { replace: true });
     } catch (e) {
       setError(e as Error);
-      if (e instanceof ApiError && e.code === "quote_expired")
+      if (e instanceof ApiError && e.code === "quote_expired") {
         setQuote(undefined);
+        request.current = undefined;
+      }
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   };
@@ -124,7 +130,7 @@ export function Checkout() {
       </Link>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">SISTE STEG</span>
+          <span className="eyebrow">Siste steg</span>
           <h1>Se gjennom bestillingen</h1>
           <p>Kontroller rom og tidspunkt før du bekrefter.</p>
         </div>
@@ -152,8 +158,11 @@ export function Checkout() {
                 aria-label="Møtetittel"
                 value={title}
                 maxLength={120}
-                disabled={Boolean(request.current)}
-                onChange={(e) => setTitle(e.target.value)}
+                disabled={busy}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  request.current = undefined;
+                }}
                 placeholder="For eksempel teammøte"
               />
             </Field>
@@ -166,8 +175,11 @@ export function Checkout() {
                 aria-label="Beskjed til utleier"
                 value={notes}
                 maxLength={1000}
-                disabled={Boolean(request.current)}
-                onChange={(e) => setNotes(e.target.value)}
+                disabled={busy}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  request.current = undefined;
+                }}
                 rows={3}
               />
             </Field>
@@ -205,13 +217,23 @@ export function Checkout() {
               </label>
               {quote.paymentMode === "hosted" ? (
                 <>
-                  <p>Betaling og endelig bekreftelse fullføres i Digilist.</p>
-                  <a
-                    className="ds-button full-width"
-                    href={`https://app.digilist.no/listing/${encodeURIComponent(room?.slug || "")}`}
-                  >
-                    Fortsett i Digilist
-                  </a>
+                  <p>
+                    Betaling og endelig bekreftelse fullføres i Digilist. Dette
+                    steget overfører ikke tidspunktet eller innloggingen.
+                  </p>
+                  {room?.slug && config?.dashboardUrl ? (
+                    <a
+                      className="ds-button full-width"
+                      href={listingUrl(config.dashboardUrl, room.slug)}
+                    >
+                      Fortsett i Digilist
+                    </a>
+                  ) : (
+                    <p className="caption">
+                      Rommet mangler en publisert listing-adresse. Åpne Digilist
+                      fra administrasjonen.
+                    </p>
+                  )}
                 </>
               ) : (
                 <>
@@ -240,7 +262,7 @@ export function Checkout() {
           )}
         </form>
         <aside className="order-summary">
-          <span className="eyebrow">DIN BOOKING</span>
+          <span className="eyebrow">Din booking</span>
           <h2>{room?.name || "Møterom"}</h2>
           <dl>
             <div>
@@ -268,14 +290,21 @@ export function Checkout() {
             </div>
           </dl>
           <div className="summary-total">
-            <span>Totalpris</span>
+            <span>{quote?.priceOnRequest ? "Pris" : "Totalpris"}</span>
             <strong>
               {quote ? money(quote.total, quote.currency) : "Henter pris …"}
             </strong>
           </div>
+          {quote?.priceOnRequest && (
+            <p className="caption">
+              Prisen avklares med utleier. Dette er ikke en
+              betalingsbekreftelse.
+            </p>
+          )}
           {quote?.paymentMode === "invoice" && (
             <p className="caption">
-              Fakturering håndteres av utleier etter avtalt oppsett.
+              Fakturering håndteres av utleier etter avtalt oppsett. Denne
+              portalen oppretter ikke fakturaen selv.
             </p>
           )}
           <p className="caption">

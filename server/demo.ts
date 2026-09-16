@@ -16,7 +16,11 @@ import { addDays, interval, overlaps, today } from "../shared/time";
 import { AppError } from "../shared/validation";
 export class DemoStore {
   db: DatabaseSync;
-  constructor(path: string, seedRooms: Room[], seed = true) {
+  constructor(
+    path: string,
+    private seedRooms: Room[],
+    seed = true,
+  ) {
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
     this.db.exec(
@@ -95,7 +99,11 @@ export class DemoStore {
       .run(randomUUID(), user.id, action, entity, Date.now());
   }
   rooms() {
-    return this.all<Room>("rooms");
+    return this.all<Room>("rooms").map((room) => {
+      const seed = this.seedRooms.find((item) => item.id === room.id);
+      if (!seed?.image || room.image) return room;
+      return { ...room, image: seed.image, imageKind: seed.imageKind };
+    });
   }
   room(id: string) {
     const room = this.rooms().find((r) => r.id === id);

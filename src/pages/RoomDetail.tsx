@@ -5,13 +5,7 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import {
-  ArrowLeft,
-  Building2,
-  CheckCircle2,
-  Clock3,
-  UsersRound,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, UsersRound } from "lucide-react";
 import { useApi } from "../api";
 import { useApp } from "../context";
 import type { Availability, Room } from "../../shared/types";
@@ -25,6 +19,7 @@ import {
   validateSearch,
 } from "../components/ui";
 import { MonthCalendar } from "../components/MonthCalendar";
+import { RoomPhoto } from "../components/RoomPhoto";
 export function RoomDetail() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -62,19 +57,9 @@ export function RoomDetail() {
       </Link>
       <div className="detail-layout">
         <section>
-          <div className={`detail-image ${room.image ? "" : "no-photo"}`}>
-            {room.image ? (
-              <img src={room.image} alt={room.name} />
-            ) : (
-              <>
-                <Building2 size={64} strokeWidth={1.2} />
-                <span>{room.name}</span>
-                <small>Romfoto kommer</small>
-              </>
-            )}
-          </div>
+          <RoomPhoto room={room} variant="detail" />
           <div className="detail-heading">
-            <span className="eyebrow">MØTEROM</span>
+            <span className="eyebrow">Møterom</span>
             <h1>{room.name}</h1>
             <div className="detail-meta">
               <span>

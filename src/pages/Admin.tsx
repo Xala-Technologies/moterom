@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, NavLink, Navigate, useLocation } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -79,6 +79,7 @@ export function Admin() {
   const [blockTitle, setBlockTitle] = useState("");
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
+  const busyLock = useRef(false);
   if (loading) return <Loading />;
   if (!user)
     return (
@@ -135,6 +136,8 @@ export function Admin() {
     )
     .sort((a, b) => b.startTime - a.startTime);
   const run = async (task: () => Promise<unknown>, message: string) => {
+    if (busyLock.current) return;
+    busyLock.current = true;
     setBusy(true);
     setError(undefined);
     try {
@@ -147,6 +150,7 @@ export function Admin() {
     } catch (e) {
       setError(e as Error);
     } finally {
+      busyLock.current = false;
       setBusy(false);
     }
   };
@@ -186,7 +190,7 @@ export function Admin() {
           <Button
             variant="secondary"
             icon
-            aria-label="Forrige dag"
+            aria-label={view === "week" ? "Forrige uke" : "Forrige dag"}
             onClick={() => setDate(addDays(date, view === "week" ? -7 : -1))}
           >
             <ChevronLeft size={18} />
@@ -197,7 +201,7 @@ export function Admin() {
           <Button
             variant="secondary"
             icon
-            aria-label="Neste dag"
+            aria-label={view === "week" ? "Neste uke" : "Neste dag"}
             onClick={() => setDate(addDays(date, view === "week" ? 7 : 1))}
           >
             <ChevronRight size={18} />
@@ -211,7 +215,7 @@ export function Admin() {
             }}
           />
         </div>
-        <div className="view-switch">
+        <div className="view-switch" role="group" aria-label="Kalendervisning">
           <button aria-pressed={view === "day"} onClick={() => setView("day")}>
             Dag
           </button>
@@ -349,7 +353,7 @@ export function Admin() {
                           .map((e) => e.roomId),
                       ).size
                     }
-                    label="Rom ledige akkurat nå"
+                    label="Rom uten aktivitet nå"
                   />
                   <Stat
                     icon={<Clock3 size={20} />}
@@ -511,6 +515,7 @@ export function Admin() {
                   >
                     Åpne Digilist
                     <ArrowUpRight size={17} />
+                    <span className="sr-only"> (åpnes i ny fane)</span>
                   </a>
                 </section>
                 {config?.mode === "demo" && (
@@ -790,6 +795,11 @@ function RoomCalendar({
         toSearch(e.startTime, e.endTime).date <= day &&
         toSearch(e.endTime - 1, e.endTime).date >= day,
     );
+  const eventLabel = (e: CalendarEvent) => {
+    const room = rooms.find((r) => r.id === e.roomId)?.name || "Rom";
+    const kind = e.kind === "block" ? "blokkert" : e.status;
+    return `${room}: ${e.title}, ${shortTime(e.startTime)}–${shortTime(e.endTime)}, ${kind}`;
+  };
   if (days > 1)
     return (
       <div className="week-calendar">
@@ -806,6 +816,7 @@ function RoomCalendar({
                   <button
                     key={e.id}
                     className={`week-event event-${e.status}`}
+                    aria-label={eventLabel(e)}
                     onClick={() => onSelect(e)}
                   >
                     <strong>
@@ -894,6 +905,7 @@ function RoomCalendar({
                           left: `${left}%`,
                           width: `${Math.max(width, 1)}%`,
                         }}
+                        aria-label={eventLabel(e)}
                         title={`${room.name}: ${e.title}, ${shortTime(e.startTime)}–${shortTime(e.endTime)}`}
                         onClick={() => onSelect(e)}
                       >
@@ -914,7 +926,11 @@ function RoomCalendar({
           items
             .sort((a, b) => a.startTime - b.startTime)
             .map((e) => (
-              <button key={e.id} onClick={() => onSelect(e)}>
+              <button
+                key={e.id}
+                aria-label={eventLabel(e)}
+                onClick={() => onSelect(e)}
+              >
                 <span>
                   {shortTime(e.startTime)}
                   <small>{shortTime(e.endTime)}</small>

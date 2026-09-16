@@ -60,7 +60,7 @@ export function MyBookings() {
     <div className="container">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">DIN OVERSIKT</span>
+          <span className="eyebrow">Din oversikt</span>
           <h1>Mine bookinger</h1>
           <p>Her finner du tid, sted og opplysninger om møtene dine.</p>
         </div>
@@ -183,7 +183,15 @@ export function BookingDetail() {
   if (result.error)
     return <ErrorState error={result.error} retry={result.reload} />;
   const b = result.data;
-  if (!b) return null;
+  if (!b)
+    return (
+      <Empty title="Bookingen ble ikke funnet">
+        <p>Den kan være slettet, eller du har ikke tilgang til den.</p>
+        <Link className="ds-button" to="/mine-bookinger">
+          Mine bookinger
+        </Link>
+      </Empty>
+    );
   const active =
     !["cancelled", "rejected", "completed"].includes(b.status) &&
     b.endTime > Date.now();
@@ -339,6 +347,16 @@ export function BookingDetail() {
               <div>
                 <dt>Betaling</dt>
                 <dd>Utestående betaling</dd>
+              </div>
+            )}
+            {b.confirmationUrl && (
+              <div>
+                <dt>Digilist</dt>
+                <dd>
+                  <a href={b.confirmationUrl} rel="noreferrer">
+                    Åpne bekreftelsen i Digilist
+                  </a>
+                </dd>
               </div>
             )}
           </dl>
