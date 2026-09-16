@@ -6,7 +6,13 @@ import express, {
 } from "express";
 import helmet from "helmet";
 import { z } from "zod";
-import { config, inventory, origin, production, floorplanPath } from "./config";
+import {
+  config,
+  inventory,
+  isAllowedOrigin,
+  production,
+  floorplanPath,
+} from "./config";
 import { DemoStore } from "./demo";
 import {
   Digilist,
@@ -82,17 +88,19 @@ app.use(
 app.use(express.json({ limit: "32kb" }));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
-  if (
-    !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
-    req.headers.origin !== origin
-  )
-    return next(
-      new AppError(
-        403,
-        "Ugyldig forespørsel. Last siden på nytt.",
-        "invalid_origin",
-      ),
+  if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    const host = String(
+      req.headers["x-forwarded-host"] || req.headers.host || "",
     );
+    if (!isAllowedOrigin(req.headers.origin, host))
+      return next(
+        new AppError(
+          403,
+          "Ugyldig forespørsel. Last siden på nytt.",
+          "invalid_origin",
+        ),
+      );
+  }
   next();
 });
 const attempts = new Map<string, { count: number; expires: number }>();
