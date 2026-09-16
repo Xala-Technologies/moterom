@@ -1,7 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
-  Building2,
   CalendarDays,
   Grid2X2,
   List,
@@ -21,19 +20,22 @@ import {
 } from "../components/ui";
 import { RoomCard } from "../components/RoomCard";
 import type { Availability, Room, Search } from "../../shared/types";
-import { defaultSearch, displayDate, searchParams } from "../../shared/time";
+import { defaultSearch, searchParams } from "../../shared/time";
 import { useApp } from "../context";
+import { useFormatters, useT } from "../i18n";
 export function readSearch(params: URLSearchParams): Search {
   const d = defaultSearch();
   return {
     date: params.get("date") || d.date,
     start: params.get("start") || d.start,
     end: params.get("end") || d.end,
-    people: Number(params.get("people") || d.people),
+    people: 1,
   };
 }
 export function Rooms() {
   const { config } = useApp();
+  const { t } = useT();
+  const { displayDate } = useFormatters();
   const [params, setParams] = useSearchParams();
   const selected = useMemo(() => readSearch(params), [params]);
   const searched = params.has("date");
@@ -44,7 +46,7 @@ export function Rooms() {
   const [showAll, setShowAll] = useState(false);
   const rooms = useApi<Room[]>("/rooms");
   const availability = useApi<Availability[]>(
-    searched && !validateSearch(selected)
+    searched && !validateSearch(selected, t)
       ? `/availability?${searchParams(selected)}`
       : null,
   );
@@ -61,7 +63,7 @@ export function Rooms() {
     availability.data?.filter((a) => a.state === "available").length ?? 0;
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const problem = validateSearch(draft);
+    const problem = validateSearch(draft, t);
     setError(problem);
     if (!problem) {
       setParams(searchParams(draft));
@@ -72,12 +74,8 @@ export function Rooms() {
     <div className="container">
       <div className="page-heading">
         <div>
-          <div className="eyebrow heading-eyebrow">
-            <Building2 size={16} />
-            ET STED Å MØTES
-          </div>
-          <h1>Finn rommet til ditt neste møte</h1>
-          <p>Velg et rom, eller finn ut hva som er ledig når du trenger det.</p>
+          <h1>{t("rooms.heading")}</h1>
+          <p>{t("rooms.intro")}</p>
         </div>
         {config?.floorplanAvailable && (
           <Button
@@ -86,7 +84,7 @@ export function Rooms() {
             onClick={() => setFloorplan(true)}
           >
             <MapIcon size={18} />
-            Plantegning
+            {t("rooms.floorplan")}
           </Button>
         )}
       </div>
@@ -94,28 +92,27 @@ export function Rooms() {
         <SearchFields value={draft} onChange={setDraft} />
         <Button type="submit" className="search-submit">
           <SearchIcon size={19} />
-          Vis ledige rom
+          {t("rooms.show_available")}
         </Button>
       </form>
-      {(error || (searched && validateSearch(selected))) && (
-        <ErrorState error={error || validateSearch(selected)!} />
+      {(error || (searched && validateSearch(selected, t))) && (
+        <ErrorState error={error || validateSearch(selected, t)!} />
       )}
-      {searched && !error && !validateSearch(selected) && (
+      {searched && !error && !validateSearch(selected, t) && (
         <div className="search-summary">
           <CalendarDays size={17} />
           <span>
-            {displayDate(selected.date)} · {selected.start}–{selected.end} ·{" "}
-            {selected.people} {selected.people === 1 ? "person" : "personer"}
+            {displayDate(selected.date)} · {selected.start}–{selected.end}
           </span>
           <button
             onClick={() => {
               setParams({});
               setShowAll(false);
             }}
-            aria-label="Nullstill filtre"
+            aria-label={t("a11y.reset_filters")}
           >
             <X size={16} />
-            Nullstill
+            {t("rooms.reset")}
           </button>
         </div>
       )}
@@ -123,25 +120,31 @@ export function Rooms() {
         <div>
           <h2>
             {searched && availability.data
-              ? `${availableCount} ${availableCount === 1 ? "rom" : "rom"} ledige`
-              : "Våre møterom"}
+              ? t("rooms.rooms_available", { count: availableCount })
+              : t("rooms.our_rooms")}
           </h2>
           <span className="muted">
             {searched
-              ? "For hele tidsrommet ditt"
-              : `${rooms.data?.length ?? 7} rom · små møter og større samlinger`}
+              ? t("rooms.for_your_interval")
+              : t("rooms.rooms_summary", {
+                  count: rooms.data?.length ?? 7,
+                })}
           </span>
         </div>
-        <div className="view-switch" aria-label="Visning">
+        <div
+          className="view-switch"
+          role="group"
+          aria-label={t("a11y.view_mode")}
+        >
           <button
-            aria-label="Kortvisning"
+            aria-label={t("a11y.grid_view")}
             aria-pressed={view === "grid"}
             onClick={() => setView("grid")}
           >
             <Grid2X2 size={19} />
           </button>
           <button
-            aria-label="Listevisning"
+            aria-label={t("a11y.list_view")}
             aria-pressed={view === "list"}
             onClick={() => setView("list")}
           >
@@ -150,14 +153,9 @@ export function Rooms() {
         </div>
       </div>
       {rooms.error ? (
-        <>
-          <ErrorState error={rooms.error} retry={rooms.reload} />
-          <Link className="text-link" to="/login">
-            Logg inn for å se rommene
-          </Link>
-        </>
+        <ErrorState error={rooms.error} retry={rooms.reload} />
       ) : rooms.loading || availability.loading ? (
-        <Loading label="Henter rom og ledighet …" />
+        <Loading label={t("rooms.loading_rooms")} />
       ) : (
         <>
           {availability.error && (
@@ -168,7 +166,7 @@ export function Rooms() {
           )}
           {hasErrors && (
             <ErrorState
-              error="Vi kunne ikke hente ledigheten for alle rom. Prøv igjen før du bestiller."
+              error={t("rooms.availability_partial_error")}
               retry={availability.reload}
             />
           )}
@@ -189,14 +187,11 @@ export function Rooms() {
           ) : (
             <Empty
               icon={<CalendarDays size={32} />}
-              title="Ingen rom passer dette tidspunktet"
+              title={t("rooms.empty_title")}
             >
-              <p>
-                Prøv et annet tidsrom, eller se rommene for å finne et
-                alternativ.
-              </p>
+              <p>{t("rooms.empty_body")}</p>
               <Button variant="secondary" onClick={() => setShowAll(true)}>
-                Se alle rom
+                {t("rooms.show_all_rooms")}
               </Button>
             </Empty>
           )}
@@ -209,28 +204,23 @@ export function Rooms() {
                 variant="tertiary"
                 onClick={() => setShowAll(true)}
               >
-                Vis også rom som ikke er ledige
+                {t("rooms.show_unavailable_too")}
               </Button>
             )}
         </>
       )}
-      {config?.mode === "demo" && (
-        <p className="inventory-note">
-          Romnavn og kapasitetsintervaller er hentet fra romoversikten. Demoen
-          bruker nedre kapasitetsgrense. Bilder og utstyr legges til når de er
-          bekreftet.
-        </p>
-      )}
       {floorplan && (
-        <Modal title="Plantegning" close={() => setFloorplan(false)} wide>
+        <Modal
+          title={t("rooms.floorplan")}
+          close={() => setFloorplan(false)}
+          wide
+        >
           <img
             className="floorplan"
             src="/api/floorplan"
-            alt="Plantegning med Sauda 1, Sauda 2, Tysso, Glomma 1, Glomma 2 og to rom merket Eidefossen."
+            alt={t("rooms.floorplan_alt")}
           />
-          <p className="muted">
-            De to Eidefossen-rommene må få endelige navn før lansering.
-          </p>
+          <p className="muted">{t("rooms.floorplan_note")}</p>
         </Modal>
       )}
     </div>

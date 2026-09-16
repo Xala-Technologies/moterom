@@ -1,6 +1,6 @@
 # Møterom
 
-A Norwegian meeting-room portal for one building, using Digilist's visual language and existing booking services. Includes a working local demo and a server-side Digilist integration adapter.
+A bilingual (Norwegian Bokmål default + English) meeting-room portal for one building, using Digilist's visual language and existing booking services. Includes a working local demo and a server-side Digilist integration adapter.
 
 **Status:** implemented for review. Production needs the building's tenant configuration, seven published room slugs, and staging acceptance. No live customer data or Digilist configuration was changed while building this application.
 
@@ -14,7 +14,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:4173`. Use **Logg inn → Prøv som kunde** or **Prøv som administrator**. The demo has an explicit banner and stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
+Open `http://localhost:4173`. Use **Logg inn → Logg inn som administrator**. Customer demo login is parked in `src/pages/Login.tsx` (`SHOW_DEMO_CUSTOMER_LOGIN`). The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
 
 ```sh
 npm run check
@@ -28,10 +28,9 @@ The test suite covers booking conflicts, idempotency, ownership, role checks, si
 ## Product flow
 
 - **Find a room:** seven room cards, date/time/attendee filter, grid/list display and an optional privately configured floor plan. Only rooms available for the entire selected interval are shown after filtering. A service failure is displayed as an error, never as a trustworthy availability result.
-- **Book:** choose the room and date/time → sign in if necessary → review and confirm. Availability and price are checked again on the server. A room that requires approval produces a request, not a false confirmation.
-- **Mine bookinger:** upcoming/history, details, cancellation, calendar download, book again, and a request to change time. The original reservation remains in place until an edit is approved in Digilist.
+- **Book:** choose the room and date/time → sign in if necessary → review and confirm. Availability and price are checked again on the server. A room that requires approval produces a request, not a false confirmation. After confirm, the customer sees the booking detail (cancel, calendar download, book again, and a request to change time). The original reservation remains in place until an edit is approved in Digilist.
 - **Administration:** daily overview, day/7-day room calendar, customer/reference search, status filters, approve/reject, room content/capacity/approval editing, and maintenance blocks. Existing Digilist screens handle pricing, opening hours, staff access and edit approval.
-- **Mobile:** stacked booking controls, room cards, bottom navigation and an agenda in place of the wide admin timeline. Light/dark themes, labelled inputs, keyboard-operable dialogs, focus styles, skip link and status announcements are included.
+- **Mobile:** stacked booking controls, room cards, and an agenda in place of the wide admin timeline. Administrators also get header and bottom navigation to Finn rom and Administrasjon. Light/dark themes, labelled inputs, keyboard-operable dialogs, focus styles, skip link and status announcements are included.
 
 ## Design provenance
 
@@ -39,7 +38,7 @@ The application uses **Inter**, Digilist's navy **#003057**, its actual theme to
 
 The unchanged files in `src/design/digilist/` and `public/digilist-logo.svg` were sourced from the private `Xala-Technologies/digilist` repository at commit `16a8025d52cc69b917f9c255cc3ef5e1637bb0c7`. See [the design source record](docs/design-source.md). Application styling is kept in `src/styles.css` so the source tokens remain reviewable. These internal brand files are not being relicensed as an open-source design system.
 
-The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pdf_. The demo conservatively uses the lower capacity bound. The PDF contains two rooms called Eidefossen; they are temporarily distinguished by capacity. No equipment, room photographs, prices or building address were invented.
+The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pdf_. The demo conservatively uses the lower capacity bound. The PDF contains two rooms called Eidefossen; they are temporarily distinguished by capacity. No equipment, prices or building address were invented. Catalogue images are licensed **illustrative** photographs, labelled in the UI and recorded in [docs/room-images.md](docs/room-images.md), until approved building photographs exist.
 
 | Room               | Source capacity | Demo capacity |
 | ------------------ | --------------- | ------------- |
@@ -71,7 +70,7 @@ Free bookings can be confirmed here. Paid bookings normally continue to the exis
 ## Architecture
 
 ```text
-src/                React, Norwegian customer/admin screens
+src/                React customer/admin screens (nb/en via i18next)
 src/design/digilist/ Unmodified Digilist theme files
 server/             Express BFF, encrypted sessions, provider adapters
 shared/             Types, validation, Europe/Oslo time handling
@@ -87,7 +86,7 @@ The supplied floor-plan image is excluded from the repository because automatic 
 
 Email-code sign-in and MFA reuse Digilist. The opaque session and short-lived Convex access token remain in an encrypted, HttpOnly, SameSite cookie (Secure and `__Host-` in production). Every authenticated request revalidates the live session; all writes enforce the configured Origin. Admin access is bound to the building tenant and underlying Digilist permissions. Booking identity comes from that verified session, never from a browser-provided customer ID.
 
-Signed five-minute quotes bind the reviewed room, interval, attendees, price and approval mode to the user. Booking submissions retain their idempotency key and exact booking details on an uncertain network result. Live idempotency keys are namespaced by tenant and user. If an old quote expires after an uncertain submission, customers are directed to check Mine bookinger; changing or reloading the entire checkout is a new transaction. Digilist is the authority for write-time conflicts and final pricing.
+Signed five-minute quotes bind the reviewed room, interval, attendees, price and approval mode to the user. Booking submissions retain their idempotency key and exact booking details on an uncertain network result. Live idempotency keys are namespaced by tenant and user. If an old quote expires after an uncertain submission, customers retry the same confirmation; changing or reloading the entire checkout is a new transaction. Digilist is the authority for write-time conflicts and final pricing.
 
 Admin history currently loads at most 1,000 bookings and shows a warning at the cap; customers load up to 500. Full tenant history remains in Digilist. The app uses request-based refresh, not live subscription updates. Recurring bookings, waitlists, door access, catering, automatic reminders and payment collection are outside this first implementation.
 

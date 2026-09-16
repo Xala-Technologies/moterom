@@ -8,7 +8,6 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
-  ArrowRight,
   Building2,
   CalendarDays,
   CheckCircle2,
@@ -16,7 +15,6 @@ import {
   Download,
   Edit3,
   RotateCcw,
-  UsersRound,
   X,
 } from "lucide-react";
 import { useApp } from "../context";
@@ -31,141 +29,17 @@ import {
   Status,
   validateSearch,
 } from "../components/ui";
+import { bookHref } from "../components/RoomCard";
 import type { Booking, Search } from "../../shared/types";
-import {
-  addDays,
-  displayDate,
-  money,
-  searchParams,
-  shortTime,
-  toSearch,
-  today,
-} from "../../shared/time";
-export function MyBookings() {
-  const { user, loading } = useApp();
-  const [tab, setTab] = useState("upcoming");
-  const result = useApi<Booking[]>(user ? "/bookings" : null);
-  if (loading) return <Loading />;
-  if (!user) return <Navigate replace to="/login?returnTo=/mine-bookinger" />;
-  const active = (b: Booking) =>
-    b.endTime >= Date.now() && !["cancelled", "rejected"].includes(b.status);
-  const bookings = (result.data || [])
-    .filter((b) => (tab === "upcoming" ? active(b) : !active(b)))
-    .sort((a, b) =>
-      tab === "upcoming"
-        ? a.startTime - b.startTime
-        : b.startTime - a.startTime,
-    );
-  return (
-    <div className="container">
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">DIN OVERSIKT</span>
-          <h1>Mine bookinger</h1>
-          <p>Her finner du tid, sted og opplysninger om møtene dine.</p>
-        </div>
-        <Link className="ds-button" to="/">
-          Bestill et rom
-          <ArrowRight size={18} />
-        </Link>
-      </div>
-      <div className="pill-tabs" aria-label="Bookingfilter">
-        <button
-          aria-pressed={tab === "upcoming"}
-          onClick={() => setTab("upcoming")}
-        >
-          Kommende<span>{result.data?.filter(active).length || 0}</span>
-        </button>
-        <button
-          aria-pressed={tab === "history"}
-          onClick={() => setTab("history")}
-        >
-          Tidligere og avsluttede
-        </button>
-      </div>
-      {result.loading ? (
-        <Loading />
-      ) : result.error ? (
-        <ErrorState error={result.error} retry={result.reload} />
-      ) : bookings.length ? (
-        <div className="booking-list">
-          {bookings.map((b, i) => (
-            <article
-              className={`booking-row ${i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
-              key={b.id}
-            >
-              <div className="booking-date">
-                <span>
-                  {new Intl.DateTimeFormat("nb-NO", {
-                    timeZone: "Europe/Oslo",
-                    month: "short",
-                  }).format(b.startTime)}
-                </span>
-                <strong>
-                  {new Intl.DateTimeFormat("nb-NO", {
-                    timeZone: "Europe/Oslo",
-                    day: "numeric",
-                  }).format(b.startTime)}
-                </strong>
-              </div>
-              <div className="booking-main">
-                <Status status={b.status} />
-                <h2>
-                  <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
-                </h2>
-                <p>{b.title || b.reference}</p>
-              </div>
-              <div className="booking-time">
-                <strong>{displayDate(b.startTime)}</strong>
-                <span>
-                  {shortTime(b.startTime)}–{shortTime(b.endTime)}
-                </span>
-                <span>{b.people} personer</span>
-              </div>
-              <div className="booking-actions">
-                <Link
-                  className="ds-button"
-                  data-variant="secondary"
-                  data-size="sm"
-                  to={`/booking/${b.id}`}
-                >
-                  Se booking
-                  <ArrowRight size={16} />
-                </Link>
-                <span className="caption">
-                  {money(b.totalPrice, b.currency)}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <Empty
-          icon={<CalendarDays size={36} />}
-          title={
-            tab === "upcoming"
-              ? "Du har ingen kommende bookinger"
-              : "Ingen tidligere bookinger"
-          }
-        >
-          <p>
-            {tab === "upcoming"
-              ? "Finn et rom til ditt neste møte. Vi tar vare på oversikten her."
-              : "Avsluttede og kansellerte bookinger vil vises her."}
-          </p>
-          <Link className="ds-button" to="/">
-            Finn et møterom
-          </Link>
-        </Empty>
-      )}
-    </div>
-  );
-}
+import { addDays, searchParams, toSearch, today } from "../../shared/time";
+import { useFormatters, useT } from "../i18n";
 export function BookingDetail() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const location = useLocation();
   const { user, loading, config, notify } = useApp();
+  const { t } = useT();
+  const { displayDate, shortTime, money } = useFormatters();
   const result = useApi<Booking>(user ? `/bookings/${id}` : null);
   const [modal, setModal] = useState<"cancel" | "edit" | null>(null);
   const [error, setError] = useState<Error>();
@@ -183,7 +57,15 @@ export function BookingDetail() {
   if (result.error)
     return <ErrorState error={result.error} retry={result.reload} />;
   const b = result.data;
-  if (!b) return null;
+  if (!b)
+    return (
+      <Empty title={t("booking.not_found_title")}>
+        <p>{t("booking.not_found_body")}</p>
+        <Link className="ds-button" to="/">
+          {t("common.to_room_overview")}
+        </Link>
+      </Empty>
+    );
   const active =
     !["cancelled", "rejected", "completed"].includes(b.status) &&
     b.endTime > Date.now();
@@ -193,7 +75,7 @@ export function BookingDetail() {
     setError(undefined);
     try {
       if (modal === "edit") {
-        const problem = search && validateSearch(search);
+        const problem = search && validateSearch(search, t);
         if (problem) throw new Error(problem);
       }
       const updated = await post<Booking>(
@@ -204,8 +86,8 @@ export function BookingDetail() {
       setModal(null);
       notify(
         modal === "edit"
-          ? "Endringsforespørselen er sendt. Opprinnelig tid gjelder frem til godkjenning."
-          : "Bookingen er kansellert.",
+          ? t("booking.notify_edit_sent")
+          : t("booking.notify_cancelled"),
       );
     } catch (e) {
       setError(e as Error);
@@ -219,9 +101,9 @@ export function BookingDetail() {
   };
   return (
     <div className="container booking-detail-container">
-      <Link className="back-link" to="/mine-bookinger">
+      <Link className="back-link" to="/">
         <ArrowLeft size={17} />
-        Mine bookinger
+        {t("common.find_rooms")}
       </Link>
       {params.has("ny") && (
         <div className="confirmation-banner">
@@ -229,13 +111,13 @@ export function BookingDetail() {
           <div>
             <h1>
               {b.status === "confirmed"
-                ? "Bookingen er bekreftet"
-                : "Forespørselen er sendt"}
+                ? t("booking.confirmed_banner")
+                : t("booking.request_sent_banner")}
             </h1>
             <p>
               {b.status === "confirmed"
-                ? "Du finner alle opplysningene nedenfor."
-                : "Du får beskjed når utleier har behandlet forespørselen."}
+                ? t("booking.confirmed_body")
+                : t("booking.request_sent_body")}
             </p>
           </div>
         </div>
@@ -244,27 +126,24 @@ export function BookingDetail() {
         <div>
           <Status status={b.status} />
           <h1>{b.roomName}</h1>
-          <p className="muted">Referanse: {b.reference}</p>
+          <p className="muted">
+            {t("booking.reference", { reference: b.reference })}
+          </p>
         </div>
         <Building2 size={40} strokeWidth={1.2} />
       </div>
       <div className="booking-facts">
         <div>
           <CalendarDays />
-          <span>Dato</span>
+          <span>{t("common.date")}</span>
           <strong>{displayDate(b.startTime, true)}</strong>
         </div>
         <div>
           <Clock3 />
-          <span>Tidspunkt</span>
+          <span>{t("booking.time_label")}</span>
           <strong>
             {shortTime(b.startTime)}–{shortTime(b.endTime)}
           </strong>
-        </div>
-        <div>
-          <UsersRound />
-          <span>Deltakere</span>
-          <strong>{b.people} personer</strong>
         </div>
       </div>
       <div className="detail-action-bar">
@@ -274,15 +153,15 @@ export function BookingDetail() {
           href={`/api/bookings/${b.id}/calendar.ics`}
         >
           <Download size={18} />
-          Legg til i kalender
+          {t("booking.add_to_calendar")}
         </a>
         <Link
           className="ds-button"
           data-variant="secondary"
-          to={`/rom/${b.roomId}?${searchParams(repeat)}`}
+          to={bookHref(b.roomId, searchParams(repeat))}
         >
           <RotateCcw size={18} />
-          Book igjen
+          {t("booking.book_again")}
         </Link>
         {active && (
           <>
@@ -295,7 +174,7 @@ export function BookingDetail() {
               }}
             >
               <Edit3 size={17} />
-              Be om endring
+              {t("booking.request_change")}
             </Button>
             {b.cancellationAllowed !== false && (
               <Button
@@ -307,7 +186,7 @@ export function BookingDetail() {
                 }}
               >
                 <X size={17} />
-                Avbestill
+                {t("booking.cancel")}
               </Button>
             )}
           </>
@@ -315,47 +194,60 @@ export function BookingDetail() {
       </div>
       {b.editRequested && (
         <div className="info-message" role="status">
-          Endringsforespørselen er sendt. Opprinnelig rom og tidspunkt gjelder
-          frem til godkjenning.
+          {t("booking.edit_pending_info")}
         </div>
       )}
       <div className="booking-information">
         <section>
-          <h2>Opplysninger</h2>
+          <h2>{t("booking.details")}</h2>
           <dl className="simple-dl">
             <div>
-              <dt>Bestilt av</dt>
+              <dt>{t("booking.booked_by")}</dt>
               <dd>{b.name || user.name}</dd>
             </div>
             <div>
-              <dt>E-post</dt>
+              <dt>{t("common.email")}</dt>
               <dd>{b.email || user.email}</dd>
             </div>
-            <div>
-              <dt>Totalpris</dt>
-              <dd>{money(b.totalPrice, b.currency)}</dd>
-            </div>
+            {b.phone ? (
+              <div>
+                <dt>{t("common.phone")}</dt>
+                <dd>{b.phone}</dd>
+              </div>
+            ) : null}
+            {typeof b.totalPrice === "number" && b.totalPrice > 0 ? (
+              <div>
+                <dt>{t("booking.total_price")}</dt>
+                <dd>{money(b.totalPrice, b.currency)}</dd>
+              </div>
+            ) : null}
             {b.paymentRequired && (
               <div>
-                <dt>Betaling</dt>
-                <dd>Utestående betaling</dd>
+                <dt>{t("booking.payment")}</dt>
+                <dd>{t("booking.payment_outstanding")}</dd>
+              </div>
+            )}
+            {b.confirmationUrl && (
+              <div>
+                <dt>Digilist</dt>
+                <dd>
+                  <a href={b.confirmationUrl} rel="noreferrer">
+                    {t("booking.open_confirmation_digilist")}
+                  </a>
+                </dd>
               </div>
             )}
           </dl>
           {b.notes && <p className="preserve-lines">{b.notes}</p>}
         </section>
         <section>
-          <h2>Før du kommer</h2>
-          <p>
-            {config?.address ||
-              "Kontakt utleier dersom du trenger hjelp med adkomst."}
-          </p>
+          <h2>{t("booking.before_you_arrive")}</h2>
+          <p>{config?.address || t("booking.access_fallback")}</p>
           {config?.contactEmail && (
             <a href={`mailto:${config.contactEmail}`}>{config.contactEmail}</a>
           )}
           <p className="muted">
-            {b.cancellationMessage ||
-              "Endringer og avbestilling behandles etter rommets regler. Kontakt utleier dersom du trenger hjelp."}
+            {b.cancellationMessage || t("booking.cancel_rules_fallback")}
           </p>
         </section>
       </div>
@@ -363,8 +255,8 @@ export function BookingDetail() {
         <Modal
           title={
             modal === "cancel"
-              ? "Avbestille bookingen?"
-              : "Be om et nytt tidspunkt"
+              ? t("booking.cancel_modal_title")
+              : t("booking.edit_modal_title")
           }
           close={() => {
             if (!busy) setModal(null);
@@ -373,7 +265,7 @@ export function BookingDetail() {
           <p>
             {modal === "cancel"
               ? `${b.roomName} · ${displayDate(b.startTime)} · ${shortTime(b.startTime)}–${shortTime(b.endTime)}`
-              : "Du beholder den opprinnelige bookingen til endringen er godkjent."}
+              : t("booking.edit_modal_body")}
           </p>
           {modal === "edit" && search && (
             <SearchFields compact value={search} onChange={setSearch} />
@@ -385,7 +277,7 @@ export function BookingDetail() {
               disabled={busy}
               onClick={() => setModal(null)}
             >
-              Tilbake
+              {t("common.back")}
             </Button>
             <Button
               disabled={busy}
@@ -393,10 +285,10 @@ export function BookingDetail() {
               onClick={action}
             >
               {busy
-                ? "Sender …"
+                ? t("common.sending")
                 : modal === "cancel"
-                  ? "Ja, avbestill"
-                  : "Send endringsforespørsel"}
+                  ? t("booking.confirm_cancel")
+                  : t("booking.send_edit_request")}
             </Button>
           </div>
         </Modal>

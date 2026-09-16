@@ -10,6 +10,8 @@ import type {
   Block,
   Booking,
   BookingInput,
+  InsightsBlock,
+  InsightsBooking,
   Quote,
   Room,
   Search,
@@ -17,6 +19,9 @@ import type {
 } from "../shared/types";
 import { interval } from "../shared/time";
 import { AppError } from "../shared/validation";
+import { translateMessage } from "../shared/i18n/messages";
+import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
+import { collectPaged, INSIGHTS_PAGE_SIZE } from "./insights";
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row =>
   value && typeof value === "object" ? (value as Row) : {};
@@ -51,8 +56,11 @@ export async function rest(
     throw new AppError(
       503,
       method === "POST"
-        ? "Vi fikk ikke bekreftet svaret. Prøv samme bestilling igjen, eller sjekk Mine bookinger."
+        ? "Vi fikk ikke bekreftet svaret. Prøv samme bestilling igjen."
         : "Vi får ikke kontakt med bookingtjenesten. Prøv igjen.",
+      method === "POST"
+        ? "booking_confirm_uncertain"
+        : "booking_service_unreachable",
     );
   }
   const value =
@@ -70,6 +78,13 @@ export async function rest(
                 row(value).detail,
                 "Bookingtjenesten kunne ikke fullføre forespørselen.",
               ),
+      response.status === 401
+        ? "session_expired"
+        : response.status === 403
+          ? "action_forbidden"
+          : response.status === 409
+            ? "booking_stale"
+            : "booking_service_failed",
     );
   return row(value);
 }
@@ -146,6 +161,7 @@ export async function setBuildingContext(session: Session) {
       throw new AppError(
         403,
         "Denne bookingløsningen er for byggets medlemmer. Kontakt administrator for tilgang.",
+        "members_only_access",
       );
   }
   session.accessToken = undefined;
@@ -170,20 +186,27 @@ export class Digilist {
           throw new AppError(
             503,
             `Rommet ${definition.name} er ikke tilgjengelig i byggets oppsett.`,
+            "room_setup_unavailable",
+            { name: definition.name },
           );
         this.sources.set(definition.id, source);
         const images = Array.isArray(source.images) ? source.images : [];
         const image =
           typeof images[0] === "string" ? images[0] : str(row(images[0]).url);
+        const liveImage =
+          image && /^https:\/\//.test(image) ? image : undefined;
         return {
           ...definition,
           sourceId: str(source._id),
           name: str(source.name, definition.name),
           slug: definition.slug,
           description: str(source.description, definition.description),
+          descriptionEn: definition.descriptionEn || "",
           capacity: z.number().int().positive().parse(source.capacity),
           capacityLabel: `${source.capacity} personer`,
-          image: image && /^https:\/\//.test(image) ? image : undefined,
+          capacityLabelEn: `${source.capacity} people`,
+          image: liveImage || definition.image,
+          imageKind: liveImage ? "actual" : definition.imageKind,
           amenities: Array.isArray(source.amenities)
             ? source.amenities.flatMap((x) => {
                 const name = typeof x === "string" ? x : str(row(x).name);
@@ -201,10 +224,14 @@ export class Digilist {
   }
   async room(id: string) {
     const r = (await this.rooms()).find((r) => r.id === id);
-    if (!r) throw new AppError(404, "Rommet ble ikke funnet.");
+    if (!r)
+      throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
     return r;
   }
-  async availability(search: Search): Promise<Availability[]> {
+  async availability(
+    search: Search,
+    locale: Locale = DEFAULT_LOCALE,
+  ): Promise<Availability[]> {
     const span = interval(search);
     const rooms = await this.rooms();
     return Promise.all(
@@ -215,8 +242,8 @@ export class Digilist {
             state: "unavailable" as const,
             reason:
               room.capacity < search.people
-                ? "For mange deltakere."
-                : "Tidspunktet har passert.",
+                ? translateMessage(locale, "too_many_participants")
+                : translateMessage(locale, "time_past"),
           };
         try {
           // Single-room validator preserves upstream failures and minimum-duration rules.
@@ -235,13 +262,16 @@ export class Digilist {
               : ("unavailable" as const),
             reason: result.valid
               ? undefined
-              : str(result.reason, "Tidsrommet kan ikke bestilles."),
+              : str(
+                  result.reason,
+                  translateMessage(locale, "slot_not_bookable"),
+                ),
           };
         } catch {
           return {
             roomId: room.id,
             state: "error" as const,
-            reason: "Kunne ikke hente ledigheten. Prøv igjen.",
+            reason: translateMessage(locale, "availability_fetch_failed"),
           };
         }
       }),
@@ -287,7 +317,11 @@ export class Digilist {
   private normalizeBooking(raw: Row, rooms: Room[]): Booking {
     const room = rooms.find((r) => r.sourceId === raw.resourceId);
     if (!room || raw.tenantId !== tenantId)
-      throw new AppError(404, "Bookingen tilhører ikke dette bygget.");
+      throw new AppError(
+        404,
+        "Bookingen tilhører ikke dette bygget.",
+        "booking_wrong_building",
+      );
     const meta = row(raw.metadata);
     const guest = row(raw.guestInfo);
     return {
@@ -298,6 +332,7 @@ export class Digilist {
       userId: str(raw.userId),
       name: str(raw.userName, str(guest.name)),
       email: str(raw.userEmail, str(guest.email)),
+      phone: str(guest.phone, str(guest.mobile, str(guest.telephone))),
       startTime: z.number().parse(raw.startTime),
       endTime: z.number().parse(raw.endTime),
       people: Number(meta.guestCount ?? meta.attendees ?? 1),
@@ -339,7 +374,11 @@ export class Digilist {
     );
     const b = this.normalizeBooking(raw, await this.rooms());
     if (!user.isAdmin && b.userId !== user.id)
-      throw new AppError(404, "Bookingen ble ikke funnet.");
+      throw new AppError(
+        404,
+        "Bookingen ble ikke funnet.",
+        "booking_not_found",
+      );
     return b;
   }
   async create(input: BookingInput, user: User, key: string) {
@@ -352,9 +391,18 @@ export class Digilist {
         listing: room.slug,
         start: new Date(span.startTime).toISOString(),
         end: new Date(span.endTime).toISOString(),
-        customer: { name: user.name, email: user.email },
+        customer: {
+          name: input.name || user.name,
+          email: user.email,
+        },
         guestCount: input.people,
-        notes: [input.title, input.notes].filter(Boolean).join("\n"),
+        notes: [
+          input.phone ? `Telefon: ${input.phone}` : "",
+          input.title,
+          input.notes,
+        ]
+          .filter(Boolean)
+          .join("\n"),
       },
       this.session?.accessToken,
       createHash("sha256")
@@ -364,6 +412,7 @@ export class Digilist {
     const b = await this.booking(z.string().parse(result.bookingId), user);
     return {
       ...b,
+      phone: input.phone || b.phone,
       confirmationUrl: str(result.confirmationUrl),
       paymentRequired: Boolean(result.paymentRequired),
     };
@@ -375,7 +424,11 @@ export class Digilist {
   ) {
     await this.booking(id, user);
     if (op !== "cancel" && !user.isAdmin)
-      throw new AppError(403, "Du har ikke administratortilgang.");
+      throw new AppError(
+        403,
+        "Du har ikke administratortilgang.",
+        "admin_required",
+      );
     if (op === "cancel" && !user.isAdmin)
       await rest(
         `/me/bookings/${encodeURIComponent(id)}/cancel`,
@@ -402,6 +455,7 @@ export class Digilist {
       throw new AppError(
         409,
         "Kontakt utleier for å endre en booking med avtalt pris.",
+        "edit_agreed_price",
       );
     await mutate(this.c, "domain/bookings:requestBookingEdit", {
       bookingId: id,
@@ -449,27 +503,118 @@ export class Digilist {
       truncated: list(bookings).length >= 1000,
     };
   }
+  async listForInsights(
+    user: User,
+    opts: { fetchFrom: number; fetchTo: number },
+  ): Promise<{ bookings: InsightsBooking[]; truncated: boolean }> {
+    this.assertAdmin(user);
+    const rooms = await this.rooms();
+    const mapped = await collectPaged(async (startAfter) => {
+      const rows = list(
+        await query(this.c, "domain/bookings:list", {
+          tenantId,
+          callerId: user.id,
+          startAfter,
+          startBefore: opts.fetchTo - 1,
+          limit: INSIGHTS_PAGE_SIZE,
+        }),
+      );
+      return rows.map((raw) => ({
+        id: str(raw._id, str(raw.id)),
+        startTime: Number(raw.startTime),
+        raw,
+      }));
+    }, opts.fetchFrom);
+    return {
+      truncated: mapped.truncated,
+      bookings: mapped.items.flatMap(({ raw }) => {
+        const room = rooms.find((r) => r.sourceId === raw.resourceId);
+        if (!room || raw.tenantId !== tenantId) return [];
+        const startTime = Number(raw.startTime);
+        const endTime = Number(raw.endTime);
+        if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return [];
+        if (endTime <= opts.fetchFrom || startTime >= opts.fetchTo) return [];
+        return [
+          {
+            id: str(raw._id, str(raw.id)),
+            roomId: room.id,
+            startTime,
+            endTime,
+            status: str(raw.status, "pending"),
+          },
+        ];
+      }),
+    };
+  }
+  async listBlocksForInsights(user: User): Promise<InsightsBlock[]> {
+    this.assertAdmin(user);
+    const rooms = await this.rooms();
+    const blocks = list(
+      await query(this.c, "domain/blocks:list", { tenantId, status: "active" }),
+    );
+    return blocks.flatMap((b) => {
+      const room = rooms.find((r) => r.sourceId === b.resourceId);
+      return room
+        ? [
+            {
+              id: str(b._id, str(b.id)),
+              roomId: room.id,
+              title: str(b.title),
+              startTime: Number(b.startDate),
+              endTime: Number(b.endDate),
+            },
+          ]
+        : [];
+    });
+  }
   assertAdmin(user: User) {
     if (!user.isAdmin)
       throw new AppError(
         403,
         "Du har ikke administratortilgang til dette bygget.",
+        "admin_building_required",
       );
   }
   async updateRoom(
     id: string,
-    patch: Pick<Room, "name" | "capacity" | "description" | "requiresApproval">,
+    patch: {
+      name: string;
+      capacity: number;
+      description: string;
+      descriptionEn?: string;
+      capacityLabel?: string;
+      capacityLabelEn?: string;
+      requiresApproval: boolean;
+      image?: string;
+      imageKind?: "illustrative" | "actual";
+      amenities?: string[];
+      arrivalInfo?: string;
+    },
     user: User,
   ) {
     this.assertAdmin(user);
     const room = await this.room(id);
+    const source = this.sources.get(id);
+    const image = patch.image?.trim();
+    const liveImage = image && /^https:\/\//.test(image) ? image : undefined;
     await mutate(this.c, "domain/resources:update", {
       id: room.sourceId,
       updatedBy: user.id,
-      ...patch,
+      name: patch.name,
+      capacity: patch.capacity,
+      description: patch.description,
+      requiresApproval: patch.requiresApproval,
       bookingConfig: {
-        ...row(this.sources.get(id)?.bookingConfig),
+        ...row(source?.bookingConfig),
         approvalRequired: patch.requiresApproval,
+      },
+      ...(liveImage ? { images: [{ url: liveImage }] } : {}),
+      ...(patch.amenities ? { amenities: patch.amenities } : {}),
+      metadata: {
+        ...row(source?.metadata),
+        ...(patch.arrivalInfo !== undefined
+          ? { arrivalInfo: patch.arrivalInfo }
+          : {}),
       },
     });
     return this.room(id);
@@ -488,6 +633,7 @@ export class Digilist {
       throw new AppError(
         409,
         "Tidsrommet overlapper en booking eller blokkering.",
+        "interval_overlaps",
       );
     return mutate(this.c, "domain/blocks:create", {
       tenantId,
@@ -505,7 +651,11 @@ export class Digilist {
     this.assertAdmin(user);
     const data = await this.admin(user);
     if (!data.blocks.some((b) => b.id === id))
-      throw new AppError(404, "Blokkeringen ble ikke funnet.");
+      throw new AppError(
+        404,
+        "Blokkeringen ble ikke funnet.",
+        "block_not_found",
+      );
     return mutate(this.c, "domain/blocks:remove", { id, actorId: user.id });
   }
 }

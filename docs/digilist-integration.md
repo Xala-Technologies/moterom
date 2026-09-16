@@ -2,25 +2,28 @@
 
 Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc3ef5e1637bb0c7`. These are source-reviewed contracts, not a claim that the customer's live deployment has been tested.
 
-| Capability                  | Existing operation                                                       |
-| --------------------------- | ------------------------------------------------------------------------ |
-| Email code                  | REST `POST /api/v1/auth/email/request`, `POST /api/v1/auth/email/verify` |
-| Session identity            | REST `GET /api/v1/auth/me`                                               |
-| Convex access token         | REST `POST /api/v1/auth/token` with the opaque session token             |
-| Tenant context              | Convex `auth/sessions:switchTenant`                                      |
-| MFA                         | Convex action `auth/mfaChallenge:confirmMfaLoginChallenge`               |
-| Published rooms             | Convex `domain/resources:getBySlugPublic`                                |
-| Whole-interval availability | Convex `domain/bookings:validateBookingSlot`                             |
-| Authoritative quote         | Convex `domain/pricing:quote`                                            |
-| Idempotent creation         | REST `POST /api/v1/checkout/sessions`                                    |
-| Customer bookings           | Convex `domain/bookings:listMine`, `domain/bookings:get`                 |
-| Customer cancellation       | REST `POST /api/v1/me/bookings/:id/cancel`                               |
-| Change request              | Convex `domain/bookings:requestBookingEdit`                              |
-| Admin bookings              | Convex `domain/bookings:list`, `approve`, `reject`, `cancel`             |
-| Room content                | Convex `domain/resources:update`                                         |
-| Maintenance blocks          | Convex `domain/blocks:list`, `checkAvailability`, `create`, `remove`     |
+| Capability                   | Existing operation                                                                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email code                   | REST `POST /api/v1/auth/email/request`, `POST /api/v1/auth/email/verify`                                                                                                                            |
+| Session identity             | REST `GET /api/v1/auth/me`                                                                                                                                                                          |
+| Convex access token          | REST `POST /api/v1/auth/token` with the opaque session token                                                                                                                                        |
+| Tenant context               | Convex `auth/sessions:switchTenant`                                                                                                                                                                 |
+| MFA                          | Convex action `auth/mfaChallenge:confirmMfaLoginChallenge`                                                                                                                                          |
+| Published rooms              | Convex `domain/resources:getBySlugPublic`                                                                                                                                                           |
+| Whole-interval availability  | Convex `domain/bookings:validateBookingSlot`                                                                                                                                                        |
+| Authoritative quote          | Convex `domain/pricing:quote`                                                                                                                                                                       |
+| Idempotent creation          | REST `POST /api/v1/checkout/sessions`                                                                                                                                                               |
+| Customer bookings            | Convex `domain/bookings:listMine`, `domain/bookings:get`                                                                                                                                            |
+| Customer cancellation        | REST `POST /api/v1/me/bookings/:id/cancel`                                                                                                                                                          |
+| Change request               | Convex `domain/bookings:requestBookingEdit`                                                                                                                                                         |
+| Admin bookings               | Convex `domain/bookings:list`, `approve`, `reject`, `cancel`                                                                                                                                        |
+| Admin insights (Møterom BFF) | `GET /api/admin/insights` aggregates `domain/bookings:list` with `startAfter`/`startBefore`, a 36-hour lookback, internal paging, and a completeness flag. This is not Digilist `domain/analytics`. |
+| Room content                 | Convex `domain/resources:update`                                                                                                                                                                    |
+| Maintenance blocks           | Convex `domain/blocks:list`, `checkAvailability`, `create`, `remove`                                                                                                                                |
 
 The BFF restricts all resources to seven configured slugs and verifies their tenant IDs. Read models sent to the client are normalized; raw user, moderation and backend metadata are not passed through. Customer booking reads are restricted to the authenticated owner. Admin list/block reads require a freshly verified member/admin of the configured tenant before calling the underlying facade.
+
+Admin insights are aggregated in the Express BFF. The live booking list is filtered on `startTime`, so overlapping reservations that started more than 36 hours before the period can be missed. `coverage: "truncated"` means the page cap was hit and totals are a lower bound. Demo uses the same formulas on the full SQLite set and is labelled demodata. Insights payloads do not include guest names, emails or `people`.
 
 Room approval must mirror Digilist's actual booking write rule: `bookingConfig.approvalRequired || requiresApproval`. Room edits preserve the rest of `bookingConfig`. The test suite includes this compatibility case.
 
