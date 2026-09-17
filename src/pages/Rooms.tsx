@@ -1,28 +1,15 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
-import {
-  CalendarDays,
-  Grid2X2,
-  List,
-  Map as MapIcon,
-  Search as SearchIcon,
-  X,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarDays, Grid2X2, List, Map as MapIcon } from "lucide-react";
 import { useApi } from "../api";
-import {
-  Button,
-  Empty,
-  ErrorState,
-  Loading,
-  Modal,
-  SearchFields,
-  validateSearch,
-} from "../components/ui";
+import { Button, Empty, ErrorState, Loading, Modal } from "../components/ui";
 import { RoomCard } from "../components/RoomCard";
-import type { Availability, Room, Search } from "../../shared/types";
-import { defaultSearch, searchParams } from "../../shared/time";
+import { BookingConfirmModal } from "../components/BookingConfirmModal";
+import type { RoomSlotSelection } from "../components/RoomCardSchedule";
+import type { Room, Search } from "../../shared/types";
+import { defaultSearch, today } from "../../shared/time";
 import { useApp } from "../context";
-import { useFormatters, useT } from "../i18n";
+import { useT } from "../i18n";
+
 export function readSearch(params: URLSearchParams): Search {
   const d = defaultSearch();
   return {
@@ -32,44 +19,50 @@ export function readSearch(params: URLSearchParams): Search {
     people: 1,
   };
 }
+
 export function Rooms() {
   const { config } = useApp();
   const { t } = useT();
-  const { displayDate } = useFormatters();
-  const [params, setParams] = useSearchParams();
-  const selected = useMemo(() => readSearch(params), [params]);
-  const searched = params.has("date");
-  const [draft, setDraft] = useState(selected);
-  const [error, setError] = useState<string>();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [floorplan, setFloorplan] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const pageDate = today();
+  const [cardDates, setCardDates] = useState<Record<string, string>>({});
+  const [selections, setSelections] = useState<
+    Record<string, RoomSlotSelection | null>
+  >({});
+  const [purposeByRoom, setPurposeByRoom] = useState<Record<string, string>>(
+    {},
+  );
+  const [confirm, setConfirm] = useState<{
+    roomId: string;
+    selection: RoomSlotSelection;
+  } | null>(null);
+  const [slotsRevision, setSlotsRevision] = useState<Record<string, number>>(
+    {},
+  );
   const rooms = useApi<Room[]>("/rooms");
-  const availability = useApi<Availability[]>(
-    searched && !validateSearch(selected, t)
-      ? `/availability?${searchParams(selected)}`
-      : null,
-  );
-  const statuses = new Map(availability.data?.map((a) => [a.roomId, a]));
-  const hasErrors = availability.data?.some((a) => a.state === "error");
-  const filtered = (rooms.data || []).filter(
-    (r) =>
-      !searched ||
-      !availability.data ||
-      showAll ||
-      statuses.get(r.id)?.state !== "unavailable",
-  );
-  const availableCount =
-    availability.data?.filter((a) => a.state === "available").length ?? 0;
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const problem = validateSearch(draft, t);
-    setError(problem);
-    if (!problem) {
-      setParams(searchParams(draft));
-      setShowAll(false);
-    }
+
+  useEffect(() => {
+    setCardDates((prev) => {
+      const next: Record<string, string> = {};
+      for (const room of rooms.data || []) {
+        next[room.id] = prev[room.id] ?? pageDate;
+      }
+      return next;
+    });
+  }, [pageDate, rooms.data]);
+
+  const confirmRoom = rooms.data?.find((r) => r.id === confirm?.roomId);
+  const roomList = rooms.data || [];
+
+  const onBooked = (roomId: string) => {
+    setSelections((prev) => ({ ...prev, [roomId]: null }));
+    setSlotsRevision((prev) => ({
+      ...prev,
+      [roomId]: (prev[roomId] ?? 0) + 1,
+    }));
   };
+
   return (
     <div className="container">
       <div className="page-heading">
@@ -88,47 +81,13 @@ export function Rooms() {
           </Button>
         )}
       </div>
-      <form className="search-panel" onSubmit={submit}>
-        <SearchFields value={draft} onChange={setDraft} />
-        <Button type="submit" className="search-submit">
-          <SearchIcon size={19} />
-          {t("rooms.show_available")}
-        </Button>
-      </form>
-      {(error || (searched && validateSearch(selected, t))) && (
-        <ErrorState error={error || validateSearch(selected, t)!} />
-      )}
-      {searched && !error && !validateSearch(selected, t) && (
-        <div className="search-summary">
-          <CalendarDays size={17} />
-          <span>
-            {displayDate(selected.date)} · {selected.start}–{selected.end}
-          </span>
-          <button
-            onClick={() => {
-              setParams({});
-              setShowAll(false);
-            }}
-            aria-label={t("a11y.reset_filters")}
-          >
-            <X size={16} />
-            {t("rooms.reset")}
-          </button>
-        </div>
-      )}
       <div className="results-heading">
         <div>
-          <h2>
-            {searched && availability.data
-              ? t("rooms.rooms_available", { count: availableCount })
-              : t("rooms.our_rooms")}
-          </h2>
+          <h2>{t("rooms.our_rooms")}</h2>
           <span className="muted">
-            {searched
-              ? t("rooms.for_your_interval")
-              : t("rooms.rooms_summary", {
-                  count: rooms.data?.length ?? 7,
-                })}
+            {t("rooms.rooms_summary", {
+              count: rooms.data?.length ?? 7,
+            })}
           </span>
         </div>
         <div
@@ -154,60 +113,36 @@ export function Rooms() {
       </div>
       {rooms.error ? (
         <ErrorState error={rooms.error} retry={rooms.reload} />
-      ) : rooms.loading || availability.loading ? (
+      ) : rooms.loading ? (
         <Loading label={t("rooms.loading_rooms")} />
+      ) : roomList.length ? (
+        <div className={`rooms-grid ${view === "list" ? "rooms-list" : ""}`}>
+          {roomList.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              list={view === "list"}
+              scheduleDate={cardDates[room.id] ?? pageDate}
+              onScheduleDateChange={(date) =>
+                setCardDates((prev) => ({ ...prev, [room.id]: date }))
+              }
+              selection={selections[room.id] ?? null}
+              onSelectSlot={(next) =>
+                setSelections((prev) => ({ ...prev, [room.id]: next }))
+              }
+              onBook={() => {
+                const selection = selections[room.id];
+                if (!selection) return;
+                setConfirm({ roomId: room.id, selection });
+              }}
+              slotsRevision={slotsRevision[room.id] ?? 0}
+            />
+          ))}
+        </div>
       ) : (
-        <>
-          {availability.error && (
-            <ErrorState
-              error={availability.error}
-              retry={availability.reload}
-            />
-          )}
-          {hasErrors && (
-            <ErrorState
-              error={t("rooms.availability_partial_error")}
-              retry={availability.reload}
-            />
-          )}
-          {filtered.length ? (
-            <div
-              className={`rooms-grid ${view === "list" ? "rooms-list" : ""}`}
-            >
-              {filtered.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  list={view === "list"}
-                  availability={statuses.get(room.id)}
-                  query={searched ? searchParams(selected) : ""}
-                />
-              ))}
-            </div>
-          ) : (
-            <Empty
-              icon={<CalendarDays size={32} />}
-              title={t("rooms.empty_title")}
-            >
-              <p>{t("rooms.empty_body")}</p>
-              <Button variant="secondary" onClick={() => setShowAll(true)}>
-                {t("rooms.show_all_rooms")}
-              </Button>
-            </Empty>
-          )}
-          {searched &&
-            !showAll &&
-            availableCount > 0 &&
-            availableCount < (rooms.data?.length ?? 0) && (
-              <Button
-                className="show-all"
-                variant="tertiary"
-                onClick={() => setShowAll(true)}
-              >
-                {t("rooms.show_unavailable_too")}
-              </Button>
-            )}
-        </>
+        <Empty icon={<CalendarDays size={32} />} title={t("rooms.empty_title")}>
+          <p>{t("rooms.empty_body")}</p>
+        </Empty>
       )}
       {floorplan && (
         <Modal
@@ -222,6 +157,21 @@ export function Rooms() {
           />
           <p className="muted">{t("rooms.floorplan_note")}</p>
         </Modal>
+      )}
+      {confirm && confirmRoom && (
+        <BookingConfirmModal
+          room={confirmRoom}
+          selection={confirm.selection}
+          purpose={purposeByRoom[confirmRoom.id] ?? ""}
+          onPurposeChange={(value) =>
+            setPurposeByRoom((prev) => ({
+              ...prev,
+              [confirmRoom.id]: value,
+            }))
+          }
+          close={() => setConfirm(null)}
+          onSuccess={() => onBooked(confirmRoom.id)}
+        />
       )}
     </div>
   );

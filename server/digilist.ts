@@ -2,7 +2,14 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { config, convexUrl, httpUrl, inventory, tenantId } from "./config";
+import {
+  adminEmails,
+  config,
+  convexUrl,
+  httpUrl,
+  inventory,
+  tenantId,
+} from "./config";
 import type { Session } from "./session";
 import type {
   AdminData,
@@ -12,7 +19,6 @@ import type {
   BookingInput,
   InsightsBlock,
   InsightsBooking,
-  Quote,
   Room,
   Search,
   User,
@@ -65,27 +71,36 @@ export async function rest(
   }
   const value =
     response.status === 204 ? {} : await response.json().catch(() => ({}));
-  if (!response.ok)
+  if (!response.ok) {
+    const problem = row(value);
+    const digilistDetail = str(
+      problem.detail || problem.message || problem.title,
+    );
+    if (response.status === 401)
+      throw new AppError(
+        401,
+        "Økten er utløpt. Logg inn på nytt.",
+        "session_expired",
+      );
+    if (response.status === 403)
+      throw new AppError(
+        403,
+        "Du har ikke tilgang til denne handlingen.",
+        "action_forbidden",
+      );
+    if (response.status === 409)
+      throw new AppError(
+        409,
+        "Tidspunktet eller bestillingen har endret seg. Kontroller valget ditt.",
+        "booking_stale",
+      );
+    // Prefer Digilist problem detail over a generic catalogued code.
     throw new AppError(
       response.status,
-      response.status === 401
-        ? "Økten er utløpt. Logg inn på nytt."
-        : response.status === 403
-          ? "Du har ikke tilgang til denne handlingen."
-          : response.status === 409
-            ? "Tidspunktet eller bestillingen har endret seg. Kontroller valget ditt."
-            : str(
-                row(value).detail,
-                "Bookingtjenesten kunne ikke fullføre forespørselen.",
-              ),
-      response.status === 401
-        ? "session_expired"
-        : response.status === 403
-          ? "action_forbidden"
-          : response.status === 409
-            ? "booking_stale"
-            : "booking_service_failed",
+      digilistDetail || "Bookingtjenesten kunne ikke fullføre forespørselen.",
+      digilistDetail ? "digilist_request_rejected" : "booking_service_failed",
     );
+  }
   return row(value);
 }
 export function client(session?: Session) {
@@ -114,6 +129,50 @@ export async function action(
 ): Promise<unknown> {
   return c.action(makeFunctionReference<"action">(name), args);
 }
+/**
+ * Map Digilist `/auth/me` fields to the portal User after switchTenant.
+ * Møterom Admin requires ADMIN_EMAILS and an admin-capable Digilist tenant
+ * role on this building tenant. Membership is Digilist tenant membership only.
+ */
+const ADMIN_TENANT_ROLES = new Set([
+  "tenant_admin",
+  "saksbehandler",
+  "owner",
+  "admin",
+  "manager",
+  "staff",
+]);
+
+function isDigilistTenantAdminRole(role: string | null | undefined): boolean {
+  return ADMIN_TENANT_ROLES.has((role ?? "").trim().toLowerCase());
+}
+
+export function mapDigilistUser(
+  raw: {
+    id: string;
+    name?: string | null;
+    email: string;
+    role: string;
+    tenantId?: string | null;
+    tenantRole?: string | null;
+  },
+  buildingTenantId: string = tenantId,
+): User {
+  const email = raw.email.trim().toLowerCase();
+  const isMember = raw.tenantId === buildingTenantId;
+  const isAdmin =
+    isMember &&
+    adminEmails.has(email) &&
+    isDigilistTenantAdminRole(raw.tenantRole);
+  return {
+    id: raw.id,
+    name: raw.name || raw.email,
+    email: raw.email,
+    isMember,
+    isAdmin,
+  };
+}
+
 export async function liveUser(session: Session): Promise<User> {
   const result = await rest("/auth/me", "GET", undefined, session.token);
   const user = z
@@ -126,20 +185,7 @@ export async function liveUser(session: Session): Promise<User> {
       tenantRole: z.string().nullable().optional(),
     })
     .parse(result.user);
-  const isMember = user.tenantId === tenantId;
-  const isAdmin =
-    isMember &&
-    (user.role === "admin" ||
-      ["owner", "admin", "tenant_admin", "saksbehandler", "manager"].includes(
-        user.tenantRole ?? "",
-      ));
-  return {
-    id: user.id,
-    name: user.name || user.email,
-    email: user.email,
-    isMember,
-    isAdmin,
-  };
+  return mapDigilistUser(user);
 }
 export async function refreshAccess(session: Session) {
   if (session.accessToken && (session.expiresAt ?? 0) > Date.now() + 30000)
@@ -157,12 +203,13 @@ export async function setBuildingContext(session: Session) {
       tenantId,
     });
   } catch {
-    if (config.access === "members")
+    if (config.access === "members") {
       throw new AppError(
         403,
         "Denne bookingløsningen er for byggets medlemmer. Kontakt administrator for tilgang.",
         "members_only_access",
       );
+    }
   }
   session.accessToken = undefined;
   await refreshAccess(session);
@@ -177,12 +224,22 @@ export class Digilist {
     return Promise.all(
       inventory.map(async (definition) => {
         const source = row(
-          await query(this.c, "domain/resources:getBySlugPublic", {
+          await query(this.c, "domain/resources:getBySlug", {
             slug: definition.slug,
             tenantId,
           }),
         );
-        if (source.tenantId !== tenantId || !source._id)
+        const channel =
+          source.accessChannel === "tenant_portal"
+            ? "tenant_portal"
+            : str(row(source.metadata).accessChannel) === "tenant_portal"
+              ? "tenant_portal"
+              : "marketplace";
+        if (
+          source.tenantId !== tenantId ||
+          !source._id ||
+          channel !== "tenant_portal"
+        )
           throw new AppError(
             503,
             `Rommet ${definition.name} er ikke tilgjengelig i byggets oppsett.`,
@@ -299,18 +356,18 @@ export class Digilist {
       ? null
       : z.number().nonnegative().parse(row(raw.summary).total);
     const currency = str(raw.currency, "NOK");
-    const paymentMode: Quote["paymentMode"] =
-      total === 0
-        ? "none"
-        : process.env.PAYMENT_MODE === "invoice"
-          ? "invoice"
-          : "hosted";
+    if (priceOnRequest || total === null || total > 0)
+      throw new AppError(
+        409,
+        "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
+        "skb_internal_booking_only",
+      );
     return {
-      total,
+      total: 0,
       currency,
-      priceOnRequest,
+      priceOnRequest: false,
       requiresApproval: room.requiresApproval,
-      paymentMode,
+      paymentMode: "none" as const,
       raw,
     };
   }
@@ -355,6 +412,7 @@ export class Digilist {
       await query(this.c, "domain/bookings:listMine", {
         userId: user.id,
         limit: 500,
+        audience: "tenant_portal",
       }),
     );
     return data
@@ -384,37 +442,60 @@ export class Digilist {
   async create(input: BookingInput, user: User, key: string) {
     const room = await this.room(input.roomId);
     const span = interval(input);
-    const result = await rest(
-      "/checkout/sessions",
-      "POST",
-      {
-        listing: room.slug,
-        start: new Date(span.startTime).toISOString(),
-        end: new Date(span.endTime).toISOString(),
-        customer: {
-          name: input.name || user.name,
-          email: user.email,
-        },
-        guestCount: input.people,
-        notes: [
-          input.phone ? `Telefon: ${input.phone}` : "",
-          input.title,
-          input.notes,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      },
-      this.session?.accessToken,
-      createHash("sha256")
-        .update(`${tenantId}:${user.id}:${key}`)
-        .digest("hex"),
+    const slot = row(
+      await query(this.c, "domain/bookings:validateBookingSlot", {
+        resourceId: room.sourceId,
+        ...span,
+      }),
     );
-    const b = await this.booking(z.string().parse(result.bookingId), user);
+    if (slot.valid === false)
+      throw new AppError(
+        409,
+        str(slot.reason, "Rommet er ikke ledig."),
+        "room_unavailable",
+      );
+    const idempotencyKey = createHash("sha256")
+      .update(`${tenantId}:${user.id}:${key}`)
+      .digest("hex");
+    const existing = list(
+      await query(this.c, "domain/bookings:listMine", {
+        userId: user.id,
+        limit: 500,
+        audience: "tenant_portal",
+      }),
+    ).find(
+      (b) => str(row(b.metadata).moteromIdempotencyKey) === idempotencyKey,
+    );
+    if (existing) {
+      const rooms = await this.rooms();
+      return this.normalizeBooking(existing, rooms);
+    }
+    const notes = [
+      input.phone ? `Telefon: ${input.phone}` : "",
+      input.title,
+      input.notes,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const result = row(
+      await mutate(this.c, "domain/bookings:create", {
+        tenantId,
+        resourceId: room.sourceId,
+        userId: user.id,
+        startTime: span.startTime,
+        endTime: span.endTime,
+        notes,
+        metadata: {
+          title: input.title,
+          guestCount: input.people,
+          moteromIdempotencyKey: idempotencyKey,
+        },
+      }),
+    );
+    const b = await this.booking(z.string().parse(result.id), user);
     return {
       ...b,
       phone: input.phone || b.phone,
-      confirmationUrl: str(result.confirmationUrl),
-      paymentRequired: Boolean(result.paymentRequired),
     };
   }
   async updateBooking(

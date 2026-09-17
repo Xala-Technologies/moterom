@@ -29,7 +29,6 @@ import {
 } from "../components/ui";
 import { MonthCalendar } from "../components/MonthCalendar";
 import type { Booking, Quote, Room, TimeSlot } from "../../shared/types";
-import { listingUrl } from "../../shared/urls";
 import { readSearch } from "./Rooms";
 import { useFormatters, useT } from "../i18n";
 type Step = 1 | 2 | 3;
@@ -365,6 +364,13 @@ export function NewBooking() {
                           <button
                             type="button"
                             key={slot.start}
+                            className={
+                              slot.state === "available"
+                                ? selected
+                                  ? "is-selected"
+                                  : "is-available"
+                                : "is-unavailable"
+                            }
                             aria-pressed={selected}
                             aria-label={
                               slot.state === "available"
@@ -564,21 +570,6 @@ export function NewBooking() {
                   />
                   <span>{t("booking.consent_checked")}</span>
                 </label>
-                {quote.paymentMode === "hosted" ? (
-                  <>
-                    <p>{t("booking.hosted_payment_note")}</p>
-                    {room?.slug && config?.dashboardUrl ? (
-                      <a
-                        className="ds-button full-width"
-                        href={listingUrl(config.dashboardUrl, room.slug)}
-                      >
-                        {t("booking.continue_in_digilist")}
-                      </a>
-                    ) : (
-                      <p className="caption">{t("booking.missing_listing")}</p>
-                    )}
-                  </>
-                ) : null}
               </div>
             )}
           </form>
@@ -662,7 +653,7 @@ export function NewBooking() {
             {t("common.next")}
             <ArrowRight size={17} />
           </Button>
-        ) : quote?.paymentMode === "hosted" ? null : (
+        ) : (
           <Button
             type="submit"
             form="wizard-confirm"
@@ -672,7 +663,7 @@ export function NewBooking() {
           </Button>
         )}
       </div>
-      {step === 3 && quote && quote.paymentMode !== "hosted" && (
+      {step === 3 && quote && (
         <p className="caption align-center wizard-confirm-note">
           <Mail size={15} />
           {quote.requiresApproval
