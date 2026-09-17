@@ -21,9 +21,14 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
   const [filter, setFilter] = useState<"all" | AccessRequestStatus>("pending");
   const [busyId, setBusyId] = useState<string>();
 
-  const rows = (result.data || []).filter(
-    (row) => filter === "all" || row.status === filter,
-  );
+  const all = result.data || [];
+  const counts = {
+    pending: all.filter((row) => row.status === "pending").length,
+    approved: all.filter((row) => row.status === "approved").length,
+    rejected: all.filter((row) => row.status === "rejected").length,
+    all: all.length,
+  };
+  const rows = all.filter((row) => filter === "all" || row.status === filter);
 
   const setStatus = async (id: string, status: AccessRequestStatus) => {
     setBusyId(id);
@@ -53,6 +58,11 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
   if (result.error)
     return <ErrorState error={result.error} retry={result.reload} />;
 
+  const emptyElsewhere =
+    filter === "pending" &&
+    counts.pending === 0 &&
+    counts.approved + counts.rejected > 0;
+
   return (
     <div className="admin-users stack">
       <p className="muted">{t("admin.users.caption")}</p>
@@ -64,19 +74,19 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
         >
           {(
             [
-              ["pending", t("admin.users.filter_pending")],
-              ["approved", t("admin.users.filter_approved")],
-              ["rejected", t("admin.users.filter_rejected")],
-              ["all", t("admin.users.filter_all")],
+              ["pending", t("admin.users.filter_pending"), counts.pending],
+              ["approved", t("admin.users.filter_approved"), counts.approved],
+              ["rejected", t("admin.users.filter_rejected"), counts.rejected],
+              ["all", t("admin.users.filter_all"), counts.all],
             ] as const
-          ).map(([value, label]) => (
+          ).map(([value, label, count]) => (
             <button
               key={value}
               type="button"
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
             >
-              {label}
+              {t("admin.users.filter_with_count", { label, count })}
             </button>
           ))}
         </div>
@@ -95,8 +105,28 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
       </div>
 
       {rows.length === 0 ? (
-        <Empty title={t("admin.users.empty_title")}>
-          <p>{t("admin.users.empty_body")}</p>
+        <Empty
+          title={
+            emptyElsewhere
+              ? t("admin.users.empty_pending_title")
+              : t("admin.users.empty_title")
+          }
+        >
+          <p>
+            {emptyElsewhere
+              ? t("admin.users.empty_pending_body")
+              : t("admin.users.empty_body")}
+          </p>
+          {emptyElsewhere && (
+            <Button
+              variant="secondary"
+              data-size="sm"
+              type="button"
+              onClick={() => setFilter("all")}
+            >
+              {t("admin.users.show_all")}
+            </Button>
+          )}
         </Empty>
       ) : (
         <ul className="admin-users-list">
