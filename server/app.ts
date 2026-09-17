@@ -192,8 +192,28 @@ async function context(
         "Digilist-innlogging er ikke konfigurert.",
         "digilist_auth_unavailable",
       );
+    // Digilist session token is the durable login. Access JWT mint failures
+    // must not look like logout — that forced a new OTP despite rememberMe.
     user = await liveUser(session);
-    if (await refreshAccess(session)) await writeSession(res, session);
+    try {
+      if (await refreshAccess(session)) await writeSession(res, session);
+    } catch (e) {
+      if (e instanceof AppError && e.status === 401)
+        throw new AppError(
+          503,
+          "Vi får ikke kontakt med bookingtjenesten. Prøv igjen.",
+          "booking_service_unreachable",
+        );
+      throw e;
+    }
+    if (
+      config.access === "members" &&
+      user &&
+      !user.isMember &&
+      accessRequests.hasApproved(user.email)
+    ) {
+      user = { ...user, isMember: true };
+    }
   }
   if (
     (requireUser || (config.access === "members" && !allowAnonymous)) &&
@@ -320,12 +340,31 @@ app.get("/api/session", async (req, res) => {
   if (!session) return res.json({ user: null });
   try {
     // Allow non-members so the client can show the access-pending panel.
+    // clearSession only when Digilist /auth/me says the session token is gone —
+    // not when Convex access-token refresh fails (mapped to 503 in context).
     const ctx = await context(req, res, false, false, true);
     res.json({ user: ctx.user ?? null });
   } catch (e) {
     if (e instanceof AppError && e.status === 401) {
       clearSession(res);
       res.json({ user: null });
+    } else if (e instanceof AppError && e.status === 503 && session.token) {
+      // Digilist session still valid; surface identity without Convex access.
+      try {
+        const user = await liveUser(session);
+        const member =
+          config.access === "members" &&
+          !user.isMember &&
+          accessRequests.hasApproved(user.email)
+            ? { ...user, isMember: true }
+            : user;
+        res.json({ user: member });
+      } catch (inner) {
+        if (inner instanceof AppError && inner.status === 401) {
+          clearSession(res);
+          res.json({ user: null });
+        } else throw inner;
+      }
     } else throw e;
   }
 });

@@ -9,7 +9,7 @@ describe("access request store", () => {
   });
   afterEach(() => store.db.close());
 
-  it("creates, lists and updates status without granting membership", () => {
+  it("creates, lists and updates status", () => {
     const created = store.create({
       name: "Ola Nordmann",
       email: "ola@example.invalid",
@@ -19,10 +19,24 @@ describe("access request store", () => {
     expect(created.status).toBe("pending");
     expect(created.email).toBe("ola@example.invalid");
     expect(store.list()).toHaveLength(1);
+    expect(store.hasApproved("ola@example.invalid")).toBe(false);
 
     const approved = store.updateStatus(created.id, "approved");
     expect(approved.status).toBe("approved");
     expect(approved.updatedAt).toBeGreaterThanOrEqual(created.createdAt);
+    expect(store.hasApproved("ola@example.invalid")).toBe(true);
+    expect(store.hasApproved("OLA@example.invalid")).toBe(true);
+  });
+
+  it("hasApproved is false after reject", () => {
+    const created = store.create({
+      name: "Ola",
+      email: "ola@example.invalid",
+      message: "Hei",
+    });
+    store.updateStatus(created.id, "approved");
+    store.updateStatus(created.id, "rejected");
+    expect(store.hasApproved("ola@example.invalid")).toBe(false);
   });
 
   it("returns the existing pending request for the same email", () => {

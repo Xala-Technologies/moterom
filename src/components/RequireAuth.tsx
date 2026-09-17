@@ -72,7 +72,7 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Shown on login when Digilist refuses tenant switch (members_only_access). */
+/** Shown on login when the user is signed in but not yet approved for the building. */
 export function AccessRequestFromLogin({
   onDismiss,
 }: {

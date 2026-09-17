@@ -203,13 +203,8 @@ export async function setBuildingContext(session: Session) {
       tenantId,
     });
   } catch {
-    if (config.access === "members") {
-      throw new AppError(
-        403,
-        "Denne bookingløsningen er for byggets medlemmer. Kontakt administrator for tilgang.",
-        "members_only_access",
-      );
-    }
+    // Soft-fail: members portals still issue a session. Access is decided from
+    // Digilist tenant membership or an admin-approved access request.
   }
   session.accessToken = undefined;
   await refreshAccess(session);
