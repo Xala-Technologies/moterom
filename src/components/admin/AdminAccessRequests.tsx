@@ -14,6 +14,13 @@ type ApiResult = {
   setData: Dispatch<SetStateAction<AccessRequest[] | undefined>>;
 };
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]!.slice(0, 1)}${parts[parts.length - 1]!.slice(0, 1)}`.toUpperCase();
+}
+
 export function AdminAccessRequests({ result }: { result: ApiResult }) {
   const { config, notify } = useApp();
   const { t } = useT();
@@ -90,18 +97,20 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
             </button>
           ))}
         </div>
-        <a
-          href={config?.dashboardUrl}
-          className="ds-button"
-          data-variant="secondary"
-          data-size="sm"
-          target="_blank"
-          rel="noreferrer"
-        >
-          {t("common.open_digilist")}
-          <ArrowUpRight size={16} />
-          <span className="sr-only"> {t("common.opens_new_tab")}</span>
-        </a>
+        {config?.dashboardUrl ? (
+          <a
+            href={config.dashboardUrl}
+            className="ds-button"
+            data-variant="secondary"
+            data-size="sm"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("common.open_digilist")}
+            <ArrowUpRight size={16} />
+            <span className="sr-only"> {t("common.opens_new_tab")}</span>
+          </a>
+        ) : null}
       </div>
 
       {rows.length === 0 ? (
@@ -129,68 +138,70 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
           )}
         </Empty>
       ) : (
-        <ul className="admin-users-list">
-          {rows.map((row) => (
-            <li key={row.id} className="admin-users-row">
-              <div className="admin-users-row-main">
-                <div>
-                  <strong>{row.name}</strong>
-                  <p className="muted">{row.email}</p>
+        <div className="admin-users-table">
+          <div className="admin-users-header" role="row">
+            <span>{t("admin.users.cols.user")}</span>
+            <span>{t("admin.users.cols.message")}</span>
+            <span>{t("admin.users.cols.received")}</span>
+            <span>{t("admin.users.cols.status")}</span>
+            <span className="admin-users-header-actions">
+              {t("admin.users.cols.actions")}
+            </span>
+          </div>
+          <ul className="admin-users-list">
+            {rows.map((row) => (
+              <li key={row.id} className="admin-users-row">
+                <div className="admin-users-identity">
+                  <div className="admin-users-avatar" aria-hidden="true">
+                    {initials(row.name)}
+                  </div>
+                  <div className="admin-users-identity-text">
+                    <strong>{row.name}</strong>
+                    <span className="admin-users-email">{row.email}</span>
+                  </div>
                 </div>
-                <Status status={row.status} />
-              </div>
-              <p className="admin-users-message">{row.message}</p>
-              <p className="caption">
-                {t("admin.users.requested_at", {
-                  date: displayDate(row.createdAt, true),
-                })}
-              </p>
-              <div className="admin-users-actions">
-                <a
-                  href={config?.dashboardUrl}
-                  className="ds-button"
-                  data-variant="secondary"
-                  data-size="sm"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("common.open_digilist")}
-                  <ArrowUpRight size={15} />
-                  <span className="sr-only"> {t("common.opens_new_tab")}</span>
-                </a>
-                {row.status !== "approved" && (
-                  <Button
-                    data-size="sm"
-                    disabled={busyId === row.id}
-                    onClick={() => void setStatus(row.id, "approved")}
-                  >
-                    {t("admin.users.mark_approved")}
-                  </Button>
-                )}
-                {row.status !== "rejected" && (
-                  <Button
-                    variant="secondary"
-                    data-size="sm"
-                    disabled={busyId === row.id}
-                    onClick={() => void setStatus(row.id, "rejected")}
-                  >
-                    {t("admin.users.mark_rejected")}
-                  </Button>
-                )}
-                {row.status !== "pending" && (
-                  <Button
-                    variant="tertiary"
-                    data-size="sm"
-                    disabled={busyId === row.id}
-                    onClick={() => void setStatus(row.id, "pending")}
-                  >
-                    {t("admin.users.mark_pending")}
-                  </Button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+                <p className="admin-users-message">{row.message}</p>
+                <p className="admin-users-date">
+                  {displayDate(row.createdAt, true)}
+                </p>
+                <div className="admin-users-status">
+                  <Status status={row.status} />
+                </div>
+                <div className="admin-users-actions">
+                  {row.status !== "approved" && (
+                    <Button
+                      data-size="sm"
+                      disabled={busyId === row.id}
+                      onClick={() => void setStatus(row.id, "approved")}
+                    >
+                      {t("admin.users.mark_approved")}
+                    </Button>
+                  )}
+                  {row.status !== "rejected" && (
+                    <Button
+                      variant="secondary"
+                      data-size="sm"
+                      disabled={busyId === row.id}
+                      onClick={() => void setStatus(row.id, "rejected")}
+                    >
+                      {t("admin.users.mark_rejected")}
+                    </Button>
+                  )}
+                  {row.status !== "pending" && (
+                    <Button
+                      variant="tertiary"
+                      data-size="sm"
+                      disabled={busyId === row.id}
+                      onClick={() => void setStatus(row.id, "pending")}
+                    >
+                      {t("admin.users.mark_pending")}
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
