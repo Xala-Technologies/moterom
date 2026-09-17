@@ -105,6 +105,17 @@ export interface AdminData {
   rooms: Room[];
   truncated: boolean;
 }
+export type AccessRequestStatus = "pending" | "approved" | "rejected";
+export interface AccessRequest {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+  name: string;
+  email: string;
+  message: string;
+  userId?: string;
+  status: AccessRequestStatus;
+}
 export const RESERVATION_STATUSES = [
   "confirmed",
   "approved",

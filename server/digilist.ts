@@ -2,7 +2,14 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { config, convexUrl, httpUrl, inventory, tenantId } from "./config";
+import {
+  adminEmails,
+  config,
+  convexUrl,
+  httpUrl,
+  inventory,
+  tenantId,
+} from "./config";
 import type { Session } from "./session";
 import type {
   AdminData,
@@ -12,7 +19,6 @@ import type {
   BookingInput,
   InsightsBlock,
   InsightsBooking,
-  Quote,
   Room,
   Search,
   User,
@@ -123,22 +129,24 @@ export async function action(
 ): Promise<unknown> {
   return c.action(makeFunctionReference<"action">(name), args);
 }
-/** Digilist tenant roles that grant Møterom administration for the building. */
-const DIGILIST_ADMIN_TENANT_ROLES = new Set([
-  "owner",
-  "admin",
-  "tenant_admin",
-  "saksbehandler",
-  "manager",
-]);
-
-const normalizeRole = (value: string | null | undefined) =>
-  (value ?? "").trim().toLowerCase();
-
 /**
  * Map Digilist `/auth/me` fields to the portal User after switchTenant.
- * Admin access is Digilist-only: member of DIGILIST_TENANT_ID with an admin role.
+ * Møterom Admin requires ADMIN_EMAILS and an admin-capable Digilist tenant
+ * role on this building tenant. Membership is Digilist tenant membership only.
  */
+const ADMIN_TENANT_ROLES = new Set([
+  "tenant_admin",
+  "saksbehandler",
+  "owner",
+  "admin",
+  "manager",
+  "staff",
+]);
+
+function isDigilistTenantAdminRole(role: string | null | undefined): boolean {
+  return ADMIN_TENANT_ROLES.has((role ?? "").trim().toLowerCase());
+}
+
 export function mapDigilistUser(
   raw: {
     id: string;
@@ -150,12 +158,12 @@ export function mapDigilistUser(
   },
   buildingTenantId: string = tenantId,
 ): User {
-  const role = normalizeRole(raw.role);
-  const tenantRole = normalizeRole(raw.tenantRole);
+  const email = raw.email.trim().toLowerCase();
   const isMember = raw.tenantId === buildingTenantId;
   const isAdmin =
     isMember &&
-    (role === "admin" || DIGILIST_ADMIN_TENANT_ROLES.has(tenantRole));
+    adminEmails.has(email) &&
+    isDigilistTenantAdminRole(raw.tenantRole);
   return {
     id: raw.id,
     name: raw.name || raw.email,
@@ -195,12 +203,13 @@ export async function setBuildingContext(session: Session) {
       tenantId,
     });
   } catch {
-    if (config.access === "members")
+    if (config.access === "members") {
       throw new AppError(
         403,
         "Denne bookingløsningen er for byggets medlemmer. Kontakt administrator for tilgang.",
         "members_only_access",
       );
+    }
   }
   session.accessToken = undefined;
   await refreshAccess(session);
@@ -215,12 +224,22 @@ export class Digilist {
     return Promise.all(
       inventory.map(async (definition) => {
         const source = row(
-          await query(this.c, "domain/resources:getBySlugPublic", {
+          await query(this.c, "domain/resources:getBySlug", {
             slug: definition.slug,
             tenantId,
           }),
         );
-        if (source.tenantId !== tenantId || !source._id)
+        const channel =
+          source.accessChannel === "tenant_portal"
+            ? "tenant_portal"
+            : str(row(source.metadata).accessChannel) === "tenant_portal"
+              ? "tenant_portal"
+              : "marketplace";
+        if (
+          source.tenantId !== tenantId ||
+          !source._id ||
+          channel !== "tenant_portal"
+        )
           throw new AppError(
             503,
             `Rommet ${definition.name} er ikke tilgjengelig i byggets oppsett.`,
@@ -337,18 +356,18 @@ export class Digilist {
       ? null
       : z.number().nonnegative().parse(row(raw.summary).total);
     const currency = str(raw.currency, "NOK");
-    const paymentMode: Quote["paymentMode"] =
-      total === 0
-        ? "none"
-        : process.env.PAYMENT_MODE === "invoice"
-          ? "invoice"
-          : "hosted";
+    if (priceOnRequest || total === null || total > 0)
+      throw new AppError(
+        409,
+        "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
+        "skb_internal_booking_only",
+      );
     return {
-      total,
+      total: 0,
       currency,
-      priceOnRequest,
+      priceOnRequest: false,
       requiresApproval: room.requiresApproval,
-      paymentMode,
+      paymentMode: "none" as const,
       raw,
     };
   }
@@ -393,6 +412,7 @@ export class Digilist {
       await query(this.c, "domain/bookings:listMine", {
         userId: user.id,
         limit: 500,
+        audience: "tenant_portal",
       }),
     );
     return data
@@ -422,37 +442,60 @@ export class Digilist {
   async create(input: BookingInput, user: User, key: string) {
     const room = await this.room(input.roomId);
     const span = interval(input);
-    const result = await rest(
-      "/checkout/sessions",
-      "POST",
-      {
-        listing: room.slug,
-        start: new Date(span.startTime).toISOString(),
-        end: new Date(span.endTime).toISOString(),
-        customer: {
-          name: input.name || user.name,
-          email: user.email,
-        },
-        guestCount: input.people,
-        notes: [
-          input.phone ? `Telefon: ${input.phone}` : "",
-          input.title,
-          input.notes,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      },
-      this.session?.accessToken,
-      createHash("sha256")
-        .update(`${tenantId}:${user.id}:${key}`)
-        .digest("hex"),
+    const slot = row(
+      await query(this.c, "domain/bookings:validateBookingSlot", {
+        resourceId: room.sourceId,
+        ...span,
+      }),
     );
-    const b = await this.booking(z.string().parse(result.bookingId), user);
+    if (slot.valid === false)
+      throw new AppError(
+        409,
+        str(slot.reason, "Rommet er ikke ledig."),
+        "room_unavailable",
+      );
+    const idempotencyKey = createHash("sha256")
+      .update(`${tenantId}:${user.id}:${key}`)
+      .digest("hex");
+    const existing = list(
+      await query(this.c, "domain/bookings:listMine", {
+        userId: user.id,
+        limit: 500,
+        audience: "tenant_portal",
+      }),
+    ).find(
+      (b) => str(row(b.metadata).moteromIdempotencyKey) === idempotencyKey,
+    );
+    if (existing) {
+      const rooms = await this.rooms();
+      return this.normalizeBooking(existing, rooms);
+    }
+    const notes = [
+      input.phone ? `Telefon: ${input.phone}` : "",
+      input.title,
+      input.notes,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const result = row(
+      await mutate(this.c, "domain/bookings:create", {
+        tenantId,
+        resourceId: room.sourceId,
+        userId: user.id,
+        startTime: span.startTime,
+        endTime: span.endTime,
+        notes,
+        metadata: {
+          title: input.title,
+          guestCount: input.people,
+          moteromIdempotencyKey: idempotencyKey,
+        },
+      }),
+    );
+    const b = await this.booking(z.string().parse(result.id), user);
     return {
       ...b,
       phone: input.phone || b.phone,
-      confirmationUrl: str(result.confirmationUrl),
-      paymentRequired: Boolean(result.paymentRequired),
     };
   }
   async updateBooking(

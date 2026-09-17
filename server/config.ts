@@ -44,6 +44,26 @@ export const floorplanPath = resolve(
   env("FLOORPLAN_PATH") || "assets/floor-plan.png",
 );
 export const digilistAuthConfigured = Boolean(convexUrl && httpUrl);
+
+/** Lowercased Digilist emails allowed to use Møterom Admin (live Digilist sessions). */
+function parseAdminEmails(raw: string | undefined): Set<string> {
+  return new Set(
+    (raw ?? "")
+      .split(",")
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+const adminEmailsRaw = env("ADMIN_EMAILS");
+export const adminEmails = parseAdminEmails(
+  adminEmailsRaw ??
+    (production && mode === "live" ? undefined : "skb@digilist.no"),
+);
+if (production && mode === "live" && adminEmails.size === 0)
+  throw new Error(
+    "Live production requires ADMIN_EMAILS with at least one email address.",
+  );
+
 export const config: Config = {
   floorplanAvailable: existsSync(floorplanPath),
   mode,

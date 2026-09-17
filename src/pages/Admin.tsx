@@ -51,6 +51,7 @@ import {
   validateSearch,
 } from "../components/ui";
 import type {
+  AccessRequest,
   AdminData,
   Block,
   Booking,
@@ -66,6 +67,7 @@ import {
   toSearch,
 } from "../../shared/time";
 import { AdminInsights } from "./AdminInsights";
+import { AdminAccessRequests } from "../components/admin/AdminAccessRequests";
 import { roomCopy, useFormatters, useI18nLocale, useT } from "../i18n";
 type CalendarEvent = {
   id: string;
@@ -87,6 +89,9 @@ export function Admin() {
   const [params] = useSearchParams();
   const section = location.pathname.split("/")[2] || "today";
   const result = useApi<AdminData>(user?.isAdmin ? "/admin" : null);
+  const accessResult = useApi<AccessRequest[]>(
+    user?.isAdmin ? "/admin/access-requests" : null,
+  );
   const [date, setDate] = useState(today());
   const [view, setView] = useState<"day" | "week">("day");
   const dateControlsRef = useRef<HTMLDivElement>(null);
@@ -176,6 +181,17 @@ export function Admin() {
       block: b,
     })),
   ];
+  const OVERVIEW_PROGRAMME_LIMIT = 5;
+  const dayProgramme = events
+    .filter((e) => overlaps(e, span))
+    .sort((a, b) => a.startTime - b.startTime);
+  const upcomingProgramme = dayProgramme.filter((e) => e.endTime > Date.now());
+  const programmeSource =
+    date === today() && upcomingProgramme.length > 0
+      ? upcomingProgramme
+      : dayProgramme;
+  const programmePreview = programmeSource.slice(0, OVERVIEW_PROGRAMME_LIMIT);
+  const programmeHasMore = dayProgramme.length > programmePreview.length;
   const filteredBookings = bookings
     .filter(
       (b) =>
@@ -239,6 +255,7 @@ export function Admin() {
       t("admin.headings.bookings.body"),
     ],
     rooms: [t("admin.headings.rooms.title"), t("admin.headings.rooms.body")],
+    users: [t("admin.headings.users.title"), t("admin.headings.users.body")],
     settings: [
       t("admin.headings.settings.title"),
       t("admin.headings.settings.body"),
@@ -348,6 +365,19 @@ export function Admin() {
           <NavLink to="/admin/rooms">
             <Building2 size={19} />
             {t("admin.nav.rooms")}
+          </NavLink>
+          <NavLink to="/admin/users">
+            <UsersRound size={19} />
+            {t("admin.nav.users")}
+            {(accessResult.data || []).some((r) => r.status === "pending") && (
+              <span className="nav-count">
+                {
+                  (accessResult.data || []).filter(
+                    (r) => r.status === "pending",
+                  ).length
+                }
+              </span>
+            )}
           </NavLink>
           <NavLink to="/admin/settings">
             <Settings size={19} />
@@ -474,43 +504,56 @@ export function Admin() {
                 )}
                 <div className="section-heading">
                   <h2>{t("admin.todays_programme")}</h2>
+                  {programmeHasMore && (
+                    <NavLink className="text-link" to="/admin/calendar">
+                      {t("admin.programme_show_all", {
+                        count: dayProgramme.length,
+                      })}
+                      <ArrowUpRight size={16} />
+                    </NavLink>
+                  )}
                 </div>
-                {events.filter((e) => overlaps(e, span)).length ? (
+                {programmePreview.length ? (
                   <div className="admin-booking-list">
-                    {events
-                      .filter((e) => overlaps(e, span))
-                      .sort((a, b) => a.startTime - b.startTime)
-                      .map((e) => (
-                        <button
-                          className="admin-booking-row"
-                          key={`${e.kind}-${e.id}`}
-                          onClick={() => openEvent(e)}
-                        >
-                          <div>
-                            <strong>
-                              {rooms.find((r) => r.id === e.roomId)?.name}
-                            </strong>
-                            <span>{e.title}</span>
-                          </div>
-                          <div>
-                            <span>
-                              {shortTime(e.startTime)}–{shortTime(e.endTime)}
-                            </span>
-                          </div>
-                          {e.kind === "block" ? (
-                            <span className="caption">
-                              {t("common.status.blocked")}
-                            </span>
-                          ) : (
-                            <Status status={e.status} />
-                          )}
-                        </button>
-                      ))}
+                    {programmePreview.map((e) => (
+                      <button
+                        className="admin-booking-row"
+                        key={`${e.kind}-${e.id}`}
+                        onClick={() => openEvent(e)}
+                      >
+                        <div>
+                          <strong>
+                            {rooms.find((r) => r.id === e.roomId)?.name}
+                          </strong>
+                          <span>{e.title}</span>
+                        </div>
+                        <div>
+                          <span>
+                            {shortTime(e.startTime)}–{shortTime(e.endTime)}
+                          </span>
+                        </div>
+                        {e.kind === "block" ? (
+                          <span className="caption">
+                            {t("common.status.blocked")}
+                          </span>
+                        ) : (
+                          <Status status={e.status} />
+                        )}
+                      </button>
+                    ))}
                   </div>
                 ) : (
                   <Empty title={t("admin.empty_day_title")}>
                     <p>{t("admin.empty_day_body")}</p>
                   </Empty>
+                )}
+                {programmeHasMore && (
+                  <p className="caption admin-programme-more">
+                    {t("admin.programme_more", {
+                      shown: programmePreview.length,
+                      total: dayProgramme.length,
+                    })}
+                  </p>
                 )}
                 <div className="section-heading">
                   <h2>{t("admin.room_calendar")}</h2>
@@ -631,6 +674,9 @@ export function Admin() {
                 })}
               </div>
             )}
+            {section === "users" && (
+              <AdminAccessRequests result={accessResult} />
+            )}
             {section === "settings" && (
               <div className="settings-grid">
                 <section className="settings-card">
@@ -672,6 +718,38 @@ export function Admin() {
                           ? t("admin.access_members_hint")
                           : t("admin.access_public")}
                       </p>
+                    </div>
+                  </div>
+                </section>
+                <section className="settings-card">
+                  <header className="settings-card-header">
+                    <h2>{t("admin.settings_users")}</h2>
+                    <p>{t("admin.settings_users_caption")}</p>
+                  </header>
+                  <div className="settings-card-body settings-card-action">
+                    <p>{t("admin.settings_users_body")}</p>
+                    <div className="settings-card-actions">
+                      <Link
+                        to="/admin/users"
+                        className="ds-button"
+                        data-variant="primary"
+                      >
+                        {t("admin.settings_users_open_inbox")}
+                      </Link>
+                      <a
+                        href={config?.dashboardUrl}
+                        className="ds-button settings-digilist-btn"
+                        data-variant="secondary"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t("common.open_digilist")}
+                        <ArrowUpRight size={17} />
+                        <span className="sr-only">
+                          {" "}
+                          {t("common.opens_new_tab")}
+                        </span>
+                      </a>
                     </div>
                   </div>
                 </section>

@@ -10,7 +10,7 @@ Run `npm run check` and `npm run format:check` on Node 24. The suite covers:
 - HTTP authentication, Origin enforcement, HttpOnly cookie, signed quote binding, booking creation/retry, ICS export and cancellation.
 - Administrator approve, reject, block create/delete, room PATCH, and insights reads, including customer 403s.
 - Digilist approval configuration, cross-tenant rejection, failure-versus-unavailability and preserving existing room rules when editing.
-- Dashboard-to-listing URL mapping for hosted payment handoff.
+- Digilist approval configuration, cross-tenant rejection, failure-versus-unavailability, tenant_portal catalogue, and paid-quote fail-closed.
 
 ## Manual browser — quality polish (local demo, Chromium in Cursor)
 
@@ -57,3 +57,12 @@ Use a dedicated staging tenant. Confirm the deployment matches the reviewed API 
 Agree on paid-booking behavior before enabling it. Confirm actual invoice/email/calendar behavior in Digilist rather than relying on demo presentation. Verify that contact details, accessibility information, both Eidefossen room names, capacities and photographs match the building.
 
 Do not merge/deploy as a customer-ready release until these outstanding checks and configuration decisions are resolved. This is a reviewable implementation with a working isolated demo.
+
+## SKB private portal (17 September 2026)
+
+Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist sibling `feat/tenant-portal-listings` from `origin/dev` `f5a6c8f` — **not** pushed to Digilist `dev`/`main`.
+
+- Local `npm run check` and `format:check` passed (55 tests). Digilist targeted Convex tests passed (163).
+- Digilist DEV tenant `skb-moterom-test` (`xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`) and seven private `tenant_portal` rooms were seeded. `config/rooms.json` slugs are filled. Marketplace REST leak checks passed (slug 404, guest checkout 404, public listing still 200). See [`docs/skb-private-portal.md`](skb-private-portal.md).
+- Local demo browser: grid confirm modal booked Sauda 1 without payment redirect; customer admin 403; phone 390×844 no overflow.
+- Still open: Hostinger `skb.digilist.no` stays demo; no git merge to `dev`/`main`; live member OTP booking against DEV was not run; Eidefossen names still need confirmation.

@@ -185,28 +185,66 @@ button:disabled {
 a.brand {
   color: var(--ds-color-neutral-text-default);
 }
-.brand img {
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-mark-img {
   width: 39px;
   height: 39px;
   object-fit: contain;
   background: #fff;
   border-radius: 8px;
   padding: 3px;
-}
-.brand > span {
-  font-size: 1.1875rem;
-  font-weight: 650;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-.brand small {
   display: block;
-  color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.66rem;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  margin-top: 6px;
+  flex-shrink: 0;
 }
+.brand-mark-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.brand-mark-name {
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--ds-color-accent-base-default, #003057);
+}
+.brand-mark-tagline {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--ds-color-accent-text-default, #003057);
+}
+.login-brand-wrap {
+  margin-bottom: 2rem;
+}
+.login-logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--ds-color-accent-base-default, #003057);
+}
+.login-logo-link .brand-mark-img {
+  width: auto;
+  height: 48px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+.login-logo-link .brand-mark-name {
+  font-size: 1.5rem;
+}
+
 .desktop-nav {
   display: flex;
   align-items: stretch;
@@ -501,8 +539,13 @@ a.brand {
 }
 .rooms-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px;
+}
+@media (min-width: 1280px) {
+  .rooms-grid:not(.rooms-list) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .room-card {
   position: relative;
@@ -515,6 +558,8 @@ a.brand {
     border-color 0.18s,
     box-shadow 0.18s;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .room-card:hover {
   box-shadow: var(--ds-shadow-md);
@@ -530,7 +575,7 @@ a.brand {
 }
 .room-image {
   position: relative;
-  height: 220px;
+  height: 280px;
   display: block;
   color: var(--ds-color-accent-text-subtle);
   text-decoration: none;
@@ -575,7 +620,11 @@ a.brand {
   color: var(--ds-color-neutral-text-subtle);
 }
 .room-card-content {
-  padding: 22px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0;
 }
 .room-card-top {
   display: flex;
@@ -629,7 +678,7 @@ a.brand {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid var(--ds-color-neutral-border-default);
-  margin-top: 20px;
+  margin-top: auto;
   padding-top: 16px;
 }
 .room-card-footer .caption {
@@ -647,14 +696,154 @@ a.brand {
   color: var(--ds-color-accent-text-subtle);
   min-height: var(--ds-touch-target-min, 44px);
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 .room-action::after {
   content: "";
   position: absolute;
   inset: 0;
 }
+.room-card.has-schedule .room-action::after {
+  content: none;
+}
 .room-action:hover {
   text-decoration: underline;
+}
+.room-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.room-schedule {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ds-color-neutral-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+.room-schedule-date {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.room-schedule-date label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ds-color-neutral-text-default);
+}
+.room-schedule-date input {
+  min-height: var(--ds-touch-target-min, 44px);
+  padding: 8px 12px;
+  border: 1px solid var(--ds-color-neutral-border-default);
+  border-radius: var(--digilist-radius-md);
+  background: var(--ds-color-neutral-background-default);
+  color: var(--ds-color-neutral-text-default);
+  font: inherit;
+}
+.room-schedule-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.room-schedule-slots button {
+  min-height: var(--ds-touch-target-min, 44px);
+  padding: 6px 8px;
+  border: 1px solid var(--ds-color-neutral-border-default);
+  border-radius: var(--digilist-radius-md);
+  background: var(--ds-color-neutral-background-default);
+  color: var(--ds-color-neutral-text-default);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.room-schedule-slots button:hover:not(:disabled) {
+  border-color: var(--ds-color-accent-base-default);
+}
+.room-schedule-slots button.is-available {
+  border-color: var(
+    --ds-color-success-border-default,
+    var(--ds-color-accent-border-subtle)
+  );
+}
+.room-schedule-slots button.is-selected,
+.room-schedule-slots button[aria-pressed="true"] {
+  background: var(--ds-color-accent-base-default);
+  border-color: var(--ds-color-accent-base-default);
+  color: var(--ds-color-accent-base-contrast-default);
+}
+.room-schedule-slots button.is-unavailable,
+.room-schedule-slots button:disabled {
+  color: var(--ds-color-neutral-text-subtle);
+  background: var(--ds-color-neutral-surface-default);
+  border-color: var(--ds-color-neutral-border-subtle);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.room-schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.room-schedule-actions .room-more-options {
+  font-size: 0.8125rem;
+  color: var(--ds-color-neutral-text-subtle);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: var(--ds-touch-target-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+.room-schedule-actions .room-more-options:hover {
+  color: var(--ds-color-accent-text-subtle);
+}
+.booking-confirm-summary {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.booking-confirm-summary div {
+  display: grid;
+  gap: 2px;
+}
+.booking-confirm-summary dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ds-color-neutral-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.booking-confirm-summary dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--ds-color-neutral-text-default);
+}
+.booking-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.booking-confirm-success {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .availability-badge {
   font-size: 0.75rem;
@@ -920,39 +1109,30 @@ a.brand {
   width: 100%;
   box-sizing: border-box;
 }
-.login-brand-wrap {
-  margin-bottom: 2rem;
+.login-intro {
+  margin: 0 0 18px;
+  font-size: 0.9375rem;
 }
-.login-logo-link {
-  display: inline-flex;
-  align-items: center;
+.access-pending {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  text-decoration: none;
-  color: inherit;
-  padding-inline-start: 12px;
-  border-inline-start: 2px solid var(--ds-color-accent-base-default, #003057);
+  max-width: 32rem;
 }
-.login-logo-img {
-  height: 48px;
-  width: auto;
-  display: block;
+.access-pending h1,
+.access-pending h2 {
+  margin: 0;
+  font-size: 1.375rem;
 }
-.login-brand-name {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  color: var(--ds-color-accent-base-default, #003057);
+.access-pending p {
+  margin: 0;
 }
-.login-brand-tagline {
-  display: block;
-  margin-top: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ds-color-accent-text-default, #003057);
+.access-pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
 }
 .login-options {
   display: flex;
@@ -972,9 +1152,15 @@ a.brand {
   cursor: pointer;
   color: inherit;
   font: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease;
+}
+a.login-option:hover {
+  border-color: var(--ds-color-neutral-border-default);
+  background: var(--ds-color-neutral-background-tinted);
 }
 .login-option:hover:not(:disabled) {
   border-color: var(--ds-color-neutral-border-default);
@@ -1045,6 +1231,27 @@ a.brand {
 .login-form-card {
   max-width: 28rem;
 }
+.login-form-card .login-submit {
+  min-height: 48px;
+  margin-top: 4px;
+  justify-content: center;
+  font-weight: 600;
+  border-radius: var(--digilist-radius-lg, 12px);
+}
+.login-form-card .login-submit:disabled {
+  opacity: 0.55;
+}
+.login-form-card .ds-input {
+  min-height: 48px;
+}
+.login-stay-logged-in {
+  margin: 4px 0 0;
+  align-items: center;
+  min-height: var(--ds-touch-target-min, 44px);
+}
+.login-stay-logged-in input {
+  margin: 0;
+}
 .login-form-title {
   margin: 0 0 8px;
   font-size: 1.25rem;
@@ -1066,6 +1273,13 @@ a.brand {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ds-color-neutral-border-subtle);
+}
+.login-resend .ds-button {
+  min-height: 44px;
+  justify-content: center;
+  border-radius: var(--digilist-radius-lg, 12px);
 }
 .login-resend-title {
   margin: 0;
@@ -1074,6 +1288,7 @@ a.brand {
 }
 .login-back {
   margin-top: 4px;
+  align-self: flex-start;
 }
 .login-micro-footer {
   flex-shrink: 0;
@@ -2263,6 +2478,9 @@ a.brand {
   align-items: center;
   margin: 25px 0 18px;
 }
+.admin-programme-more {
+  margin: 8px 0 0;
+}
 .calendar-toolbar {
   display: flex;
   justify-content: space-between;
@@ -2846,12 +3064,63 @@ a.brand {
   align-items: flex-start;
   gap: 16px;
 }
+.settings-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
 .settings-card-action > p {
   margin: 0;
   font-size: 0.875rem;
   color: var(--ds-color-neutral-text-subtle);
   line-height: 1.5;
   max-width: 52ch;
+}
+.admin-users-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-users-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-users-row {
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: 10px;
+  background: var(--ds-color-neutral-background-default);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.admin-users-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.admin-users-row-main p {
+  margin: 2px 0 0;
+}
+.admin-users-message {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.9375rem;
+}
+.admin-users-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 .settings-props {
   display: grid;
@@ -3042,15 +3311,15 @@ a.brand {
     padding-inline: 16px;
     gap: 12px;
   }
-  .brand img {
+  .brand-mark-img {
     width: 34px;
     height: 34px;
   }
-  .brand > span {
-    font-size: 1.0625rem;
+  .brand-mark-name {
+    font-size: 1rem;
   }
-  .brand small {
-    font-size: 0.6rem;
+  .brand-mark-tagline {
+    font-size: 9px;
   }
   .desktop-nav {
     display: none;
@@ -3287,10 +3556,10 @@ a.brand {
     max-width: 480px;
     padding: 1.5rem 1.25rem;
   }
-  .login-logo-img {
+  .login-logo-link .brand-mark-img {
     height: 40px;
   }
-  .login-brand-name {
+  .login-logo-link .brand-mark-name {
     font-size: 1.25rem;
   }
   .login-micro-footer {
@@ -3524,10 +3793,12 @@ a.brand {
     font-size: 0.75rem;
   }
 }
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .rooms-grid {
     grid-template-columns: 1fr;
   }
+}
+@media (max-width: 480px) {
   .room-image {
     height: 180px;
   }

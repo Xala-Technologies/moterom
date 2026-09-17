@@ -9,6 +9,7 @@ import {
   Sun,
 } from "lucide-react";
 import { Button } from "./ui";
+import { BrandMark } from "./BrandMark";
 import { useApp } from "../context";
 import { post } from "../api";
 import { useI18nLocale, useT } from "../i18n";
@@ -45,6 +46,7 @@ export function Shell() {
       "/admin/calendar": t("admin.document.calendar"),
       "/admin/bookings": t("admin.document.bookings"),
       "/admin/rooms": t("admin.document.rooms"),
+      "/admin/users": t("admin.document.users"),
       "/admin/settings": t("admin.document.settings"),
       "/mine-bookinger": t("dashboard.document_title"),
       "/login": t("auth.document_title"),
@@ -82,18 +84,16 @@ export function Shell() {
       {!login && (
         <header className="app-header">
           <NavLink to="/" className="brand" aria-label={t("a11y.brand_home")}>
-            <img src="/digilist-logo.svg" alt="" />
-            <span>
-              {building}
-              <small>{t("common.powered_by_digilist")}</small>
-            </span>
+            <BrandMark />
           </NavLink>
           {user && (
             <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
               <NavLink to="/" end>
                 {t("common.find_rooms")}
               </NavLink>
-              <NavLink to="/mine-bookinger">{t("dashboard.nav")}</NavLink>
+              {!user.isAdmin && (
+                <NavLink to="/mine-bookinger">{t("dashboard.nav")}</NavLink>
+              )}
               {user.isAdmin && (
                 <NavLink to="/admin">{t("common.administration")}</NavLink>
               )}
@@ -122,7 +122,7 @@ export function Shell() {
             {user ? (
               <>
                 <NavLink
-                  to="/mine-bookinger"
+                  to={user.isAdmin ? "/admin" : "/mine-bookinger"}
                   className="user-name user-name-link"
                 >
                   {user.name}
@@ -136,7 +136,7 @@ export function Shell() {
                   <LogOut size={20} />
                 </Button>
               </>
-            ) : (
+            ) : config?.access === "members" ? null : (
               <NavLink
                 className="ds-button"
                 data-variant="secondary"
@@ -201,10 +201,12 @@ export function Shell() {
             <Building2 size={21} />
             {t("common.find_rooms")}
           </NavLink>
-          <NavLink to="/mine-bookinger">
-            <CalendarDays size={21} />
-            {t("dashboard.nav")}
-          </NavLink>
+          {!user.isAdmin && (
+            <NavLink to="/mine-bookinger">
+              <CalendarDays size={21} />
+              {t("dashboard.nav")}
+            </NavLink>
+          )}
           {user.isAdmin && (
             <NavLink to="/admin">
               <LayoutDashboard size={21} />

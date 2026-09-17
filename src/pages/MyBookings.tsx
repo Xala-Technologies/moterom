@@ -59,7 +59,7 @@ function isActiveBooking(b: Booking) {
 
 /** Digilist-style personal bookings dashboard (minside pattern) for this building. */
 export function MyBookings() {
-  const { user, loading, config } = useApp();
+  const { user, loading } = useApp();
   const { t } = useT();
   const { displayDate, shortTime, money } = useFormatters();
   const [tab, setTab] = useState<"upcoming" | "history">("upcoming");
@@ -92,18 +92,6 @@ export function MyBookings() {
           <p>{t("dashboard.intro")}</p>
         </div>
         <div className="page-heading-actions">
-          {config?.dashboardUrl && (
-            <a
-              className="ds-button"
-              data-variant="tertiary"
-              href={config.dashboardUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("common.open_digilist")}
-              <span className="sr-only"> {t("common.opens_new_tab")}</span>
-            </a>
-          )}
           <Link className="ds-button" to="/">
             {t("dashboard.book_room")}
             <ArrowRight size={18} />

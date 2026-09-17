@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loading, ErrorState } from "../components/ui";
+import { AccessRequestFromLogin } from "../components/RequireAuth";
 import { useApp } from "../context";
-import { post } from "../api";
+import { ApiError, post } from "../api";
 import { useT } from "../i18n";
 
 /** Digilist OAuth callback — receives sessionToken from Digilist auth redirect. */
 export function AuthCallback() {
-  const { refresh } = useApp();
+  const { config, refresh } = useApp();
   const { t } = useT();
   const [params] = useSearchParams();
   const nav = useNavigate();
@@ -37,7 +38,11 @@ export function AuthCallback() {
       try {
         await post("/auth/session", { token });
         if (cancelled) return;
-        await refresh();
+        const next = await refresh();
+        if (config?.access === "members" && next && !next.isMember) {
+          nav("/login", { replace: true });
+          return;
+        }
         nav(safeReturn, { replace: true });
       } catch (e) {
         if (!cancelled) setError(e as Error);
@@ -47,7 +52,21 @@ export function AuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, [params, refresh, nav, t]);
+  }, [params, refresh, nav, t, config?.access]);
+
+  if (error instanceof ApiError && error.code === "members_only_access") {
+    return (
+      <div className="login-layout">
+        <div className="login-left">
+          <div className="login-main">
+            <AccessRequestFromLogin
+              onDismiss={() => nav("/login", { replace: true })}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

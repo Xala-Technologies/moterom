@@ -1,16 +1,26 @@
-import { useEffect, useState, type FormEvent, type ReactElement } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Mail, Phone, ShieldCheck, ArrowLeft } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Mail,
+  Phone,
+  ShieldCheck,
+  ArrowLeft,
+  ArrowRight,
+  UserRoundPlus,
+} from "lucide-react";
 import { Button, Field, Input, Label, ErrorState } from "../components/ui";
+import {
+  AccessPending,
+  AccessRequestFromLogin,
+} from "../components/RequireAuth";
+import { AccessRequestForm } from "../components/AccessRequestForm";
+import { BrandMark } from "../components/BrandMark";
 import { useApp } from "../context";
-import { post } from "../api";
+import { ApiError, post } from "../api";
 import { useT } from "../i18n";
 
-type Method = "menu" | "email" | "sms";
+type Method = "menu" | "email" | "sms" | "request";
 type Step = "form" | "code" | "mfa";
-
-/** Parked until the customer dashboard is shown again. Set to true to restore «Prøv som kunde». */
-const SHOW_DEMO_CUSTOMER_LOGIN = false;
 
 const FOOTER_LINKS = [
   { href: "https://digilist.no/personvern", labelKey: "auth.privacy" as const },
@@ -21,31 +31,11 @@ const FOOTER_LINKS = [
   },
 ];
 
-function BankIdIcon({ size = 20 }: { size?: number }): ReactElement {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <rect width="40" height="40" rx="8" fill="#002776" />
-      <path d="M12 14h4c2.2 0 4 1.8 4 4s-1.8 4-4 4h-4v-8z" fill="white" />
-      <rect x="12" y="24" width="4" height="4" fill="white" />
-      <rect x="20" y="14" width="4" height="14" fill="white" />
-      <path d="M28 14h-4v14h4c2.2 0 4-3.1 4-7s-1.8-7-4-7z" fill="white" />
-    </svg>
-  );
-}
-
 export function Login() {
-  const { config, refresh } = useApp();
+  const { config, user, refresh } = useApp();
   const { t } = useT();
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const demoMode = config?.mode === "demo";
   const digilistAuth = config?.digilistAuthConfigured === true;
   const candidate = params.get("returnTo") || "/";
   const returnTo =
@@ -66,6 +56,9 @@ export function Login() {
   const [error, setError] = useState<Error>();
   const [slide, setSlide] = useState(0);
   const [panelPaused, setPanelPaused] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(true);
+  const membersOnly =
+    error instanceof ApiError && error.code === "members_only_access";
 
   const slides = [
     {
@@ -94,9 +87,10 @@ export function Login() {
 
   const done = async (destination = returnTo) => {
     const next = await refresh();
+    if (config?.access === "members" && next && !next.isMember) return;
     let target = destination;
     if (destination === "/" || destination === "") {
-      target = next?.isAdmin ? "/admin" : "/mine-bookinger";
+      target = next?.isAdmin ? "/admin" : "/";
     }
     nav(target, { replace: true });
   };
@@ -108,39 +102,6 @@ export function Login() {
     setVerification("");
     setMfa("");
     setError(undefined);
-  };
-
-  const demo = async (role: "admin" | "customer") => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      await post("/auth/demo", { role });
-      await done(
-        role === "admin"
-          ? returnTo.startsWith("/admin")
-            ? returnTo
-            : "/admin"
-          : returnTo,
-      );
-    } catch (e) {
-      setError(e as Error);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const startBankId = async () => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      const r = await post<{ url: string }>("/auth/oauth/bankid", {
-        returnPath: returnTo,
-      });
-      window.location.href = r.url;
-    } catch (e) {
-      setError(e as Error);
-      setBusy(false);
-    }
   };
 
   const requestEmail = async () => {
@@ -166,6 +127,7 @@ export function Login() {
       email,
       verificationId: verification,
       code,
+      rememberMe: stayLoggedIn,
     });
     if (r.mfaChallengeId) {
       setMfa(r.mfaChallengeId);
@@ -179,6 +141,7 @@ export function Login() {
       phoneNumber: phone,
       verificationId: verification,
       code,
+      rememberMe: stayLoggedIn,
     });
     if (r.mfaChallengeId) {
       setMfa(r.mfaChallengeId);
@@ -188,7 +151,11 @@ export function Login() {
   };
 
   const verifyMfa = async () => {
-    await post("/auth/mfa", { challengeId: mfa, code });
+    await post("/auth/mfa", {
+      challengeId: mfa,
+      code,
+      rememberMe: stayLoggedIn,
+    });
     await done();
   };
 
@@ -224,316 +191,347 @@ export function Login() {
 
   const active = slides[Math.min(slide, slides.length - 1)]!;
 
+  if (user && (user.isMember || config?.access !== "members")) {
+    let target = returnTo || "/";
+    if ((target === "/" || target === "") && user.isAdmin) target = "/admin";
+    return <Navigate replace to={target} />;
+  }
+  if (user && config?.access === "members" && !user.isMember) {
+    return (
+      <div className="login-layout">
+        <div className="login-left">
+          <div className="login-main">
+            <AccessPending onLogout={() => nav("/login", { replace: true })} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-layout">
       <div className="login-left">
         <div className="login-main">
           <div className="login-brand-wrap">
-            <Link to="/" className="login-logo-link">
-              <img src="/digilist-logo.svg" alt="" className="login-logo-img" />
-              <span>
-                <span className="login-brand-name">DIGILIST</span>
-                <span className="login-brand-tagline">ENKEL BOOKING</span>
-              </span>
-            </Link>
+            <div className="login-logo-link" aria-hidden="true">
+              <BrandMark />
+            </div>
           </div>
 
-          {error && <ErrorState error={error} />}
+          {membersOnly ? (
+            <AccessRequestFromLogin onDismiss={() => setError(undefined)} />
+          ) : (
+            <>
+              <p className="login-intro muted">
+                {t("auth.members_gate_intro")}
+              </p>
+              {error && <ErrorState error={error} />}
 
-          {method === "menu" && (
-            <div className="login-options">
-              {digilistAuth ? (
-                <>
-                  <button
-                    type="button"
-                    className="login-option"
-                    disabled={busy}
-                    onClick={() => {
-                      setError(undefined);
-                      setMethod("email");
-                      setStep("form");
-                    }}
-                  >
-                    <span className="login-option-icon" aria-hidden="true">
-                      <Mail size={20} strokeWidth={1.75} />
-                    </span>
-                    <span className="login-option-copy">
-                      <span className="login-option-title">
-                        {t("auth.email_login_title")}
-                      </span>
-                      <span className="login-option-desc">
-                        {t("auth.email_login_desc")}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="login-option"
-                    disabled={busy}
-                    onClick={() => {
-                      setError(undefined);
-                      setMethod("sms");
-                      setStep("form");
-                    }}
-                  >
-                    <span className="login-option-icon" aria-hidden="true">
-                      <Phone size={20} strokeWidth={1.75} />
-                    </span>
-                    <span className="login-option-copy">
-                      <span className="login-option-title">
-                        {t("auth.sms_login_title")}
-                      </span>
-                      <span className="login-option-desc">
-                        {t("auth.sms_login_desc")}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="login-option"
-                    disabled={busy}
-                    onClick={startBankId}
-                  >
-                    <span className="login-option-icon login-option-icon-plain">
-                      <BankIdIcon size={40} />
-                    </span>
-                    <span className="login-option-copy">
-                      <span className="login-option-title">
-                        {t("auth.bankid_title")}
-                      </span>
-                      <span className="login-option-desc">
-                        {t("auth.bankid_desc")}
-                      </span>
-                    </span>
-                  </button>
-                </>
-              ) : (
-                <p className="login-micro" role="status">
-                  {t("auth.digilist_not_configured")}
-                </p>
-              )}
-              {digilistAuth && (
-                <p className="login-micro">{t("auth.digilist_admin_hint")}</p>
-              )}
-
-              {demoMode && (
-                <>
-                  {digilistAuth && (
-                    <div className="login-divider" role="separator">
-                      <span>{t("auth.or_divider")}</span>
-                    </div>
+              {method === "menu" && (
+                <div className="login-options">
+                  {digilistAuth ? (
+                    <>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
+                        onClick={() => {
+                          setError(undefined);
+                          setMethod("email");
+                          setStep("form");
+                        }}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <Mail size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.email_login_title")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.email_login_desc")}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
+                        onClick={() => {
+                          setError(undefined);
+                          setMethod("sms");
+                          setStep("form");
+                        }}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <Phone size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.sms_login_title")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.sms_login_desc")}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
+                        onClick={() => {
+                          setError(undefined);
+                          setMethod("request");
+                        }}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <UserRoundPlus size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.request_access_title")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.request_access_desc")}
+                          </span>
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <p className="login-micro" role="status">
+                      {t("auth.digilist_not_configured")}
+                    </p>
                   )}
-                  {SHOW_DEMO_CUSTOMER_LOGIN && (
+                  {digilistAuth && (
+                    <p className="login-micro">
+                      {t("auth.digilist_admin_hint")}
+                    </p>
+                  )}
+
+                  {!digilistAuth && (
                     <button
                       type="button"
                       className="login-option"
                       disabled={busy}
-                      onClick={() => demo("customer")}
+                      onClick={() => {
+                        setError(undefined);
+                        setMethod("request");
+                      }}
                     >
                       <span className="login-option-icon" aria-hidden="true">
-                        <Mail size={20} strokeWidth={1.75} />
+                        <UserRoundPlus size={20} strokeWidth={1.75} />
                       </span>
                       <span className="login-option-copy">
                         <span className="login-option-title">
-                          {t("auth.try_as_customer")}
+                          {t("auth.request_access_title")}
                         </span>
                         <span className="login-option-desc">
-                          {t("auth.try_as_customer_desc")}
+                          {t("auth.request_access_desc")}
                         </span>
                       </span>
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className="login-option"
-                    disabled={busy}
-                    onClick={() => demo("admin")}
-                  >
-                    <span className="login-option-icon" aria-hidden="true">
-                      <ShieldCheck size={20} strokeWidth={1.75} />
-                    </span>
-                    <span className="login-option-copy">
-                      <span className="login-option-title">
+                </div>
+              )}
+
+              {method === "request" && (
+                <AccessRequestForm showCancel onCancel={resetFlow} />
+              )}
+
+              {method !== "menu" && method !== "request" && (
+                <form onSubmit={submit} className="login-form-card stack">
+                  {step === "form" && method === "email" && (
+                    <>
+                      <h1 className="login-form-title">
+                        {t("auth.email_login_title")}
+                      </h1>
+                      <p className="muted">{t("auth.email_form_subtitle")}</p>
+                      <Field>
+                        <Label>{t("auth.email_address")}</Label>
+                        <Input
+                          aria-label={t("auth.email_address")}
+                          autoComplete="email"
+                          type="email"
+                          placeholder={t("auth.email_placeholder")}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          autoFocus
+                          required
+                        />
+                      </Field>
+                      <Button
+                        className="full-width login-submit"
+                        type="submit"
+                        disabled={busy || !email}
+                      >
+                        {busy ? t("auth.sending_code") : t("auth.continue")}
+                        {!busy ? <ArrowRight size={18} /> : null}
+                      </Button>
+                    </>
+                  )}
+
+                  {step === "form" && method === "sms" && (
+                    <>
+                      <h1 className="login-form-title">
+                        {t("auth.sms_login_title")}
+                      </h1>
+                      <p className="muted">{t("auth.sms_form_subtitle")}</p>
+                      <Field>
+                        <Label>{t("auth.phone_number")}</Label>
+                        <Input
+                          aria-label={t("auth.phone_number")}
+                          autoComplete="tel"
+                          type="tel"
+                          inputMode="tel"
+                          placeholder={t("auth.phone_placeholder")}
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          autoFocus
+                          required
+                        />
+                      </Field>
+                      <Button
+                        className="full-width login-submit"
+                        type="submit"
+                        disabled={busy || !phone}
+                      >
                         {busy
-                          ? t("auth.logging_in")
-                          : t("auth.log_in_as_admin")}
-                      </span>
-                      <span className="login-option-desc">
-                        {t("auth.log_in_as_admin_desc")}
-                      </span>
-                    </span>
-                  </button>
-                  <p className="login-micro">{t("auth.demo_caption")}</p>
-                </>
-              )}
-            </div>
-          )}
+                          ? t("auth.sending_code")
+                          : t("auth.sms_send_code")}
+                        {!busy ? <ArrowRight size={18} /> : null}
+                      </Button>
+                    </>
+                  )}
 
-          {method !== "menu" && (
-            <form onSubmit={submit} className="login-form-card stack">
-              {step === "form" && method === "email" && (
-                <>
-                  <h1 className="login-form-title">
-                    {t("auth.email_login_title")}
-                  </h1>
-                  <p className="muted">{t("auth.email_form_subtitle")}</p>
-                  <Field>
-                    <Label>{t("auth.email_address")}</Label>
-                    <Input
-                      aria-label={t("auth.email_address")}
-                      autoComplete="email"
-                      type="email"
-                      placeholder={t("auth.email_placeholder")}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      autoFocus
-                      required
-                    />
-                  </Field>
+                  {step === "code" && (
+                    <>
+                      <div className="login-step-icon" aria-hidden="true">
+                        {method === "sms" ? (
+                          <Phone size={24} strokeWidth={1.75} />
+                        ) : (
+                          <Mail size={24} strokeWidth={1.75} />
+                        )}
+                      </div>
+                      <h1 className="login-form-title">
+                        {method === "sms"
+                          ? t("auth.sms_code_sent")
+                          : t("auth.code_sent_title")}
+                      </h1>
+                      <p className="muted">
+                        {method === "sms"
+                          ? t("auth.sms_code_prefix")
+                          : t("auth.code_verification_prefix")}{" "}
+                        <strong>{method === "sms" ? phone : email}</strong>
+                      </p>
+                      <Field>
+                        <Label>{t("auth.one_time_code")}</Label>
+                        <Input
+                          aria-label={t("auth.one_time_code")}
+                          autoComplete="one-time-code"
+                          inputMode="numeric"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          value={code}
+                          onChange={(e) => setCode(e.target.value)}
+                          autoFocus
+                          required
+                        />
+                      </Field>
+                      <label className="consent login-stay-logged-in">
+                        <input
+                          type="checkbox"
+                          checked={stayLoggedIn}
+                          onChange={(e) => setStayLoggedIn(e.target.checked)}
+                        />
+                        <span>{t("auth.stay_logged_in_30_days")}</span>
+                      </label>
+                      <Button
+                        className="full-width login-submit"
+                        type="submit"
+                        disabled={busy || code.length !== 6}
+                      >
+                        {busy
+                          ? t("auth.verifying")
+                          : t("auth.confirm_continue")}
+                        {!busy ? <ArrowRight size={18} /> : null}
+                      </Button>
+                      <div className="login-resend">
+                        <p className="login-resend-title">
+                          {method === "sms"
+                            ? t("auth.no_sms_received")
+                            : t("auth.no_code_received")}
+                        </p>
+                        <p className="muted">
+                          {method === "sms"
+                            ? t("auth.check_phone")
+                            : t("auth.check_spam")}
+                        </p>
+                        <Button
+                          variant="secondary"
+                          className="full-width"
+                          type="button"
+                          disabled={busy}
+                          onClick={resend}
+                        >
+                          {t("auth.resend_code")}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {step === "mfa" && (
+                    <>
+                      <div className="login-step-icon" aria-hidden="true">
+                        <ShieldCheck size={24} strokeWidth={1.75} />
+                      </div>
+                      <h1 className="login-form-title">
+                        {t("auth.mfa_title")}
+                      </h1>
+                      <p className="muted">{t("auth.mfa_subtitle")}</p>
+                      <Field>
+                        <Label>{t("auth.mfa_code_label")}</Label>
+                        <Input
+                          aria-label={t("auth.mfa_code_label")}
+                          autoComplete="one-time-code"
+                          value={code}
+                          onChange={(e) => setCode(e.target.value)}
+                          autoFocus
+                          required
+                        />
+                      </Field>
+                      <label className="consent login-stay-logged-in">
+                        <input
+                          type="checkbox"
+                          checked={stayLoggedIn}
+                          onChange={(e) => setStayLoggedIn(e.target.checked)}
+                        />
+                        <span>{t("auth.stay_logged_in_30_days")}</span>
+                      </label>
+                      <Button
+                        className="full-width login-submit"
+                        type="submit"
+                        disabled={busy || !code.trim()}
+                      >
+                        {busy ? t("auth.verifying") : t("auth.mfa_submit")}
+                        {!busy ? <ArrowRight size={18} /> : null}
+                      </Button>
+                    </>
+                  )}
+
                   <Button
-                    className="full-width"
-                    type="submit"
-                    disabled={busy || !email}
+                    variant="tertiary"
+                    type="button"
+                    className="login-back"
+                    onClick={resetFlow}
                   >
-                    {busy ? t("auth.sending_code") : t("auth.continue")}
+                    <ArrowLeft size={16} />
+                    {step === "form"
+                      ? t("auth.back_to_methods")
+                      : t("auth.back_to_login")}
                   </Button>
-                </>
+                </form>
               )}
-
-              {step === "form" && method === "sms" && (
-                <>
-                  <h1 className="login-form-title">
-                    {t("auth.sms_login_title")}
-                  </h1>
-                  <p className="muted">{t("auth.sms_form_subtitle")}</p>
-                  <Field>
-                    <Label>{t("auth.phone_number")}</Label>
-                    <Input
-                      aria-label={t("auth.phone_number")}
-                      autoComplete="tel"
-                      type="tel"
-                      inputMode="tel"
-                      placeholder={t("auth.phone_placeholder")}
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      autoFocus
-                      required
-                    />
-                  </Field>
-                  <Button
-                    className="full-width"
-                    type="submit"
-                    disabled={busy || !phone}
-                  >
-                    {busy ? t("auth.sending_code") : t("auth.sms_send_code")}
-                  </Button>
-                </>
-              )}
-
-              {step === "code" && (
-                <>
-                  <div className="login-step-icon" aria-hidden="true">
-                    {method === "sms" ? (
-                      <Phone size={24} strokeWidth={1.75} />
-                    ) : (
-                      <Mail size={24} strokeWidth={1.75} />
-                    )}
-                  </div>
-                  <h1 className="login-form-title">
-                    {method === "sms"
-                      ? t("auth.sms_code_sent")
-                      : t("auth.code_sent_title")}
-                  </h1>
-                  <p className="muted">
-                    {method === "sms"
-                      ? t("auth.sms_code_prefix")
-                      : t("auth.code_verification_prefix")}{" "}
-                    <strong>{method === "sms" ? phone : email}</strong>
-                  </p>
-                  <Field>
-                    <Label>{t("auth.one_time_code")}</Label>
-                    <Input
-                      aria-label={t("auth.one_time_code")}
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                      pattern="[0-9]{6}"
-                      maxLength={6}
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      autoFocus
-                      required
-                    />
-                  </Field>
-                  <Button
-                    className="full-width"
-                    type="submit"
-                    disabled={busy || code.length !== 6}
-                  >
-                    {busy ? t("auth.verifying") : t("auth.confirm_continue")}
-                  </Button>
-                  <div className="login-resend">
-                    <p className="login-resend-title">
-                      {method === "sms"
-                        ? t("auth.no_sms_received")
-                        : t("auth.no_code_received")}
-                    </p>
-                    <p className="muted">
-                      {method === "sms"
-                        ? t("auth.check_phone")
-                        : t("auth.check_spam")}
-                    </p>
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      disabled={busy}
-                      onClick={resend}
-                    >
-                      {t("auth.resend_code")}
-                    </Button>
-                  </div>
-                </>
-              )}
-
-              {step === "mfa" && (
-                <>
-                  <div className="login-step-icon" aria-hidden="true">
-                    <ShieldCheck size={24} strokeWidth={1.75} />
-                  </div>
-                  <h1 className="login-form-title">{t("auth.mfa_title")}</h1>
-                  <p className="muted">{t("auth.mfa_subtitle")}</p>
-                  <Field>
-                    <Label>{t("auth.mfa_code_label")}</Label>
-                    <Input
-                      aria-label={t("auth.mfa_code_label")}
-                      autoComplete="one-time-code"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      autoFocus
-                      required
-                    />
-                  </Field>
-                  <Button
-                    className="full-width"
-                    type="submit"
-                    disabled={busy || !code.trim()}
-                  >
-                    {busy ? t("auth.verifying") : t("auth.mfa_submit")}
-                  </Button>
-                </>
-              )}
-
-              <Button
-                variant="tertiary"
-                type="button"
-                className="login-back"
-                onClick={resetFlow}
-              >
-                <ArrowLeft size={16} />
-                {step === "form"
-                  ? t("auth.back_to_methods")
-                  : t("auth.back_to_login")}
-              </Button>
-            </form>
+            </>
           )}
         </div>
 
