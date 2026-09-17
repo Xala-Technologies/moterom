@@ -14,7 +14,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:4173`. Use **Logg inn → Logg inn som administrator**. Customer demo login is parked in `src/pages/Login.tsx` (`SHOW_DEMO_CUSTOMER_LOGIN`). The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
+Open `http://localhost:4173`. Digilist login (email OTP, SMS OTP, BankID) appears when `DIGILIST_URL` and `DIGILIST_HTTP_URL` are set; the BFF calls Digilist’s auth APIs. Without those URLs, only demo sign-in is offered. In demo mode, **Fortsett i demo** remains available for a local session. BankID on `localhost` may require Digilist `EXTRA_CORS_ORIGINS` to include `PUBLIC_ORIGIN`. Customer demo login is parked in `src/pages/Login.tsx` (`SHOW_DEMO_CUSTOMER_LOGIN`). The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
 
 ```sh
 npm run check
@@ -53,7 +53,7 @@ The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pd
 ## Connect Digilist
 
 1. Set a real resource `slug` for each entry in `config/rooms.json`. IDs in this file are stable portal IDs; do not replace them with guessed Convex IDs. Resources must belong to the configured building tenant and be published for the existing checkout endpoint.
-2. Set `DATA_MODE=live`, `DIGILIST_TENANT_ID`, `DIGILIST_URL` (Convex deployment), and `DIGILIST_HTTP_URL` (HTTP actions).
+2. Set `DATA_MODE=live`, `DIGILIST_TENANT_ID`, `DIGILIST_URL` (Convex deployment), and `DIGILIST_HTTP_URL` (HTTP actions). Digilist email/SMS/BankID sign-in also works in `DATA_MODE=demo` once those two Digilist URLs are set (`digilistAuthConfigured` in `/api/config`). Building administrators use that same Digilist sign-in; grant them an admin-capable Digilist role on `DIGILIST_TENANT_ID` (see [docs/digilist-integration.md](docs/digilist-integration.md)). There is no local admin email allowlist.
 3. Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a trailing slash. Generate a random `SESSION_SECRET` with at least 32 characters and provide it through the deployment's secret manager.
 4. Choose `BOOKING_ACCESS=members` for a tenant-only portal, or `public` for an open room catalogue with sign-in required to book. A members-only portal does not make an otherwise published listing private elsewhere on Digilist; agree on that platform policy before launch.
 5. Add building name, address and contact email. Confirm room names, capacities, images, equipment, opening hours, minimum durations, turnaround time, cancellation rules and approval requirements in Digilist.

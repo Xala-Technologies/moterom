@@ -22,9 +22,10 @@ import { Shell } from "./components/Shell";
 import { Empty, ErrorState, Loading } from "./components/ui";
 import { Rooms } from "./pages/Rooms";
 import { Login } from "./pages/Login";
+import { AuthCallback } from "./pages/AuthCallback";
 import { Checkout } from "./pages/Checkout";
 import { NewBooking } from "./pages/NewBooking";
-import { BookingDetail } from "./pages/MyBookings";
+import { MyBookings, BookingDetail } from "./pages/MyBookings";
 import { bookHref } from "./components/RoomCard";
 function LegacyRoomRedirect() {
   const { id = "" } = useParams();
@@ -81,9 +82,10 @@ function App() {
         <Route index element={<Rooms />} />
         <Route path="rom/:id" element={<LegacyRoomRedirect />} />
         <Route path="login" element={<Login />} />
+        <Route path="auth/callback" element={<AuthCallback />} />
         <Route path="ny-booking" element={<NewBooking />} />
         <Route path="bestill/:id" element={<Checkout />} />
-        <Route path="mine-bookinger" element={<Navigate replace to="/" />} />
+        <Route path="mine-bookinger" element={<MyBookings />} />
         <Route path="booking/:id" element={<BookingDetail />} />
         <Route
           path="admin/*"

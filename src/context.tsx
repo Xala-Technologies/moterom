@@ -12,7 +12,7 @@ interface AppContext {
   user?: User;
   loading: boolean;
   error?: string;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<User | undefined>;
   notify: (message: string) => void;
 }
 const Context = createContext<AppContext | null>(null);
@@ -30,9 +30,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         api<{ user: User | null }>("/session"),
       ]);
       setConfig(c);
-      setUser(s.user ?? undefined);
+      const next = s.user ?? undefined;
+      setUser(next);
+      return next;
     } catch (e) {
       setError((e as Error).message);
+      return undefined;
     } finally {
       setLoading(false);
     }

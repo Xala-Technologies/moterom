@@ -8,10 +8,13 @@ import helmet from "helmet";
 import { z } from "zod";
 import {
   config,
+  digilistAuthConfigured,
   inventory,
   isAllowedOrigin,
   production,
   floorplanPath,
+  httpUrl,
+  origin,
 } from "./config";
 import { DemoStore } from "./demo";
 import {
@@ -153,7 +156,13 @@ async function context(
       isAdmin: false,
       isMember: true,
     };
-  } else if (config.mode === "live" && session?.token) {
+  } else if (session?.token) {
+    if (!httpUrl)
+      throw new AppError(
+        503,
+        "Digilist-innlogging er ikke konfigurert.",
+        "digilist_auth_unavailable",
+      );
     user = await liveUser(session);
     if (await refreshAccess(session)) await writeSession(res, session);
   }
@@ -293,14 +302,22 @@ app.post("/api/auth/demo", async (req, res) => {
   await writeSession(res, { demoRole: role });
   res.json({ success: true });
 });
+const requireDigilistHttp = () => {
+  if (!digilistAuthConfigured)
+    throw new AppError(
+      503,
+      "Digilist-innlogging er ikke konfigurert for denne installasjonen.",
+      "digilist_auth_unavailable",
+    );
+};
 app.post("/api/auth/request", async (req, res) => {
-  if (demo) throw new AppError(400, "Bruk demoinnloggingen.", "use_demo_login");
+  requireDigilistHttp();
   const email = z.email().max(254).parse(req.body.email).toLowerCase().trim();
   const data = await rest("/auth/email/request", "POST", { email });
   res.json({ verificationId: z.string().parse(data.verificationId) });
 });
 app.post("/api/auth/verify", async (req, res) => {
-  if (demo) throw new AppError(400, "Bruk demoinnloggingen.", "use_demo_login");
+  requireDigilistHttp();
   const body = z
     .object({
       email: z.email().max(254),
@@ -318,8 +335,77 @@ app.post("/api/auth/verify", async (req, res) => {
   await writeSession(res, session);
   res.json({ success: true });
 });
+app.post("/api/auth/sms/request", async (req, res) => {
+  requireDigilistHttp();
+  const phoneNumber = z
+    .string()
+    .trim()
+    .min(8)
+    .max(32)
+    .parse(req.body.phoneNumber);
+  const data = await rest("/auth/sms/request", "POST", { phoneNumber });
+  res.json({ verificationId: z.string().parse(data.verificationId) });
+});
+app.post("/api/auth/sms/verify", async (req, res) => {
+  requireDigilistHttp();
+  const body = z
+    .object({
+      phoneNumber: z.string().trim().min(8).max(32),
+      verificationId: z.string().max(300),
+      code: z.string().regex(/^\d{6}$/),
+    })
+    .parse(req.body);
+  const result = await rest("/auth/sms/verify", "POST", body);
+  if (result.requiresMfa)
+    return res.json({
+      mfaChallengeId: z.string().parse(result.mfaChallengeId),
+    });
+  const session: Session = { token: z.string().parse(result.token) };
+  await setBuildingContext(session);
+  await writeSession(res, session);
+  res.json({ success: true });
+});
+app.post("/api/auth/oauth/bankid", async (req, res) => {
+  requireDigilistHttp();
+  const returnPath = z.string().max(500).optional().parse(req.body.returnPath);
+  const safeReturn =
+    returnPath &&
+    returnPath.startsWith("/") &&
+    !returnPath.startsWith("//") &&
+    !returnPath.includes("\\")
+      ? returnPath
+      : "/";
+  try {
+    const result = z.object({ authUrl: z.string().url() }).parse(
+      await action(client(), "auth/start:startOAuth", {
+        provider: "bankid",
+        appOrigin: origin,
+        returnPath: safeReturn,
+        appId: "web",
+      }),
+    );
+    res.json({ url: result.authUrl });
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : "";
+    if (/allow-list|unavailable|not configured|BANKID|bankid/i.test(detail))
+      throw new AppError(
+        503,
+        "BankID er ikke tilgjengelig akkurat nå. Prøv e-post eller SMS.",
+        "bankid_unavailable",
+      );
+    throw e;
+  }
+});
+app.post("/api/auth/session", async (req, res) => {
+  requireDigilistHttp();
+  const token = z.string().min(20).max(500).parse(req.body.token);
+  const session: Session = { token };
+  await setBuildingContext(session);
+  await writeSession(res, session);
+  res.json({ success: true });
+});
 app.post("/api/auth/mfa", async (req, res) => {
-  if (demo) throw new AppError(404, "Siden finnes ikke.", "not_found");
+  requireDigilistHttp();
   const body = z
     .object({
       challengeId: z.string().max(300),
@@ -348,7 +434,7 @@ app.post("/api/auth/mfa", async (req, res) => {
 });
 app.post("/api/auth/logout", async (req, res) => {
   const session = await readSession(req);
-  if (config.mode === "live" && session?.token)
+  if (session?.token && httpUrl)
     await rest("/auth/logout", "POST", undefined, session.token);
   clearSession(res);
   res.json({ success: true });

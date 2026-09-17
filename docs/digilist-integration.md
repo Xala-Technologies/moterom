@@ -5,6 +5,8 @@ Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc
 | Capability                   | Existing operation                                                                                                                                                                                  |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Email code                   | REST `POST /api/v1/auth/email/request`, `POST /api/v1/auth/email/verify`                                                                                                                            |
+| SMS code                     | REST `POST /api/v1/auth/sms/request`, `POST /api/v1/auth/sms/verify`                                                                                                                                |
+| BankID                       | Convex `auth/start:startOAuth` (`provider: "bankid"`), callback via `/auth/callback` → BFF `POST /api/auth/session`                                                                                 |
 | Session identity             | REST `GET /api/v1/auth/me`                                                                                                                                                                          |
 | Convex access token          | REST `POST /api/v1/auth/token` with the opaque session token                                                                                                                                        |
 | Tenant context               | Convex `auth/sessions:switchTenant`                                                                                                                                                                 |
@@ -22,6 +24,16 @@ Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc
 | Maintenance blocks           | Convex `domain/blocks:list`, `checkAvailability`, `create`, `remove`                                                                                                                                |
 
 The BFF restricts all resources to seven configured slugs and verifies their tenant IDs. Read models sent to the client are normalized; raw user, moderation and backend metadata are not passed through. Customer booking reads are restricted to the authenticated owner. Admin list/block reads require a freshly verified member/admin of the configured tenant before calling the underlying facade.
+
+### Building administrators
+
+Admin access is Digilist-only. There is no separate Møterom admin password or email allowlist.
+
+1. In Digilist, grant the person an admin-capable role on the building tenant (`DIGILIST_TENANT_ID`): platform `role` of `admin`, or `tenantRole` of `owner`, `admin`, `tenant_admin`, `saksbehandler`, or `manager`.
+2. They sign in on Møterom with the same Digilist email OTP, SMS OTP, or BankID used by customers.
+3. After `switchTenant` and `GET /auth/me`, the BFF sets `isAdmin` and redirects them to `/admin`.
+
+Customers without those Digilist tenant roles land on Mine bookinger and receive 403 on `/api/admin`.
 
 Admin insights are aggregated in the Express BFF. The live booking list is filtered on `startTime`, so overlapping reservations that started more than 36 hours before the period can be missed. `coverage: "truncated"` means the page cap was hit and totals are a lower bound. Demo uses the same formulas on the full SQLite set and is labelled demodata. Insights payloads do not include guest names, emails or `people`.
 

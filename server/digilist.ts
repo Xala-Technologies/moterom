@@ -65,27 +65,36 @@ export async function rest(
   }
   const value =
     response.status === 204 ? {} : await response.json().catch(() => ({}));
-  if (!response.ok)
+  if (!response.ok) {
+    const problem = row(value);
+    const digilistDetail = str(
+      problem.detail || problem.message || problem.title,
+    );
+    if (response.status === 401)
+      throw new AppError(
+        401,
+        "Økten er utløpt. Logg inn på nytt.",
+        "session_expired",
+      );
+    if (response.status === 403)
+      throw new AppError(
+        403,
+        "Du har ikke tilgang til denne handlingen.",
+        "action_forbidden",
+      );
+    if (response.status === 409)
+      throw new AppError(
+        409,
+        "Tidspunktet eller bestillingen har endret seg. Kontroller valget ditt.",
+        "booking_stale",
+      );
+    // Prefer Digilist problem detail over a generic catalogued code.
     throw new AppError(
       response.status,
-      response.status === 401
-        ? "Økten er utløpt. Logg inn på nytt."
-        : response.status === 403
-          ? "Du har ikke tilgang til denne handlingen."
-          : response.status === 409
-            ? "Tidspunktet eller bestillingen har endret seg. Kontroller valget ditt."
-            : str(
-                row(value).detail,
-                "Bookingtjenesten kunne ikke fullføre forespørselen.",
-              ),
-      response.status === 401
-        ? "session_expired"
-        : response.status === 403
-          ? "action_forbidden"
-          : response.status === 409
-            ? "booking_stale"
-            : "booking_service_failed",
+      digilistDetail || "Bookingtjenesten kunne ikke fullføre forespørselen.",
+      digilistDetail ? "digilist_request_rejected" : "booking_service_failed",
     );
+  }
   return row(value);
 }
 export function client(session?: Session) {
@@ -114,6 +123,48 @@ export async function action(
 ): Promise<unknown> {
   return c.action(makeFunctionReference<"action">(name), args);
 }
+/** Digilist tenant roles that grant Møterom administration for the building. */
+const DIGILIST_ADMIN_TENANT_ROLES = new Set([
+  "owner",
+  "admin",
+  "tenant_admin",
+  "saksbehandler",
+  "manager",
+]);
+
+const normalizeRole = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase();
+
+/**
+ * Map Digilist `/auth/me` fields to the portal User after switchTenant.
+ * Admin access is Digilist-only: member of DIGILIST_TENANT_ID with an admin role.
+ */
+export function mapDigilistUser(
+  raw: {
+    id: string;
+    name?: string | null;
+    email: string;
+    role: string;
+    tenantId?: string | null;
+    tenantRole?: string | null;
+  },
+  buildingTenantId: string = tenantId,
+): User {
+  const role = normalizeRole(raw.role);
+  const tenantRole = normalizeRole(raw.tenantRole);
+  const isMember = raw.tenantId === buildingTenantId;
+  const isAdmin =
+    isMember &&
+    (role === "admin" || DIGILIST_ADMIN_TENANT_ROLES.has(tenantRole));
+  return {
+    id: raw.id,
+    name: raw.name || raw.email,
+    email: raw.email,
+    isMember,
+    isAdmin,
+  };
+}
+
 export async function liveUser(session: Session): Promise<User> {
   const result = await rest("/auth/me", "GET", undefined, session.token);
   const user = z
@@ -126,20 +177,7 @@ export async function liveUser(session: Session): Promise<User> {
       tenantRole: z.string().nullable().optional(),
     })
     .parse(result.user);
-  const isMember = user.tenantId === tenantId;
-  const isAdmin =
-    isMember &&
-    (user.role === "admin" ||
-      ["owner", "admin", "tenant_admin", "saksbehandler", "manager"].includes(
-        user.tenantRole ?? "",
-      ));
-  return {
-    id: user.id,
-    name: user.name || user.email,
-    email: user.email,
-    isMember,
-    isAdmin,
-  };
+  return mapDigilistUser(user);
 }
 export async function refreshAccess(session: Session) {
   if (session.accessToken && (session.expiresAt ?? 0) > Date.now() + 30000)

@@ -35,6 +35,7 @@ import { Textarea } from "@digdir/designsystemet-react";
 import { useApp } from "../context";
 import { api, post, useApi } from "../api";
 import { RoomPhoto } from "../components/RoomPhoto";
+import { AdminBookingList } from "../components/admin/AdminBookingList";
 import {
   Button,
   Empty,
@@ -438,74 +439,36 @@ export function Admin() {
                       <h2>{t("admin.pending_section")}</h2>
                     </div>
                     <div className="admin-booking-list">
-                      {bookings
-                        .filter((b) => b.status === "pending")
-                        .sort((a, b) => a.startTime - b.startTime)
-                        .map((b) => (
-                          <article
-                            className="admin-booking-row pending-row"
-                            key={b.id}
-                          >
-                            <button
-                              type="button"
-                              className="pending-main"
-                              onClick={() =>
-                                openEvent({
-                                  ...b,
-                                  title:
-                                    b.title ||
-                                    b.name ||
-                                    t("admin.event_fallback_title"),
-                                  kind: "booking",
-                                  booking: b,
-                                })
-                              }
-                            >
-                              <div>
-                                <strong>{b.roomName}</strong>
-                                <span>{b.name || b.email}</span>
-                                <small>{b.reference}</small>
-                              </div>
-                              <div>
-                                <strong>{displayDate(b.startTime)}</strong>
-                                <span>
-                                  {shortTime(b.startTime)}–
-                                  {shortTime(b.endTime)}
-                                </span>
-                              </div>
-                            </button>
-                            <div className="pending-actions">
-                              <Button
-                                disabled={busy}
-                                data-size="sm"
-                                onClick={() =>
-                                  run(
-                                    () => post(`/bookings/${b.id}/approve`),
-                                    t("admin.toasts.approved"),
-                                  )
-                                }
-                              >
-                                <Check size={16} />
-                                {t("admin.approve")}
-                              </Button>
-                              <Button
-                                disabled={busy}
-                                variant="secondary"
-                                data-color="danger"
-                                data-size="sm"
-                                onClick={() =>
-                                  run(
-                                    () => post(`/bookings/${b.id}/reject`),
-                                    t("admin.toasts.rejected"),
-                                  )
-                                }
-                              >
-                                <X size={16} />
-                                {t("admin.reject")}
-                              </Button>
-                            </div>
-                          </article>
-                        ))}
+                      <AdminBookingList
+                        bookings={bookings
+                          .filter((b) => b.status === "pending")
+                          .sort((a, b) => a.startTime - b.startTime)}
+                        rooms={rooms}
+                        busy={busy}
+                        onOpen={(b) =>
+                          openEvent({
+                            ...b,
+                            title:
+                              b.title ||
+                              b.name ||
+                              t("admin.event_fallback_title"),
+                            kind: "booking",
+                            booking: b,
+                          })
+                        }
+                        onApprove={(b) =>
+                          run(
+                            () => post(`/bookings/${b.id}/approve`),
+                            t("admin.toasts.approved"),
+                          )
+                        }
+                        onReject={(b) =>
+                          run(
+                            () => post(`/bookings/${b.id}/reject`),
+                            t("admin.toasts.rejected"),
+                          )
+                        }
+                      />
                     </div>
                   </>
                 )}
@@ -594,40 +557,34 @@ export function Admin() {
                 </div>
                 <div className="admin-booking-list">
                   {filteredBookings.length ? (
-                    filteredBookings.map((b) => (
-                      <button
-                        className="admin-booking-row"
-                        key={b.id}
-                        onClick={() =>
-                          openEvent({
-                            ...b,
-                            title:
-                              b.title ||
-                              b.name ||
-                              t("admin.event_fallback_title"),
-                            kind: "booking",
-                            booking: b,
-                          })
-                        }
-                      >
-                        <div>
-                          <strong>{b.roomName}</strong>
-                          <span>{b.name || b.email}</span>
-                          <small>{b.reference}</small>
-                        </div>
-                        <div>
-                          <strong>{displayDate(b.startTime)}</strong>
-                          <span>
-                            {shortTime(b.startTime)}–{shortTime(b.endTime)}
-                          </span>
-                        </div>
-                        <Status status={b.status} />
-                        <span className="text-link">
-                          {t("admin.follow_up")}
-                          <ArrowUpRight size={16} />
-                        </span>
-                      </button>
-                    ))
+                    <AdminBookingList
+                      bookings={filteredBookings}
+                      rooms={rooms}
+                      busy={busy}
+                      onOpen={(b) =>
+                        openEvent({
+                          ...b,
+                          title:
+                            b.title ||
+                            b.name ||
+                            t("admin.event_fallback_title"),
+                          kind: "booking",
+                          booking: b,
+                        })
+                      }
+                      onApprove={(b) =>
+                        run(
+                          () => post(`/bookings/${b.id}/approve`),
+                          t("admin.toasts.approved"),
+                        )
+                      }
+                      onReject={(b) =>
+                        run(
+                          () => post(`/bookings/${b.id}/reject`),
+                          t("admin.toasts.rejected"),
+                        )
+                      }
+                    />
                   ) : (
                     <Empty title={t("admin.empty_bookings_title")}>
                       <p>{t("admin.empty_bookings_body")}</p>

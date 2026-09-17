@@ -43,6 +43,7 @@ export const inventory = rooms as Room[];
 export const floorplanPath = resolve(
   env("FLOORPLAN_PATH") || "assets/floor-plan.png",
 );
+export const digilistAuthConfigured = Boolean(convexUrl && httpUrl);
 export const config: Config = {
   floorplanAvailable: existsSync(floorplanPath),
   mode,
@@ -52,6 +53,7 @@ export const config: Config = {
   access,
   dashboardUrl:
     env("DIGILIST_DASHBOARD_URL") || "https://dashboard.digilist.no",
+  digilistAuthConfigured,
 };
 
 /** True when the browser Origin is this deployment (PUBLIC_ORIGIN or request Host). */

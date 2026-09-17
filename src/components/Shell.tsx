@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Building2, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  LayoutDashboard,
+  LogOut,
+  Moon,
+  Sun,
+} from "lucide-react";
 import { Button } from "./ui";
 import { useApp } from "../context";
 import { post } from "../api";
@@ -11,7 +18,8 @@ export function Shell() {
   const { label, nativeLabel, cycleLocale } = useI18nLocale();
   const location = useLocation();
   const admin = location.pathname.startsWith("/admin");
-  const login = location.pathname === "/login";
+  const login =
+    location.pathname === "/login" || location.pathname === "/auth/callback";
   const building = config?.buildingName || t("common.app_name");
   const [dark, setDark] = useState(() => {
     try {
@@ -38,6 +46,7 @@ export function Shell() {
       "/admin/bookings": t("admin.document.bookings"),
       "/admin/rooms": t("admin.document.rooms"),
       "/admin/settings": t("admin.document.settings"),
+      "/mine-bookinger": t("dashboard.document_title"),
       "/login": t("auth.document_title"),
     };
     const fallback = location.pathname.startsWith("/ny-booking")
@@ -66,60 +75,68 @@ export function Shell() {
     }
   };
   return (
-    <div className="app-shell">
+    <div className={login ? "app-shell auth-shell" : "app-shell"}>
       <a href="#main-content" className="skip-link">
         {t("a11y.skip_to_content")}
       </a>
-      <header className="app-header">
-        <NavLink to="/" className="brand" aria-label={t("a11y.brand_home")}>
-          <img src="/digilist-logo.svg" alt="" />
-          <span>
-            {building}
-            <small>{t("common.powered_by_digilist")}</small>
-          </span>
-        </NavLink>
-        {user?.isAdmin && (
-          <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
-            <NavLink to="/" end>
-              {t("common.find_rooms")}
-            </NavLink>
-            <NavLink to="/admin">{t("common.administration")}</NavLink>
-          </nav>
-        )}
-        <div className="header-actions">
-          <Button
-            variant="tertiary"
-            className="language-switch"
-            data-testid="language-switcher"
-            aria-label={t("a11y.language_switch", { label: nativeLabel })}
-            onClick={cycleLocale}
-          >
-            {label}
-          </Button>
-          <Button
-            variant="tertiary"
-            icon
-            aria-label={
-              dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")
-            }
-            onClick={() => setDark(!dark)}
-          >
-            {dark ? <Sun size={20} /> : <Moon size={20} />}
-          </Button>
-          {user ? (
-            <>
-              <span className="user-name">{user.name}</span>
-              <Button
-                variant="tertiary"
-                icon
-                aria-label={t("a11y.log_out")}
-                onClick={logout}
-              >
-                <LogOut size={20} />
-              </Button>
-            </>
-          ) : (
-            !login && (
+      {!login && (
+        <header className="app-header">
+          <NavLink to="/" className="brand" aria-label={t("a11y.brand_home")}>
+            <img src="/digilist-logo.svg" alt="" />
+            <span>
+              {building}
+              <small>{t("common.powered_by_digilist")}</small>
+            </span>
+          </NavLink>
+          {user && (
+            <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
+              <NavLink to="/" end>
+                {t("common.find_rooms")}
+              </NavLink>
+              <NavLink to="/mine-bookinger">{t("dashboard.nav")}</NavLink>
+              {user.isAdmin && (
+                <NavLink to="/admin">{t("common.administration")}</NavLink>
+              )}
+            </nav>
+          )}
+          <div className="header-actions">
+            <Button
+              variant="tertiary"
+              className="language-switch"
+              data-testid="language-switcher"
+              aria-label={t("a11y.language_switch", { label: nativeLabel })}
+              onClick={cycleLocale}
+            >
+              {label}
+            </Button>
+            <Button
+              variant="tertiary"
+              icon
+              aria-label={
+                dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")
+              }
+              onClick={() => setDark(!dark)}
+            >
+              {dark ? <Sun size={20} /> : <Moon size={20} />}
+            </Button>
+            {user ? (
+              <>
+                <NavLink
+                  to="/mine-bookinger"
+                  className="user-name user-name-link"
+                >
+                  {user.name}
+                </NavLink>
+                <Button
+                  variant="tertiary"
+                  icon
+                  aria-label={t("a11y.log_out")}
+                  onClick={logout}
+                >
+                  <LogOut size={20} />
+                </Button>
+              </>
+            ) : (
               <NavLink
                 className="ds-button"
                 data-variant="secondary"
@@ -128,10 +145,10 @@ export function Shell() {
               >
                 {t("auth.log_in")}
               </NavLink>
-            )
-          )}
-        </div>
-      </header>
+            )}
+          </div>
+        </header>
+      )}
       <main
         id="main-content"
         tabIndex={-1}
@@ -139,6 +156,29 @@ export function Shell() {
           admin ? "admin-main" : login ? "page-main auth-main" : "page-main"
         }
       >
+        {login && (
+          <div className="login-shell-actions">
+            <Button
+              variant="tertiary"
+              className="language-switch"
+              data-testid="language-switcher"
+              aria-label={t("a11y.language_switch", { label: nativeLabel })}
+              onClick={cycleLocale}
+            >
+              {label}
+            </Button>
+            <Button
+              variant="tertiary"
+              icon
+              aria-label={
+                dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")
+              }
+              onClick={() => setDark(!dark)}
+            >
+              {dark ? <Sun size={20} /> : <Moon size={20} />}
+            </Button>
+          </div>
+        )}
         <Outlet />
       </main>
       {!admin && !login && (
@@ -155,16 +195,22 @@ export function Shell() {
           )}
         </footer>
       )}
-      {user?.isAdmin && (
+      {user && !login && (
         <nav className="mobile-nav" aria-label={t("a11y.mobile_nav")}>
           <NavLink to="/" end>
             <Building2 size={21} />
             {t("common.find_rooms")}
           </NavLink>
-          <NavLink to="/admin">
-            <LayoutDashboard size={21} />
-            {t("common.administration")}
+          <NavLink to="/mine-bookinger">
+            <CalendarDays size={21} />
+            {t("dashboard.nav")}
           </NavLink>
+          {user.isAdmin && (
+            <NavLink to="/admin">
+              <LayoutDashboard size={21} />
+              {t("common.administration")}
+            </NavLink>
+          )}
         </nav>
       )}
     </div>

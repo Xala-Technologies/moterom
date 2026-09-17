@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -48,6 +49,196 @@ function roomFallback(booking: Booking): Room {
     amenities: [],
     requiresApproval: false,
   };
+}
+
+function isActiveBooking(b: Booking) {
+  return (
+    b.endTime >= Date.now() && !["cancelled", "rejected"].includes(b.status)
+  );
+}
+
+/** Digilist-style personal bookings dashboard (minside pattern) for this building. */
+export function MyBookings() {
+  const { user, loading, config } = useApp();
+  const { t } = useT();
+  const { displayDate, shortTime, money } = useFormatters();
+  const [tab, setTab] = useState<"upcoming" | "history">("upcoming");
+  const result = useApi<Booking[]>(user ? "/bookings" : null);
+  if (loading) return <Loading />;
+  if (!user) return <Navigate replace to="/login?returnTo=/mine-bookinger" />;
+  const all = result.data || [];
+  const upcomingCount = all.filter(isActiveBooking).length;
+  const pendingCount = all.filter((b) => b.status === "pending").length;
+  const confirmedCount = all.filter(
+    (b) =>
+      ["confirmed", "approved", "reserved"].includes(b.status) &&
+      isActiveBooking(b),
+  ).length;
+  const bookings = all
+    .filter((b) =>
+      tab === "upcoming" ? isActiveBooking(b) : !isActiveBooking(b),
+    )
+    .sort((a, b) =>
+      tab === "upcoming"
+        ? a.startTime - b.startTime
+        : b.startTime - a.startTime,
+    );
+  return (
+    <div className="container">
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">{t("dashboard.eyebrow")}</span>
+          <h1>{t("dashboard.heading")}</h1>
+          <p>{t("dashboard.intro")}</p>
+        </div>
+        <div className="page-heading-actions">
+          {config?.dashboardUrl && (
+            <a
+              className="ds-button"
+              data-variant="tertiary"
+              href={config.dashboardUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("common.open_digilist")}
+              <span className="sr-only"> {t("common.opens_new_tab")}</span>
+            </a>
+          )}
+          <Link className="ds-button" to="/">
+            {t("dashboard.book_room")}
+            <ArrowRight size={18} />
+          </Link>
+        </div>
+      </div>
+      <div className="admin-stats dashboard-stats" aria-live="polite">
+        <div className="stat">
+          <div>
+            <span>{t("dashboard.stat_pending")}</span>
+            <strong>{pendingCount}</strong>
+          </div>
+          <span className="stat-icon" aria-hidden="true">
+            <Clock3 size={18} />
+          </span>
+        </div>
+        <div className="stat">
+          <div>
+            <span>{t("dashboard.stat_confirmed")}</span>
+            <strong>{confirmedCount}</strong>
+          </div>
+          <span className="stat-icon" aria-hidden="true">
+            <CheckCircle2 size={18} />
+          </span>
+        </div>
+        <div className="stat">
+          <div>
+            <span>{t("dashboard.stat_total")}</span>
+            <strong>{all.length}</strong>
+          </div>
+          <span className="stat-icon" aria-hidden="true">
+            <CalendarDays size={18} />
+          </span>
+        </div>
+      </div>
+      <div className="pill-tabs" aria-label={t("dashboard.filter_aria")}>
+        <button
+          type="button"
+          aria-pressed={tab === "upcoming"}
+          onClick={() => setTab("upcoming")}
+        >
+          {t("dashboard.tab_upcoming")}
+          <span>{upcomingCount}</span>
+        </button>
+        <button
+          type="button"
+          aria-pressed={tab === "history"}
+          onClick={() => setTab("history")}
+        >
+          {t("dashboard.tab_history")}
+        </button>
+      </div>
+      {result.loading ? (
+        <Loading />
+      ) : result.error ? (
+        <ErrorState error={result.error} retry={result.reload} />
+      ) : bookings.length ? (
+        <div className="booking-list">
+          {bookings.map((b, i) => (
+            <article
+              className={`booking-row ${i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
+              key={b.id}
+            >
+              <div className="booking-date">
+                <span>
+                  {new Intl.DateTimeFormat(undefined, {
+                    timeZone: "Europe/Oslo",
+                    month: "short",
+                  }).format(b.startTime)}
+                </span>
+                <strong>
+                  {new Intl.DateTimeFormat(undefined, {
+                    timeZone: "Europe/Oslo",
+                    day: "numeric",
+                  }).format(b.startTime)}
+                </strong>
+              </div>
+              <div className="booking-main">
+                <Status status={b.status} />
+                <h2>
+                  <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
+                </h2>
+                <p>{b.title || b.reference}</p>
+              </div>
+              <div className="booking-time">
+                <strong>{displayDate(b.startTime)}</strong>
+                <span>
+                  {shortTime(b.startTime)}–{shortTime(b.endTime)}
+                </span>
+                {typeof b.people === "number" && b.people > 0 ? (
+                  <span>
+                    {t("booking.participants")}: {b.people}
+                  </span>
+                ) : null}
+              </div>
+              <div className="booking-actions">
+                <Link
+                  className="ds-button"
+                  data-variant="secondary"
+                  data-size="sm"
+                  to={`/booking/${b.id}`}
+                >
+                  {t("dashboard.view_booking")}
+                  <ArrowRight size={16} />
+                </Link>
+                {typeof b.totalPrice === "number" ? (
+                  <span className="caption">
+                    {money(b.totalPrice, b.currency)}
+                  </span>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <Empty
+          icon={<CalendarDays size={36} />}
+          title={
+            tab === "upcoming"
+              ? t("dashboard.empty_upcoming_title")
+              : t("dashboard.empty_history_title")
+          }
+        >
+          <p>
+            {tab === "upcoming"
+              ? t("dashboard.empty_upcoming_body")
+              : t("dashboard.empty_history_body")}
+          </p>
+          <Link className="ds-button" to="/">
+            {t("common.find_rooms")}
+          </Link>
+        </Empty>
+      )}
+    </div>
+  );
 }
 
 export function BookingDetail() {
