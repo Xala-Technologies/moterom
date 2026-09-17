@@ -110,6 +110,20 @@ export class AccessRequestStore {
     return this.map({ ...existing, status, updated });
   }
 
+  /** True when this email has an admin-approved access request. */
+  hasApproved(email: string): boolean {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return false;
+    const row = this.db
+      .prepare(
+        `SELECT id FROM access_requests
+         WHERE email = ? AND status = 'approved'
+         LIMIT 1`,
+      )
+      .get(normalized);
+    return Boolean(row);
+  }
+
   private map(row: Record<string, unknown>): AccessRequest {
     return {
       id: String(row.id),

@@ -35,6 +35,19 @@ Møterom Admin requires **both** a Digilist email listed in `ADMIN_EMAILS` (comm
 
 Other Digilist accounts (even Digilist tenant admins) are not Møterom admins unless listed in `ADMIN_EMAILS`. They land on Mine bookinger or the access-pending screen and receive 403 on `/api/admin`. Demo mode still offers «Logg inn som administrator» for local testing without Digilist.
 
+### Access requests (Admin → Brukere)
+
+When `BOOKING_ACCESS=members`, non-members can submit a local access request (`POST /api/access-requests`, SQLite). Admin → **Brukere** can approve or decline.
+
+Portal `isMember` is true when either:
+
+1. Digilist `/auth/me` reports `tenantId` matching `DIGILIST_TENANT_ID`, or
+2. That email has an **approved** access request in Møterom.
+
+Without Digilist membership and without approval, the user stays on the access-pending screen. Rejecting a request removes portal access granted via (2). Digilist tenant switch failures no longer block session creation; the membership checks above decide access after login.
+
+Live Digilist booking writes still need Digilist tenant context when `DATA_MODE=live`. Demo mode uses the local demo store after approval.
+
 Admin insights are aggregated in the Express BFF. The live booking list is filtered on `startTime`, so overlapping reservations that started more than 36 hours before the period can be missed. `coverage: "truncated"` means the page cap was hit and totals are a lower bound. Demo uses the same formulas on the full SQLite set and is labelled demodata. Insights payloads do not include guest names, emails or `people`.
 
 Room approval must mirror Digilist's actual booking write rule: `bookingConfig.approvalRequired || requiresApproval`. Room edits preserve the rest of `bookingConfig`. The test suite includes this compatibility case.
