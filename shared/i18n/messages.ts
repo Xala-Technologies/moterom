@@ -19,7 +19,10 @@ const nb: Record<string, string> = {
   booking_belongs_to_other: "Bestillingen tilhører en annen bruker.",
   quote_terms_changed:
     "Pris eller bestillingsvilkår er endret. Kontroller bestillingen på nytt.",
-  complete_in_digilist: "Denne bestillingen må fullføres i Digilist.",
+  complete_in_digilist:
+    "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
+  skb_internal_booking_only:
+    "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
   booking_fingerprint_mismatch:
     "Bestillingen ble endret. Kontroller opplysningene på nytt.",
   room_unavailable: "Rommet er ikke ledig.",
@@ -40,6 +43,10 @@ const nb: Record<string, string> = {
   booking_service_failed: "Bookingtjenesten kunne ikke fullføre forespørselen.",
   members_only_access:
     "Denne bookingløsningen er for byggets medlemmer. Kontakt administrator for tilgang.",
+  access_request_not_found: "Forespørselen ble ikke funnet.",
+  access_request_members_only:
+    "Tilgangsforespørsler brukes bare når portalen er begrenset til medlemmer.",
+  already_building_member: "Du er allerede medlem av dette bygget.",
   room_setup_unavailable:
     "Rommet {{name}} er ikke tilgjengelig i byggets oppsett.",
   admin_building_required: "Du har ikke administratortilgang til dette bygget.",
@@ -122,7 +129,10 @@ const en: Record<string, string> = {
   booking_belongs_to_other: "This booking belongs to another user.",
   quote_terms_changed:
     "Price or booking terms have changed. Review the booking again.",
-  complete_in_digilist: "This booking must be completed in Digilist.",
+  complete_in_digilist:
+    "This room cannot be booked with payment in the meeting-room portal. Contact an administrator.",
+  skb_internal_booking_only:
+    "This room cannot be booked with payment in the meeting-room portal. Contact an administrator.",
   booking_fingerprint_mismatch:
     "The booking was changed. Review the details again.",
   room_unavailable: "The room is not available.",
@@ -142,6 +152,10 @@ const en: Record<string, string> = {
   booking_service_failed: "The booking service could not complete the request.",
   members_only_access:
     "This booking solution is for building members. Contact an administrator for access.",
+  access_request_not_found: "The access request was not found.",
+  access_request_members_only:
+    "Access requests are only used when the portal is limited to members.",
+  already_building_member: "You are already a member of this building.",
   room_setup_unavailable:
     "Room {{name}} is not available in the building setup.",
   admin_building_required:

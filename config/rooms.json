@@ -2,7 +2,7 @@
   {
     "id": "sauda-1",
     "name": "Sauda 1",
-    "slug": "",
+    "slug": "skb-test-sauda-1",
     "capacity": 12,
     "capacityLabel": "12–14 personer",
     "capacityLabelEn": "12–14 people",
@@ -16,7 +16,7 @@
   {
     "id": "sauda-2",
     "name": "Sauda 2",
-    "slug": "",
+    "slug": "skb-test-sauda-2",
     "capacity": 10,
     "capacityLabel": "10–12 personer",
     "capacityLabelEn": "10–12 people",
@@ -30,7 +30,7 @@
   {
     "id": "tysso",
     "name": "Tysso",
-    "slug": "",
+    "slug": "skb-test-tysso",
     "capacity": 24,
     "capacityLabel": "24–26 personer",
     "capacityLabelEn": "24–26 people",
@@ -44,7 +44,7 @@
   {
     "id": "glomma-1",
     "name": "Glomma 1",
-    "slug": "",
+    "slug": "skb-test-glomma-1",
     "capacity": 44,
     "capacityLabel": "44–56 personer",
     "capacityLabelEn": "44–56 people",
@@ -58,7 +58,7 @@
   {
     "id": "glomma-2",
     "name": "Glomma 2",
-    "slug": "",
+    "slug": "skb-test-glomma-2",
     "capacity": 26,
     "capacityLabel": "26–28 personer",
     "capacityLabelEn": "26–28 people",
@@ -72,7 +72,7 @@
   {
     "id": "eidefossen-a",
     "name": "Eidefossen · 12–14",
-    "slug": "",
+    "slug": "skb-test-eidefossen-a",
     "capacity": 12,
     "capacityLabel": "12–14 personer",
     "capacityLabelEn": "12–14 people",
@@ -87,7 +87,7 @@
   {
     "id": "eidefossen-b",
     "name": "Eidefossen · 10–12",
-    "slug": "",
+    "slug": "skb-test-eidefossen-b",
     "capacity": 10,
     "capacityLabel": "10–12 personer",
     "capacityLabelEn": "10–12 people",

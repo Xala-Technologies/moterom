@@ -47,6 +47,16 @@ export const roomSchema = z.object({
     .optional(),
 });
 export type RoomPatch = z.infer<typeof roomSchema>;
+export const accessRequestCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  email: z.email().max(254),
+  message: z.string().trim().min(1).max(1000),
+});
+export const accessRequestStatusSchema = z.enum([
+  "pending",
+  "approved",
+  "rejected",
+]);
 export class AppError extends Error {
   constructor(
     public status: number,

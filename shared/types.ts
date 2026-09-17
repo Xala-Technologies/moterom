@@ -87,6 +87,8 @@ export interface Config {
   contactEmail: string;
   access: "public" | "members";
   dashboardUrl: string;
+  /** True when Digilist Convex + HTTP URLs are set so email/SMS/BankID can call Digilist. */
+  digilistAuthConfigured: boolean;
 }
 export interface BookingInput extends Search {
   roomId: string;
@@ -102,6 +104,17 @@ export interface AdminData {
   blocks: Block[];
   rooms: Room[];
   truncated: boolean;
+}
+export type AccessRequestStatus = "pending" | "approved" | "rejected";
+export interface AccessRequest {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+  name: string;
+  email: string;
+  message: string;
+  userId?: string;
+  status: AccessRequestStatus;
 }
 export const RESERVATION_STATUSES = [
   "confirmed",

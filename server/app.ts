@@ -8,12 +8,16 @@ import helmet from "helmet";
 import { z } from "zod";
 import {
   config,
+  digilistAuthConfigured,
   inventory,
   isAllowedOrigin,
   production,
   floorplanPath,
+  httpUrl,
+  origin,
 } from "./config";
 import { DemoStore } from "./demo";
+import { AccessRequestStore } from "./accessRequests";
 import {
   Digilist,
   rest,
@@ -33,6 +37,8 @@ import {
 } from "./session";
 import {
   AppError,
+  accessRequestCreateSchema,
+  accessRequestStatusSchema,
   bookingSchema,
   roomSchema,
   searchSchema,
@@ -60,6 +66,9 @@ const demo =
   config.mode === "demo"
     ? new DemoStore(process.env.DEMO_DB_PATH || ".data/demo.sqlite", inventory)
     : undefined;
+const accessRequests = new AccessRequestStore(
+  process.env.ACCESS_REQUESTS_DB_PATH || ".data/access_requests.sqlite",
+);
 interface Context {
   session?: Session;
   user?: User;
@@ -128,11 +137,34 @@ app.use("/api/auth", (req, _res, next) => {
       : undefined,
   );
 });
+app.use("/api/access-requests", (req, _res, next) => {
+  if (req.method !== "POST") return next();
+  const key = `access:${req.ip || "unknown"}`;
+  const now = Date.now();
+  const previous = attempts.get(key);
+  const entry =
+    previous && previous.expires > now
+      ? previous
+      : { count: 0, expires: now + 60000 };
+  entry.count++;
+  attempts.set(key, entry);
+  next(
+    entry.count > 10
+      ? new AppError(
+          429,
+          "For mange forsøk. Vent et minutt og prøv igjen.",
+          "too_many_attempts",
+        )
+      : undefined,
+  );
+});
 async function context(
   req: Request,
   res: Response,
   requireUser = false,
   requireAdmin = false,
+  allowNonMember = false,
+  allowAnonymous = false,
 ): Promise<Context> {
   const session = await readSession(req);
   let user: User | undefined;
@@ -153,13 +185,22 @@ async function context(
       isAdmin: false,
       isMember: true,
     };
-  } else if (config.mode === "live" && session?.token) {
+  } else if (session?.token) {
+    if (!httpUrl)
+      throw new AppError(
+        503,
+        "Digilist-innlogging er ikke konfigurert.",
+        "digilist_auth_unavailable",
+      );
     user = await liveUser(session);
     if (await refreshAccess(session)) await writeSession(res, session);
   }
-  if ((requireUser || config.access === "members") && !user)
+  if (
+    (requireUser || (config.access === "members" && !allowAnonymous)) &&
+    !user
+  )
     throw new AppError(401, "Logg inn for å fortsette.", "login_required");
-  if (config.access === "members" && user && !user.isMember)
+  if (config.access === "members" && user && !user.isMember && !allowNonMember)
     throw new AppError(
       403,
       "Du må være medlem av bygget for å bestille.",
@@ -278,7 +319,8 @@ app.get("/api/session", async (req, res) => {
   const session = await readSession(req);
   if (!session) return res.json({ user: null });
   try {
-    const ctx = await context(req, res);
+    // Allow non-members so the client can show the access-pending panel.
+    const ctx = await context(req, res, false, false, true);
     res.json({ user: ctx.user ?? null });
   } catch (e) {
     if (e instanceof AppError && e.status === 401) {
@@ -293,46 +335,140 @@ app.post("/api/auth/demo", async (req, res) => {
   await writeSession(res, { demoRole: role });
   res.json({ success: true });
 });
+const requireDigilistHttp = () => {
+  if (!digilistAuthConfigured)
+    throw new AppError(
+      503,
+      "Digilist-innlogging er ikke konfigurert for denne installasjonen.",
+      "digilist_auth_unavailable",
+    );
+};
 app.post("/api/auth/request", async (req, res) => {
-  if (demo) throw new AppError(400, "Bruk demoinnloggingen.", "use_demo_login");
+  requireDigilistHttp();
   const email = z.email().max(254).parse(req.body.email).toLowerCase().trim();
   const data = await rest("/auth/email/request", "POST", { email });
   res.json({ verificationId: z.string().parse(data.verificationId) });
 });
 app.post("/api/auth/verify", async (req, res) => {
-  if (demo) throw new AppError(400, "Bruk demoinnloggingen.", "use_demo_login");
+  requireDigilistHttp();
   const body = z
     .object({
       email: z.email().max(254),
       verificationId: z.string().max(300),
       code: z.string().regex(/^\d{6}$/),
+      rememberMe: z.boolean().optional().default(true),
     })
     .parse(req.body);
-  const result = await rest("/auth/email/verify", "POST", body);
+  const { rememberMe, ...verifyBody } = body;
+  const result = await rest("/auth/email/verify", "POST", verifyBody);
   if (result.requiresMfa)
     return res.json({
       mfaChallengeId: z.string().parse(result.mfaChallengeId),
     });
-  const session: Session = { token: z.string().parse(result.token) };
+  const session: Session = {
+    token: z.string().parse(result.token),
+    rememberMe,
+  };
+  await setBuildingContext(session);
+  await writeSession(res, session);
+  res.json({ success: true });
+});
+app.post("/api/auth/sms/request", async (req, res) => {
+  requireDigilistHttp();
+  const phoneNumber = z
+    .string()
+    .trim()
+    .min(8)
+    .max(32)
+    .parse(req.body.phoneNumber);
+  const data = await rest("/auth/sms/request", "POST", { phoneNumber });
+  res.json({ verificationId: z.string().parse(data.verificationId) });
+});
+app.post("/api/auth/sms/verify", async (req, res) => {
+  requireDigilistHttp();
+  const body = z
+    .object({
+      phoneNumber: z.string().trim().min(8).max(32),
+      verificationId: z.string().max(300),
+      code: z.string().regex(/^\d{6}$/),
+      rememberMe: z.boolean().optional().default(true),
+    })
+    .parse(req.body);
+  const { rememberMe, ...verifyBody } = body;
+  const result = await rest("/auth/sms/verify", "POST", verifyBody);
+  if (result.requiresMfa)
+    return res.json({
+      mfaChallengeId: z.string().parse(result.mfaChallengeId),
+    });
+  const session: Session = {
+    token: z.string().parse(result.token),
+    rememberMe,
+  };
+  await setBuildingContext(session);
+  await writeSession(res, session);
+  res.json({ success: true });
+});
+app.post("/api/auth/oauth/bankid", async (req, res) => {
+  requireDigilistHttp();
+  const returnPath = z.string().max(500).optional().parse(req.body.returnPath);
+  const safeReturn =
+    returnPath &&
+    returnPath.startsWith("/") &&
+    !returnPath.startsWith("//") &&
+    !returnPath.includes("\\")
+      ? returnPath
+      : "/";
+  try {
+    const result = z.object({ authUrl: z.string().url() }).parse(
+      await action(client(), "auth/start:startOAuth", {
+        provider: "bankid",
+        appOrigin: origin,
+        returnPath: safeReturn,
+        appId: "web",
+      }),
+    );
+    res.json({ url: result.authUrl });
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : "";
+    if (/allow-list|unavailable|not configured|BANKID|bankid/i.test(detail))
+      throw new AppError(
+        503,
+        "BankID er ikke tilgjengelig akkurat nå. Prøv e-post eller SMS.",
+        "bankid_unavailable",
+      );
+    throw e;
+  }
+});
+app.post("/api/auth/session", async (req, res) => {
+  requireDigilistHttp();
+  const token = z.string().min(20).max(500).parse(req.body.token);
+  const rememberMe = z
+    .boolean()
+    .optional()
+    .default(true)
+    .parse(req.body.rememberMe);
+  const session: Session = { token, rememberMe };
   await setBuildingContext(session);
   await writeSession(res, session);
   res.json({ success: true });
 });
 app.post("/api/auth/mfa", async (req, res) => {
-  if (demo) throw new AppError(404, "Siden finnes ikke.", "not_found");
+  requireDigilistHttp();
   const body = z
     .object({
       challengeId: z.string().max(300),
       code: z.string().min(6).max(32),
+      rememberMe: z.boolean().optional().default(true),
     })
     .parse(req.body);
+  const { rememberMe, ...mfaBody } = body;
   const result = z
     .object({ success: z.boolean(), sessionToken: z.string().optional() })
     .parse(
       await action(
         client(),
         "auth/mfaChallenge:confirmMfaLoginChallenge",
-        body,
+        mfaBody,
       ),
     );
   if (!result.success || !result.sessionToken)
@@ -341,14 +477,14 @@ app.post("/api/auth/mfa", async (req, res) => {
       "Koden kunne ikke bekreftes. Prøv igjen.",
       "code_unverified",
     );
-  const session: Session = { token: result.sessionToken };
+  const session: Session = { token: result.sessionToken, rememberMe };
   await setBuildingContext(session);
   await writeSession(res, session);
   res.json({ success: true });
 });
 app.post("/api/auth/logout", async (req, res) => {
   const session = await readSession(req);
-  if (config.mode === "live" && session?.token)
+  if (session?.token && httpUrl)
     await rest("/auth/logout", "POST", undefined, session.token);
   clearSession(res);
   res.json({ success: true });
@@ -515,11 +651,11 @@ app.post("/api/bookings", async (req, res) => {
       "Pris eller bestillingsvilkår er endret. Kontroller bestillingen på nytt.",
       "quote_terms_changed",
     );
-  if (current.paymentMode === "hosted")
+  if (current.paymentMode !== "none" || current.total !== 0)
     throw new AppError(
       409,
-      "Denne bestillingen må fullføres i Digilist.",
-      "complete_in_digilist",
+      "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
+      "skb_internal_booking_only",
     );
   const result = await ctx.provider.create(input, ctx.user!, key);
   if (demo && ctx.session?.demoGuest)
@@ -579,6 +715,7 @@ app.get("/api/bookings/:id/calendar.ics", async (req, res) => {
     `SUMMARY:${esc(b.roomName)}`,
     `DESCRIPTION:${esc(translateMessage(requestLocale(req), "ics_reference", { reference: b.reference }))}`,
     `LOCATION:${esc(config.address)}`,
+    `URL:${origin}/booking/${encodeURIComponent(b.id)}`,
     `STATUS:${b.status === "cancelled" ? "CANCELLED" : b.status === "confirmed" ? "CONFIRMED" : "TENTATIVE"}`,
     "END:VEVENT",
     "END:VCALENDAR",
@@ -602,6 +739,36 @@ app.get("/api/bookings/:id/calendar.ics", async (req, res) => {
     .type("text/calendar")
     .attachment("moterom.ics")
     .send(folded.join("\r\n") + "\r\n");
+});
+app.post("/api/access-requests", async (req, res) => {
+  if (config.access !== "members")
+    throw new AppError(
+      400,
+      "Tilgangsforespørsler brukes bare når portalen er begrenset til medlemmer.",
+      "access_request_members_only",
+    );
+  const ctx = await context(req, res, false, false, true, true);
+  if (ctx.user?.isMember)
+    throw new AppError(
+      400,
+      "Du er allerede medlem av dette bygget.",
+      "already_building_member",
+    );
+  const body = accessRequestCreateSchema.parse(req.body);
+  const created = accessRequests.create({
+    ...body,
+    userId: ctx.user?.id,
+  });
+  res.status(201).json(created);
+});
+app.get("/api/admin/access-requests", async (req, res) => {
+  await context(req, res, true, true);
+  res.json(accessRequests.list());
+});
+app.patch("/api/admin/access-requests/:id", async (req, res) => {
+  await context(req, res, true, true);
+  const status = accessRequestStatusSchema.parse(req.body?.status);
+  res.json(accessRequests.updateStatus(String(req.params.id), status));
 });
 app.get("/api/admin", async (req, res) => {
   const ctx = await context(req, res, true, true);

@@ -19,12 +19,14 @@ import "./styles.css";
 import { AppProvider, useApp } from "./context";
 import { I18nProvider, useT } from "./i18n";
 import { Shell } from "./components/Shell";
+import { RequireAuth } from "./components/RequireAuth";
 import { Empty, ErrorState, Loading } from "./components/ui";
 import { Rooms } from "./pages/Rooms";
 import { Login } from "./pages/Login";
+import { AuthCallback } from "./pages/AuthCallback";
 import { Checkout } from "./pages/Checkout";
 import { NewBooking } from "./pages/NewBooking";
-import { BookingDetail } from "./pages/MyBookings";
+import { MyBookings, BookingDetail } from "./pages/MyBookings";
 import { bookHref } from "./components/RoomCard";
 function LegacyRoomRedirect() {
   const { id = "" } = useParams();
@@ -78,22 +80,25 @@ function App() {
   return (
     <Routes>
       <Route element={<Shell />}>
-        <Route index element={<Rooms />} />
-        <Route path="rom/:id" element={<LegacyRoomRedirect />} />
         <Route path="login" element={<Login />} />
-        <Route path="ny-booking" element={<NewBooking />} />
-        <Route path="bestill/:id" element={<Checkout />} />
-        <Route path="mine-bookinger" element={<Navigate replace to="/" />} />
-        <Route path="booking/:id" element={<BookingDetail />} />
-        <Route
-          path="admin/*"
-          element={
-            <Suspense fallback={<Loading />}>
-              <Admin />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
+        <Route path="auth/callback" element={<AuthCallback />} />
+        <Route element={<RequireAuth />}>
+          <Route index element={<Rooms />} />
+          <Route path="rom/:id" element={<LegacyRoomRedirect />} />
+          <Route path="ny-booking" element={<NewBooking />} />
+          <Route path="bestill/:id" element={<Checkout />} />
+          <Route path="mine-bookinger" element={<MyBookings />} />
+          <Route path="booking/:id" element={<BookingDetail />} />
+          <Route
+            path="admin/*"
+            element={
+              <Suspense fallback={<Loading />}>
+                <Admin />
+              </Suspense>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Route>
     </Routes>
   );

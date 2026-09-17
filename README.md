@@ -14,7 +14,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:4173`. Use **Logg inn → Logg inn som administrator**. Customer demo login is parked in `src/pages/Login.tsx` (`SHOW_DEMO_CUSTOMER_LOGIN`). The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
+Open `http://localhost:4173`. Digilist login (email OTP, SMS OTP, BankID) appears when `DIGILIST_URL` and `DIGILIST_HTTP_URL` are set; the BFF calls Digilist’s auth APIs. Without those URLs, only demo sign-in is offered. In demo mode, **Fortsett i demo** remains available for a local session. BankID on `localhost` may require Digilist `EXTRA_CORS_ORIGINS` to include `PUBLIC_ORIGIN`. Customer demo login is parked in `src/pages/Login.tsx` (`SHOW_DEMO_CUSTOMER_LOGIN`). The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
 
 ```sh
 npm run check
@@ -52,20 +52,20 @@ The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pd
 
 ## Connect Digilist
 
-1. Set a real resource `slug` for each entry in `config/rooms.json`. IDs in this file are stable portal IDs; do not replace them with guessed Convex IDs. Resources must belong to the configured building tenant and be published for the existing checkout endpoint.
-2. Set `DATA_MODE=live`, `DIGILIST_TENANT_ID`, `DIGILIST_URL` (Convex deployment), and `DIGILIST_HTTP_URL` (HTTP actions).
-3. Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a trailing slash. Generate a random `SESSION_SECRET` with at least 32 characters and provide it through the deployment's secret manager.
-4. Choose `BOOKING_ACCESS=members` for a tenant-only portal, or `public` for an open room catalogue with sign-in required to book. A members-only portal does not make an otherwise published listing private elsewhere on Digilist; agree on that platform policy before launch.
-5. Add building name, address and contact email. Confirm room names, capacities, images, equipment, opening hours, minimum durations, turnaround time, cancellation rules and approval requirements in Digilist.
-6. Keep `PAYMENT_MODE=hosted` unless the owner has explicitly chosen an established invoice process. Run [staging acceptance](docs/acceptance.md) before enabling customer bookings.
+1. Set a real resource `slug` for each entry in `config/rooms.json` only after the DEV SKB-test tenant rooms exist. IDs in this file are stable portal IDs; do not replace them with guessed Convex IDs. Live rooms must belong to `DIGILIST_TENANT_ID`, be published/active, `visibility=private`, and `accessChannel=tenant_portal`.
+2. Set `DATA_MODE=live`, `DIGILIST_TENANT_ID`, `DIGILIST_URL` (Convex SDK: `https://convex-api.dev.digilist.no` for isolated work), and `DIGILIST_HTTP_URL` (REST: `https://convex.dev.digilist.no`). Do not swap those two URLs. Set `ADMIN_EMAILS` to the Digilist account(s) allowed to open Møterom Admin (default for non-production: `skb@digilist.no`). Admin also requires an active Digilist tenant role (`tenant_admin`, `saksbehandler`, or legacy `owner`/`admin`/`manager`/`staff`) on that tenant.
+3. Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a trailing slash (`https://skb.digilist.no` in production, `http://localhost:4173` locally). Generate a random `SESSION_SECRET` with at least 32 characters and provide it through the deployment's secret manager.
+4. Set `BOOKING_ACCESS=members` so the portal is login-first and only Digilist building members can use rooms and booking. Access requests appear under Admin → Users; approving or removing membership is still done in Digilist.
+5. Add building name, address and contact email. Confirm room names, capacities, images, equipment, opening hours, minimum durations, turnaround time, cancellation rules and approval requirements in Digilist. Do not invent catalogue facts in this repository.
+6. Leave `PAYMENT_MODE` unset on the SKB live target. Rooms must be free/internal in Digilist. A paid quote fails closed in the BFF; the portal does not redirect to app.digilist.no. Run [staging acceptance](docs/acceptance.md). Live `skb.digilist.no` uses `DATA_MODE=live` against the isolated Digilist DEV tenant until a production Digilist tenant is approved.
 
 Production defaults to live mode and refuses incomplete configuration. Demo login exists only in demo mode. Running a production demo requires both `DATA_MODE=demo` and the explicit `ALLOW_DEMO_DEPLOYMENT=true`; it still requires HTTPS and a strong session secret. Never enable that setting on the customer deployment.
 
 ### Payment boundary
 
-Free bookings can be confirmed here. Paid bookings normally continue to the existing Digilist listing/checkout flow. **This handoff does not transfer the selected interval or authenticate the user into Digilist's separate website**, so the user may need to select those details/sign in again. The current REST checkout creates a booking but does not provide a payment-intent checkout URL. This application does not pretend that a redirect charges a card.
+SKB bookings are internal and free. The live adapter calls authenticated `domain/bookings:create` and refuses a Digilist quote with a total greater than zero. It does not open guest checkout or app.digilist.no. Configure the seven rooms as free in Digilist rather than zeroing prices in this repository.
 
-`PAYMENT_MODE=invoice` allows an unpaid reservation through the existing booking endpoint. It does **not** itself issue an invoice. Use it only when invoicing is already operational for this tenant. Approval-required and price-on-request arrangements need the owner's agreed workflow. Review this boundary before promising a three-step paid checkout.
+`PAYMENT_MODE=invoice` is not used on the SKB live target. This application does not create invoices, charge cards, or claim email/SMS receipts unless the corresponding service confirmed them.
 
 ## Architecture
 
@@ -80,11 +80,11 @@ tests/              Domain, HTTP boundary and adapter regression tests
 docs/               Integration, source provenance and acceptance notes
 ```
 
-The browser calls the same-origin Express backend. Live mode uses Digilist's existing REST authentication/checkout and Convex domain facades; it does not run a second production booking database. The local SQLite provider is demo-only. No service/admin API key is embedded in the browser. Digilist rechecks its own permissions and authoritative booking rules.
+The browser calls the same-origin Express backend. Live mode uses Digilist's existing REST authentication and Convex domain facades (`getBySlug`, `bookings.create`); it does not run a second production booking database. The local SQLite provider is demo-only. No service/admin API key is embedded in the browser. Digilist rechecks its own permissions and authoritative booking rules.
 
 The supplied floor-plan image is excluded from the repository because automatic review did not approve uploading that private attachment. Set `FLOORPLAN_PATH` to an approved, privately mounted PNG to enable the floor-plan control. It follows the room catalogue's access gate; see `assets/README.md`.
 
-Email-code sign-in and MFA reuse Digilist. The opaque session and short-lived Convex access token remain in an encrypted, HttpOnly, SameSite cookie (Secure and `__Host-` in production). Every authenticated request revalidates the live session; all writes enforce the configured Origin. Admin access is bound to the building tenant and underlying Digilist permissions. Booking identity comes from that verified session, never from a browser-provided customer ID.
+Email-code sign-in and MFA reuse Digilist. The opaque Digilist session and short-lived Convex access token remain in an encrypted, HttpOnly, SameSite cookie (Secure and `__Host-` in production) for up to 30 days, matching Digilist stay-logged-in. Every authenticated request revalidates the live session; all writes enforce the configured Origin. Admin access is bound to `ADMIN_EMAILS` **and** a Digilist tenant admin role on this building. Booking identity comes from that verified session, never from a browser-provided customer ID.
 
 Signed five-minute quotes bind the reviewed room, interval, attendees, price and approval mode to the user. Booking submissions retain their idempotency key and exact booking details on an uncertain network result. Live idempotency keys are namespaced by tenant and user. If an old quote expires after an uncertain submission, customers retry the same confirmation; changing or reloading the entire checkout is a new transaction. Digilist is the authority for write-time conflicts and final pricing.
 

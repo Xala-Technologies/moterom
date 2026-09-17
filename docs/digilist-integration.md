@@ -5,14 +5,16 @@ Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc
 | Capability                   | Existing operation                                                                                                                                                                                  |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Email code                   | REST `POST /api/v1/auth/email/request`, `POST /api/v1/auth/email/verify`                                                                                                                            |
+| SMS code                     | REST `POST /api/v1/auth/sms/request`, `POST /api/v1/auth/sms/verify`                                                                                                                                |
+| BankID                       | Convex `auth/start:startOAuth` (`provider: "bankid"`), callback via `/auth/callback` → BFF `POST /api/auth/session`                                                                                 |
 | Session identity             | REST `GET /api/v1/auth/me`                                                                                                                                                                          |
 | Convex access token          | REST `POST /api/v1/auth/token` with the opaque session token                                                                                                                                        |
 | Tenant context               | Convex `auth/sessions:switchTenant`                                                                                                                                                                 |
 | MFA                          | Convex action `auth/mfaChallenge:confirmMfaLoginChallenge`                                                                                                                                          |
-| Published rooms              | Convex `domain/resources:getBySlugPublic`                                                                                                                                                           |
+| Published rooms              | Convex `domain/resources:getBySlug` (session + `DIGILIST_TENANT_ID`; `accessChannel=tenant_portal`)                                                                                                 |
 | Whole-interval availability  | Convex `domain/bookings:validateBookingSlot`                                                                                                                                                        |
-| Authoritative quote          | Convex `domain/pricing:quote`                                                                                                                                                                       |
-| Idempotent creation          | REST `POST /api/v1/checkout/sessions`                                                                                                                                                               |
+| Authoritative quote          | Convex `domain/pricing:quote` (total must be 0; paid quotes fail closed)                                                                                                                            |
+| Idempotent creation          | Convex `domain/bookings:create` with `metadata.moteromIdempotencyKey` namespaced `tenantId:userId:key`                                                                                              |
 | Customer bookings            | Convex `domain/bookings:listMine`, `domain/bookings:get`                                                                                                                                            |
 | Customer cancellation        | REST `POST /api/v1/me/bookings/:id/cancel`                                                                                                                                                          |
 | Change request               | Convex `domain/bookings:requestBookingEdit`                                                                                                                                                         |
@@ -23,21 +25,30 @@ Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc
 
 The BFF restricts all resources to seven configured slugs and verifies their tenant IDs. Read models sent to the client are normalized; raw user, moderation and backend metadata are not passed through. Customer booking reads are restricted to the authenticated owner. Admin list/block reads require a freshly verified member/admin of the configured tenant before calling the underlying facade.
 
+### Building administrators
+
+Møterom Admin requires **both** a Digilist email listed in `ADMIN_EMAILS` (comma-separated, case-insensitive) **and** an admin-capable Digilist tenant role on `DIGILIST_TENANT_ID` (`tenant_admin`, `saksbehandler`, or legacy `owner`/`admin`/`manager`/`staff`). Production live deployments must set at least one allowlisted address. Digilist tenant roles alone do not open `/admin`. Allowlisted emails without tenant membership do not open `/admin`.
+
+1. Put the administrator’s Digilist email in `ADMIN_EMAILS` (this building uses `skb@digilist.no`) and add them to the building tenant in Digilist with an admin-capable role.
+2. They sign in on Møterom with Digilist email OTP, SMS OTP, or BankID.
+3. After login, the BFF sets `isAdmin` only when both checks pass and redirects them to `/admin`.
+
+Other Digilist accounts (even Digilist tenant admins) are not Møterom admins unless listed in `ADMIN_EMAILS`. They land on Mine bookinger or the access-pending screen and receive 403 on `/api/admin`. Demo mode still offers «Logg inn som administrator» for local testing without Digilist.
+
 Admin insights are aggregated in the Express BFF. The live booking list is filtered on `startTime`, so overlapping reservations that started more than 36 hours before the period can be missed. `coverage: "truncated"` means the page cap was hit and totals are a lower bound. Demo uses the same formulas on the full SQLite set and is labelled demodata. Insights payloads do not include guest names, emails or `people`.
 
 Room approval must mirror Digilist's actual booking write rule: `bookingConfig.approvalRequired || requiresApproval`. Room edits preserve the rest of `bookingConfig`. The test suite includes this compatibility case.
 
-The REST checkout accepts `listing`, ISO `start`/`end`, verified `customer`, `guestCount` and `notes`. The backend finds the customer account by their verified email. The meeting title is prefixed to notes because this endpoint has no separate title field. The portal does not fabricate Stripe sessions, card charges, invoices, email receipts or reminders.
+Authenticated `domain/bookings:create` uses the session user, env tenant, mapped `resourceId`, Oslo interval, and purpose in notes/title. The BFF stamps `metadata.moteromIdempotencyKey` so a retry of the same confirmation can replay. The portal does not fabricate Stripe sessions, card charges, invoices, email receipts or reminders. Guest REST checkout is not used for SKB.
 
 ## Boundaries to validate in staging
 
-- All seven resources must be published. The existing guest checkout path refuses unpublished resources, even when the portal is configured as members-only. If the building requires private listings across the entire platform, extend the authenticated Digilist contract first.
-- Check room changes that trigger Digilist re-moderation. A listing that becomes non-public is intentionally unavailable to the portal until it is published again.
+- All seven resources must be `listingStatus=published` (or active equivalent), `visibility=private`, `accessChannel=tenant_portal`, free to book, and owned by a dedicated SKB tenant — never a marketplace tenant. Public slug, guest checkout, embed, and storefront `listMine` must 404/omit them.
+- Check room changes that trigger Digilist re-moderation. A listing that becomes marketplace-visible is a launch blocker.
 - Test opening hours in Europe/Oslo, including winter/summer. The reviewed component availability implementation uses JavaScript `Date` local-time accessors for its opening-hours comparison. Confirm the deployed backend's behavior with Oslo fixtures; this portal must not paper over an upstream timezone discrepancy.
 - Booking writes rely on Digilist's transactional conflict checks. Block creation performs an advisory pre-check; confirm the upstream mutation's race behavior when a booking and maintenance block are created concurrently. A frontend check alone cannot provide atomicity.
-- Quotes are rechecked immediately before creation, but the existing checkout contract has no expected-price/version precondition. Digilist recomputes the final authoritative price. Payment is therefore handed to the established checkout flow; invoice customers must be comfortable with that policy before enabling invoice mode.
-- Paid bookings need the existing Digilist web flow or a configured invoice process. A seamless paid checkout with preserved interval and SSO requires an additional backend handoff contract.
+- Quotes are rechecked immediately before creation. Paid or price-on-request rooms fail closed in Møterom; they are not redirected to Digilist.
 - Edit requests keep the original time reserved. Approval, repricing and final application of that request remain in Digilist's established workflow. The demo records the request for review; it does not simulate an actual invoice or approval worker.
-- Verify tenant role mappings and active-membership revocation with the real test users. Backend permission checks remain authoritative even when the portal exposes an admin action.
+- Verify `ADMIN_EMAILS` plus Digilist tenant role, and membership revocation, with the real test users. Backend permission checks remain authoritative even when the portal exposes an admin action.
 
-Any required backend changes belong in the Digilist repository under its own development instructions and review process. This implementation does not duplicate that production domain or silently modify it.
+Any required backend changes belong in the Digilist repository under `feat/tenant-portal-listings`. Do not push that branch to Digilist `dev` or `main` (those deploy). This implementation does not duplicate that production domain or silently modify it.
