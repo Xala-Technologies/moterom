@@ -78,7 +78,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
-  it("cancels with the opaque user session token required by the REST API", async () => {
+  it("keeps cancellation on the access-token contract required by its REST route", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
     mocks.query.mockImplementation(async (ref) =>
@@ -98,7 +98,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       accessToken: "convex-jwt",
     }).updateBooking("booking-1", "cancel", { ...user, isAdmin: false });
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe(
-      "Bearer opaque-session",
+      "Bearer convex-jwt",
     );
   });
   it("preserves photo variants and the gallery on content-only edits", async () => {

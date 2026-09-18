@@ -584,7 +584,7 @@ export class Digilist {
         `/me/bookings/${encodeURIComponent(id)}/cancel`,
         "POST",
         {},
-        this.session?.token,
+        this.session?.accessToken,
       );
     else
       await mutate(this.c, `domain/bookings:${op}`, {
