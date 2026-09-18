@@ -14,6 +14,7 @@ import {
   Clock3,
   Download,
   Edit3,
+  MessageCircle,
   RotateCcw,
   UsersRound,
   X,
@@ -32,6 +33,7 @@ import {
 } from "../components/ui";
 import { bookHref } from "../components/RoomCard";
 import { RoomPhoto } from "../components/RoomPhoto";
+import { MessageThread } from "../components/MessageThread";
 import type { Booking, Room, Search } from "../../shared/types";
 import { addDays, searchParams, toSearch, today } from "../../shared/time";
 import { useFormatters, useT } from "../i18n";
@@ -196,6 +198,15 @@ export function MyBookings() {
                 >
                   {t("dashboard.view_booking")}
                   <ArrowRight size={16} />
+                </Link>
+                <Link
+                  className="ds-button"
+                  data-variant="tertiary"
+                  data-size="sm"
+                  to={`/booking/${b.id}#meldinger`}
+                >
+                  {t("messages.send")}
+                  <MessageCircle size={16} />
                 </Link>
                 {typeof b.totalPrice === "number" ? (
                   <span className="caption">
@@ -462,6 +473,14 @@ export function BookingDetail() {
           </p>
         </section>
       </div>
+      <section className="booking-info-panel booking-messages" id="meldinger">
+        <h2>{t("messages.heading")}</h2>
+        <p className="muted">{t("messages.booking_intro")}</p>
+        <MessageThread
+          endpoint={`/bookings/${b.id}/messages`}
+          emptyHint={t("messages.empty_thread")}
+        />
+      </section>
       {modal && (
         <Modal
           title={

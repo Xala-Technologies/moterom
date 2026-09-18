@@ -75,7 +75,7 @@ Node 24: `npm run check` and `format:check` passed (86 tests across 15 files, ty
 
 Local demo browser at `http://localhost:4173` (Chromium in Cursor): login showed email, SMS, BankID, access request, **Fortsett i demo** and **Prøv som kunde**; demo admin landed on `/admin`; Users had no Digilist deep-link and demo inbox copy; Settings showed membership-from-Digilist copy, a single Digilist link for hours/prices, and no payment settings. Dark theme and English on Settings remained readable. Not claimed: phone overflow measurement, keyboard-only pass, VoiceOver, live OTP, or Digilist `inviteMember`.
 
-Launch blockers include authenticated tenant verification (OTP), durable upstream idempotency, an atomic no-payment policy and a booking-only membership contract. Marketplace public-slug isolation was re-checked 18 September 2026 against Digilist DEV REST (see [`skb-private-portal.md`](skb-private-portal.md)). Møterom's request inbox no longer grants access independently of Digilist. Full Digilist dashboard migration is not complete.
+Launch blockers include authenticated tenant verification (OTP), durable upstream idempotency, an atomic no-payment policy and a dedicated booking-only role. Marketplace public-slug isolation was re-checked 18 September 2026 against Digilist DEV REST (see [`skb-private-portal.md`](skb-private-portal.md)). Completing a live access request now calls Digilist `ensureActiveBooker` (portal booker, no magic link). Full Digilist dashboard migration is not complete.
 
 ## Live isolation re-check — 18 September 2026 (afternoon)
 
@@ -105,3 +105,7 @@ Merged [#16](https://github.com/Xala-Technologies/moterom/pull/16) into `dev` an
 Anonymous: `/api/config` live / members; `/api/rooms`, `/api/admin`, `/api/admin/members`, `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404. Container healthy.
 
 Signed in as Wahid Rahmani on `https://skb.digilist.no`: Finn rom listed 7 rooms; `/api/admin` and `/api/admin/members` 403 `admin_required` (route exists); Mine bookinger showed the Teammøte 16:00–17:00 booking plus a later confirmed Sauda 1 on 24 Sep (`DGL-20260918-MG0QKK`). No new booking was created during this rebuild.
+
+## Access request Kontroll — 18 September 2026 (evening)
+
+Hostinger **Kontroller medlemskap** for `burnerlbv12@gmail.com` (LIJSERIBST) returned 409 `membership_not_active`. The then-live image only verified an already-active Digilist member. DEV Convex now has `domain/tenantTeam:ensureActiveBooker`, and `seedSkbTestTenant:seed` wrote an active `support` membership for that email on `skb-moterom-test`. This branch also calls that mutation from Admin → Brukere so a later request can be granted without a seed. The person must sign in again after membership is activated.

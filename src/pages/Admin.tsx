@@ -25,6 +25,7 @@ import {
   Download,
   LayoutDashboard,
   LockKeyhole,
+  MessageCircle,
   Plus,
   Settings,
   ShieldCheck,
@@ -69,6 +70,7 @@ import {
 import { AdminInsights } from "./AdminInsights";
 import { AdminAccessRequests } from "../components/admin/AdminAccessRequests";
 import { AdminMembers } from "../components/admin/AdminMembers";
+import { AdminMessages } from "../components/admin/AdminMessages";
 import { roomCopy, useFormatters, useI18nLocale, useT } from "../i18n";
 type CalendarEvent = {
   id: string;
@@ -246,6 +248,10 @@ export function Admin() {
     ],
     rooms: [t("admin.headings.rooms.title"), t("admin.headings.rooms.body")],
     users: [t("admin.headings.users.title"), t("admin.headings.users.body")],
+    messages: [
+      t("admin.headings.messages.title"),
+      t("admin.headings.messages.body"),
+    ],
     settings: [
       t("admin.headings.settings.title"),
       t("admin.headings.settings.body"),
@@ -351,6 +357,10 @@ export function Admin() {
                 {bookings.filter((b) => b.status === "pending").length}
               </span>
             )}
+          </NavLink>
+          <NavLink to="/admin/messages">
+            <MessageCircle size={19} />
+            {t("admin.nav.messages")}
           </NavLink>
           <NavLink to="/admin/rooms">
             <Building2 size={19} />
@@ -670,6 +680,7 @@ export function Admin() {
                 <AdminAccessRequests result={accessResult} />
               </div>
             )}
+            {section === "messages" && <AdminMessages />}
             {section === "settings" && (
               <div className="settings-grid">
                 <section className="settings-card">

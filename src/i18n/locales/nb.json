@@ -69,6 +69,7 @@
     "slot_unknown": "{{label}}, ukjent ledighet",
     "slot_unavailable": "{{label}}, ikke ledig",
     "admin_nav": "Administrasjonsmeny",
+    "dashboard_nav": "Oversiktsmeny",
     "calendar_view": "Kalendervisning",
     "calendar_date": "Kalenderdato",
     "previous_day": "Forrige dag",
@@ -303,6 +304,7 @@
   },
   "dashboard": {
     "document_title": "Mine bookinger",
+    "area": "Dashboard",
     "nav": "Mine bookinger",
     "eyebrow": "Din oversikt",
     "heading": "Mine bookinger",
@@ -320,6 +322,22 @@
     "empty_history_title": "Ingen tidligere bookinger",
     "empty_history_body": "Avsluttede og kansellerte bookinger vil vises her."
   },
+  "messages": {
+    "document_title": "Meldinger",
+    "nav": "Meldinger",
+    "heading": "Meldinger",
+    "intro": "Skriv til administratoren om en booking. Svarene vises her og hos administrator.",
+    "booking_intro": "Meldingen går til administratoren for bygget. Dere ser den samme samtalen.",
+    "compose_label": "Melding",
+    "send": "Send melding",
+    "thread_aria": "Samtale",
+    "empty_title": "Ingen meldinger ennå",
+    "empty_body": "Åpne en booking og send en melding til administratoren.",
+    "empty_thread": "Ingen meldinger i denne samtalen ennå. Skriv den første.",
+    "empty_admin_title": "Ingen samtaler",
+    "empty_admin_body": "Når en kunde sender en melding fra en booking, vises den her.",
+    "customer_fallback": "Kunde"
+  },
   "admin": {
     "document": {
       "overview": "Oversikt",
@@ -328,6 +346,7 @@
       "bookings": "Bookinger",
       "rooms": "Rom",
       "users": "Brukere",
+      "messages": "Meldinger",
       "settings": "Innstillinger",
       "administration": "Administrasjon"
     },
@@ -340,6 +359,7 @@
       "bookings": "Bookinger",
       "rooms": "Rom",
       "users": "Brukere",
+      "messages": "Meldinger",
       "settings": "Innstillinger"
     },
     "sidebar_footer": "Du administrerer dette bygget.",
@@ -367,6 +387,10 @@
       "users": {
         "title": "Brukere",
         "body": "Godkjenn eller avslå forespørsler om tilgang."
+      },
+      "messages": {
+        "title": "Meldinger",
+        "body": "Svar på henvendelser fra medlemmer om bookinger."
       },
       "settings": {
         "title": "Tilgang og innstillinger",
@@ -431,13 +455,13 @@
     "access_public_short": "Åpen romoversikt",
     "settings_users": "Tilgang",
     "settings_users_caption": "Medlemskap leses fra Digilist. Forespørsler følges her.",
-    "settings_users_body": "Nye brukere sender forespørsel under Brukere. I live-modus fullføres en forespørsel bare når Digilist allerede har et aktivt medlem med den e-posten. Avslag fjerner ikke et Digilist-medlemskap.",
+    "settings_users_body": "Nye brukere sender forespørsel under Brukere. Kontroller medlemskap aktiverer dem som booker i Digilist. Avslag fjerner ikke et Digilist-medlemskap.",
     "settings_users_open_inbox": "Åpne brukere",
     "settings_rules": "Fortsatt i Digilist",
     "settings_rules_caption": "Åpningstider og priser på oppføringen.",
     "settings_rules_body": "Åpningstider, pauser mellom bookinger og priser redigeres fortsatt i Digilist. Møterom har ingen betalingsinnstillinger. Byggets medlemmer vises under Brukere.",
     "users": {
-      "caption": "Tilgang styres av aktivt medlemskap i byggets Digilist-leietaker. Gi eller fjern medlemskap der. Innboksen følger bare forespørsler; avslag fjerner ikke et eksisterende medlemskap.",
+      "caption": "Tilgang styres av aktivt medlemskap i byggets Digilist-leietaker. Kontroller medlemskap aktiverer personen som booker i Digilist. Avslag fjerner ikke et eksisterende medlemskap.",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -461,7 +485,7 @@
       "mark_rejected": "Avslå",
       "mark_pending": "Tilbakestill",
       "toasts": {
-        "marked_approved": "Aktivt medlemskap er kontrollert i Digilist. Forespørselen er ferdigbehandlet.",
+        "marked_approved": "Medlemskapet er aktivert i Digilist. Forespørselen er ferdigbehandlet.",
         "marked_rejected": "Forespørselen er avslått.",
         "marked_pending": "Forespørselen er satt tilbake til venter.",
         "marked_approved_demo": "Demoforespørselen er ferdigbehandlet."

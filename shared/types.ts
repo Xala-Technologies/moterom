@@ -209,3 +209,26 @@ export interface InsightsRoomReport extends InsightsEnvelope {
   upcomingBlocks: InsightsBlock[];
   limitations: string[];
 }
+export interface ConversationSummary {
+  id: string;
+  bookingId?: string;
+  roomName: string;
+  subject: string;
+  preview: string;
+  updatedAt: number;
+  unread: number;
+  customerName: string;
+}
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  fromAdmin: boolean;
+  content: string;
+  createdAt: number;
+}
+export interface ConversationThread {
+  conversation: ConversationSummary | null;
+  messages: Message[];
+}

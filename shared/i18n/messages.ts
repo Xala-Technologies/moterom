@@ -66,6 +66,9 @@ const nb: Record<string, string> = {
     "Rommet har flere bilder. Administrer bildegalleriet i Digilist før du bytter til illustrasjonsbildet.",
   invalid_image_size: "Bildet må være mellom 32 byte og 2 MB.",
   request_failed: "Noe gikk galt. Prøv igjen.",
+  messaging_unavailable:
+    "Meldinger er ikke tilgjengelig for dette bygget akkurat nå.",
+  conversation_not_found: "Samtalen ble ikke funnet.",
   validation_failed: "Kontroller feltene og prøv igjen.",
   booking_service_incomplete:
     "Bookingtjenesten kunne ikke fullføre handlingen. Prøv igjen.",
@@ -183,6 +186,9 @@ const en: Record<string, string> = {
     "This room has multiple photos. Manage its gallery in Digilist before switching to the catalogue illustration.",
   invalid_image_size: "The image must be between 32 bytes and 2 MB.",
   request_failed: "Something went wrong. Try again.",
+  messaging_unavailable:
+    "Messages are not available for this building right now.",
+  conversation_not_found: "The conversation was not found.",
   validation_failed: "Check the fields and try again.",
   booking_service_incomplete:
     "The booking service could not complete the action. Try again.",

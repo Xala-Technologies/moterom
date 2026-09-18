@@ -61,6 +61,8 @@ const outsider = {
 let records: Record<string, any>[];
 let sources: Record<string, any>[];
 let tenantMembers: Record<string, any>[];
+let conversations: Record<string, any>[];
+let messages: Record<string, any>[];
 
 async function cookie(token = "member") {
   let value = "";
@@ -113,6 +115,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   records = [];
   tenantMembers = [];
+  conversations = [];
+  messages = [];
   sources = inventory.map((room) => ({
     _id: `resource-${room.id}`,
     tenantId: "building-test",
@@ -156,6 +160,18 @@ beforeEach(() => {
         return { summary: { total: 0 }, currency: "NOK", validation: [] };
       case "domain/tenantTeam:listMembers":
         return tenantMembers;
+      case "domain/messaging:listConversations":
+        return conversations.filter((c) => c.userId === args.userId);
+      case "domain/messaging:listConversationsForTenant":
+        return conversations.filter((c) => c.tenantId === args.tenantId);
+      case "domain/messaging:getConversationByBooking":
+        return (
+          conversations.find((c) => c.bookingId === args.bookingId) ?? null
+        );
+      case "domain/messaging:getConversation":
+        return conversations.find((c) => c._id === args.id);
+      case "domain/messaging:listMessages":
+        return messages.filter((m) => m.conversationId === args.conversationId);
       default:
         throw new Error(`Unexpected query ${getFunctionName(ref)}`);
     }
@@ -180,6 +196,81 @@ beforeEach(() => {
           args,
         );
         return {};
+      }
+      case "domain/messaging:getOrCreateConversationForBooking": {
+        const existing = conversations.find(
+          (c) => c.bookingId === args.bookingId,
+        );
+        if (existing) return { conversationId: existing._id };
+        const conversation = {
+          _id: randomUUID(),
+          tenantId: args.tenantId,
+          bookingId: args.bookingId,
+          userId: args.userId,
+          resourceId: args.resourceId,
+          listingName: inventory[0].name,
+          userName: member.name,
+          lastMessagePreview: "",
+          unreadCount: 0,
+        };
+        conversations.push(conversation);
+        return { conversationId: conversation._id };
+      }
+      case "domain/messaging:sendMessage": {
+        const replayed = messages.find(
+          (m) =>
+            m.conversationId === args.conversationId &&
+            m.clientMessageId &&
+            m.clientMessageId === args.clientMessageId,
+        );
+        if (replayed) return { replayed: true, id: replayed._id };
+        const message = {
+          _id: randomUUID(),
+          conversationId: args.conversationId,
+          senderId: args.senderId,
+          senderType: args.senderType,
+          senderName:
+            args.senderType === "admin" ? "Administrator" : member.name,
+          content: args.content,
+          visibility: "public",
+          _creationTime: Date.now(),
+          clientMessageId: args.clientMessageId,
+        };
+        messages.push(message);
+        const conversation = conversations.find(
+          (c) => c._id === args.conversationId,
+        );
+        if (conversation) {
+          conversation.lastMessagePreview = args.content;
+          conversation.lastMessageAt = message._creationTime;
+        }
+        return { id: message._id };
+      }
+      case "domain/messaging:markMessagesAsRead":
+        return {};
+      case "domain/tenantTeam:ensureActiveBooker": {
+        const email = String(args.email).trim().toLowerCase();
+        if (
+          !tenantMembers.some(
+            (member) =>
+              member.email.trim().toLowerCase() === email &&
+              member.status === "active",
+          )
+        ) {
+          tenantMembers.push({
+            userId: randomUUID(),
+            name: args.name || email,
+            email,
+            role: "support",
+            status: "active",
+          });
+        }
+        return {
+          userId: randomUUID(),
+          membershipId: randomUUID(),
+          createdNewUser: true,
+          activated: true,
+        };
       }
       default:
         throw new Error(`Unexpected mutation ${getFunctionName(ref)}`);
@@ -356,7 +447,32 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .expect(403);
   });
 
-  it("requires Digilist membership before completing an access request and honors revocation", async () => {
+  it("sends a booking message through Digilist messaging facades", async () => {
+    const created = await submit(
+      { ...input(), quoteToken: await quote() },
+      randomUUID(),
+      201,
+    );
+    const sent = await request(app)
+      .post(`/api/bookings/${created.body.id}/messages`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie())
+      .send({ content: "Hei admin", clientMessageId: randomUUID() })
+      .expect(201);
+    expect(sent.body.messages[0].content).toBe("Hei admin");
+    expect(sent.body.messages[0].fromAdmin).toBe(false);
+    const inbox = await request(app)
+      .get("/api/admin/messages")
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(inbox.body[0].preview).toBe("Hei admin");
+    await request(app)
+      .get("/api/admin/messages")
+      .set("Cookie", await cookie())
+      .expect(403);
+  });
+
+  it("activates a Digilist portal booker when completing an access request", async () => {
     const created = (
       await request(app)
         .post("/api/access-requests")
@@ -375,26 +491,19 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .set("Origin", origin)
       .set("Cookie", await cookie("admin"))
       .send({ status: "approved" })
-      .expect(409);
-    tenantMembers.push({
-      userId: outsider.id,
-      name: outsider.name,
-      email: outsider.email,
-      role: "support",
-      status: "active",
-    });
-    await request(app)
-      .patch(`/api/admin/access-requests/${created.id}`)
-      .set("Origin", origin)
-      .set("Cookie", await cookie("admin"))
-      .send({ status: "approved" })
       .expect(200);
+    expect(
+      mocks.mutation.mock.calls.some(
+        ([ref]) =>
+          getFunctionName(ref) === "domain/tenantTeam:ensureActiveBooker",
+      ),
+    ).toBe(true);
     expect(
       mocks.mutation.mock.calls.some(
         ([ref]) => getFunctionName(ref) === "domain/tenantTeam:inviteMember",
       ),
     ).toBe(false);
-    // Historical local approval cannot override Digilist's current denial.
+    // Inbox completion does not override the current Digilist session.
     await request(app)
       .get("/api/rooms")
       .set("Cookie", await cookie("outsider"))
@@ -412,6 +521,37 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .set("Cookie", await cookie("outsider"))
       .expect(200);
     expect(fallback.body.user.isMember).toBe(false);
+  });
+
+  it("keeps the access request open when Digilist cannot activate the booker", async () => {
+    const created = (
+      await request(app)
+        .post("/api/access-requests")
+        .set("Origin", origin)
+        .set("Cookie", await cookie("outsider"))
+        .send({
+          name: "Outsider",
+          email: outsider.email,
+          message: "Please add me",
+        })
+        .expect(201)
+    ).body;
+    mocks.mutation.mockImplementationOnce(async () => {
+      throw new Error("activation failed");
+    });
+    await request(app)
+      .patch(`/api/admin/access-requests/${created.id}`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .send({ status: "approved" })
+      .expect(409);
+    const rows = await request(app)
+      .get("/api/admin/access-requests")
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(
+      rows.body.find((row: { id: string }) => row.id === created.id).status,
+    ).toBe("pending");
   });
 
   it("pins the member list to the building and denies customers and anonymous callers", async () => {
