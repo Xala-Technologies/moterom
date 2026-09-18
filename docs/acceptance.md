@@ -109,3 +109,9 @@ Signed in as Wahid Rahmani on `https://skb.digilist.no`: Finn rom listed 7 rooms
 ## Access request Kontroll — 18 September 2026 (evening)
 
 Hostinger **Kontroller medlemskap** for `burnerlbv12@gmail.com` (LIJSERIBST) returned 409 `membership_not_active`. The then-live image only verified an already-active Digilist member. DEV Convex now has `domain/tenantTeam:ensureActiveBooker`, and `seedSkbTestTenant:seed` wrote an active `support` membership for that email on `skb-moterom-test`. This branch also calls that mutation from Admin → Brukere so a later request can be granted without a seed. The person must sign in again after membership is activated.
+
+## Hostinger rebuild — 18 September 2026 (portal-booker grant)
+
+Merged [#20](https://github.com/Xala-Technologies/moterom/pull/20) into `dev` and [#21](https://github.com/Xala-Technologies/moterom/pull/21) into `main`. Rebuilt the Hostinger container from `main` `68576a3`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged; DEV Convex already had `ensureActiveBooker`.
+
+Anonymous: `/api/config` live / members; `/api/rooms` and `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404 with Origin. Container healthy. The public bundle includes the new Users caption (**Kontroller medlemskap aktiverer personen som booker i Digilist**) and no longer the verify-only copy. Not claimed: an admin click of **Kontroller medlemskap** after this rebuild (needs OTP).
