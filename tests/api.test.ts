@@ -370,4 +370,40 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       .get("/api/admin/insights/rooms/does-not-exist")
       .expect(404);
   });
+  it("lets a customer message the administrator and shows the thread in both inboxes", async () => {
+    const bookings = (await customer.get("/api/bookings").expect(200)).body as {
+      id: string;
+      userId: string;
+    }[];
+    const mine = bookings.find((b) => b.userId === "demo-customer");
+    expect(mine).toBeTruthy();
+    const empty = await customer
+      .get(`/api/bookings/${mine!.id}/messages`)
+      .expect(200);
+    expect(empty.body.messages).toEqual([]);
+    const sent = await customer
+      .post(`/api/bookings/${mine!.id}/messages`)
+      .set("Origin", origin)
+      .send({ content: "Trenger adgangskort", clientMessageId: randomUUID() })
+      .expect(201);
+    expect(sent.body.messages).toHaveLength(1);
+    expect(sent.body.messages[0].content).toBe("Trenger adgangskort");
+    expect(sent.body.messages[0].fromAdmin).toBe(false);
+    const inbox = await administrator.get("/api/admin/messages").expect(200);
+    expect(inbox.body[0].preview).toBe("Trenger adgangskort");
+    const reply = await administrator
+      .post(`/api/admin/messages/${inbox.body[0].id}`)
+      .set("Origin", origin)
+      .send({ content: "Kort ligger i resepsjonen" })
+      .expect(201);
+    expect(reply.body.messages).toHaveLength(2);
+    expect(reply.body.messages[1].fromAdmin).toBe(true);
+    const thread = await customer
+      .get(`/api/bookings/${mine!.id}/messages`)
+      .expect(200);
+    expect(
+      thread.body.messages.map((m: { content: string }) => m.content),
+    ).toEqual(["Trenger adgangskort", "Kort ligger i resepsjonen"]);
+    await customer.get("/api/admin/messages").expect(403);
+  });
 });

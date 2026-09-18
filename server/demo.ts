@@ -8,8 +8,11 @@ import type {
   Block,
   Booking,
   BookingInput,
+  ConversationSummary,
+  ConversationThread,
   InsightsBlock,
   InsightsBooking,
+  Message,
   Room,
   Search,
   User,
@@ -28,7 +31,7 @@ export class DemoStore {
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
     this.db.exec(
-      "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS bookings (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS blocks (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS requests (key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, booking TEXT NOT NULL); CREATE TABLE IF NOT EXISTS audit (id TEXT PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, entity TEXT NOT NULL, created INTEGER NOT NULL);",
+      "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS bookings (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS blocks (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS requests (key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, booking TEXT NOT NULL); CREATE TABLE IF NOT EXISTS audit (id TEXT PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, entity TEXT NOT NULL, created INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS conversations (id TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, created INTEGER NOT NULL, data TEXT NOT NULL);",
     );
     for (const room of seedRooms)
       this.db
@@ -84,13 +87,18 @@ export class DemoStore {
       }
     }
   }
-  private all<T>(table: "rooms" | "bookings" | "blocks"): T[] {
+  private all<T>(
+    table: "rooms" | "bookings" | "blocks" | "conversations",
+  ): T[] {
     return this.db
       .prepare(`SELECT data FROM ${table}`)
       .all()
       .map((row) => JSON.parse(String(row.data)) as T);
   }
-  private save(table: "rooms" | "bookings" | "blocks", value: { id: string }) {
+  private save(
+    table: "rooms" | "bookings" | "blocks" | "conversations",
+    value: { id: string },
+  ) {
     this.db
       .prepare(
         `INSERT INTO ${table} VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data`,
@@ -394,5 +402,143 @@ export class DemoStore {
     this.assertAdmin(user);
     this.db.prepare("DELETE FROM blocks WHERE id = ?").run(id);
     this.audit(user, "block.removed", id);
+  }
+  private conversations(): ConversationSummary[] {
+    return this.all<ConversationSummary>("conversations").sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+  }
+  private messagesFor(conversationId: string): Message[] {
+    return this.db
+      .prepare(
+        "SELECT data FROM messages WHERE conversation_id = ? ORDER BY created ASC",
+      )
+      .all(conversationId)
+      .map((row) => JSON.parse(String(row.data)) as Message);
+  }
+  private thread(conversation: ConversationSummary): ConversationThread {
+    return { conversation, messages: this.messagesFor(conversation.id) };
+  }
+  private conversationForBooking(
+    booking: Booking,
+    create: boolean,
+  ): ConversationSummary | null {
+    const existing = this.conversations().find(
+      (c) => c.bookingId === booking.id,
+    );
+    if (existing) return existing;
+    if (!create) return null;
+    const conversation: ConversationSummary = {
+      id: randomUUID(),
+      bookingId: booking.id,
+      roomName: booking.roomName,
+      subject: booking.roomName,
+      preview: "",
+      updatedAt: Date.now(),
+      unread: 0,
+      customerName: booking.name,
+    };
+    this.save("conversations", conversation);
+    return conversation;
+  }
+  inbox(user: User): ConversationSummary[] {
+    if (user.isAdmin) return this.conversations();
+    const mine = new Set(this.bookings(user).map((b) => b.id));
+    return this.conversations().filter(
+      (c) => c.bookingId && mine.has(c.bookingId),
+    );
+  }
+  bookingThread(bookingId: string, user: User): ConversationThread {
+    const booking = this.booking(bookingId, user);
+    const conversation = this.conversationForBooking(booking, false);
+    return {
+      conversation,
+      messages: conversation ? this.messagesFor(conversation.id) : [],
+    };
+  }
+  conversationThread(id: string, user: User): ConversationThread {
+    const conversation = this.conversations().find((c) => c.id === id);
+    if (!conversation)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    if (!user.isAdmin) {
+      if (!conversation.bookingId)
+        throw new AppError(
+          404,
+          "Samtalen ble ikke funnet.",
+          "conversation_not_found",
+        );
+      this.booking(conversation.bookingId, user);
+    }
+    return this.thread(conversation);
+  }
+  sendBookingMessage(
+    bookingId: string,
+    content: string,
+    user: User,
+    clientMessageId?: string,
+  ): ConversationThread {
+    const booking = this.booking(bookingId, user);
+    const conversation = this.conversationForBooking(booking, true)!;
+    return this.appendMessage(conversation, content, user, clientMessageId);
+  }
+  sendConversationMessage(
+    id: string,
+    content: string,
+    user: User,
+    clientMessageId?: string,
+  ): ConversationThread {
+    const thread = this.conversationThread(id, user);
+    if (!thread.conversation)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    return this.appendMessage(
+      thread.conversation,
+      content,
+      user,
+      clientMessageId,
+    );
+  }
+  private appendMessage(
+    conversation: ConversationSummary,
+    content: string,
+    user: User,
+    clientMessageId?: string,
+  ): ConversationThread {
+    if (clientMessageId) {
+      const replayed = this.messagesFor(conversation.id).find(
+        (m) =>
+          m.id === clientMessageId ||
+          (m as Message & { clientMessageId?: string }).clientMessageId ===
+            clientMessageId,
+      );
+      if (replayed) return this.thread(conversation);
+    }
+    const createdAt = Date.now();
+    const message: Message & { clientMessageId?: string } = {
+      id: clientMessageId || randomUUID(),
+      conversationId: conversation.id,
+      senderId: user.id,
+      senderName: user.isAdmin ? "Administrator" : user.name,
+      fromAdmin: user.isAdmin,
+      content,
+      createdAt,
+      clientMessageId,
+    };
+    this.db
+      .prepare("INSERT INTO messages VALUES (?, ?, ?, ?)")
+      .run(message.id, conversation.id, createdAt, JSON.stringify(message));
+    conversation.preview = content;
+    conversation.updatedAt = createdAt;
+    conversation.unread = user.isAdmin ? 0 : 1;
+    this.save("conversations", conversation);
+    this.audit(user, "message.sent", conversation.id);
+    return this.thread(conversation);
   }
 }

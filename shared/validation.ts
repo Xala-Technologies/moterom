@@ -57,6 +57,10 @@ export const accessRequestStatusSchema = z.enum([
   "approved",
   "rejected",
 ]);
+export const messageCreateSchema = z.object({
+  content: z.string().trim().min(1).max(4000),
+  clientMessageId: z.string().uuid().optional(),
+});
 export class AppError extends Error {
   constructor(
     public status: number,

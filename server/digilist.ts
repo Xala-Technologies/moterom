@@ -18,8 +18,11 @@ import type {
   Block,
   Booking,
   BookingInput,
+  ConversationSummary,
+  ConversationThread,
   InsightsBlock,
   InsightsBooking,
+  Message,
   Room,
   Search,
   User,
@@ -758,6 +761,23 @@ export class Digilist {
       email: member.email || "",
     }));
   }
+  async ensureActiveBooker(email: string, name: string, user: User) {
+    this.assertAdmin(user);
+    try {
+      await mutate(this.c, "domain/tenantTeam:ensureActiveBooker", {
+        tenantId,
+        actorId: user.id,
+        email,
+        name,
+      });
+    } catch {
+      throw new AppError(
+        409,
+        "Aktivt medlemskap må først bekreftes i Digilist. Forespørselen er fortsatt åpen.",
+        "membership_not_active",
+      );
+    }
+  }
   async updateRoom(
     id: string,
     patch: {
@@ -880,5 +900,252 @@ export class Digilist {
         "block_not_found",
       );
     return mutate(this.c, "domain/blocks:remove", { id, actorId: user.id });
+  }
+  private messagingFailure(error: unknown): never {
+    const text = error instanceof Error ? error.message : "";
+    if (/MODULE_DISABLED|not enabled for this tenant/i.test(text))
+      throw new AppError(
+        503,
+        "Meldinger er ikke tilgjengelig for dette bygget akkurat nå.",
+        "messaging_unavailable",
+      );
+    if (/Forbidden|not authorized/i.test(text))
+      throw new AppError(
+        403,
+        "Du har ikke tilgang til denne handlingen.",
+        "action_forbidden",
+      );
+    throw new AppError(
+      502,
+      "Bookingtjenesten kunne ikke fullføre handlingen. Prøv igjen.",
+      "booking_service_incomplete",
+    );
+  }
+  private mapConversation(raw: Row, rooms: Room[]): ConversationSummary | null {
+    const bookingId = str(raw.bookingId) || undefined;
+    const resourceId = str(raw.resourceId);
+    const room = rooms.find(
+      (r) => r.sourceId === resourceId || r.name === str(raw.listingName),
+    );
+    const roomName = str(
+      raw.listingName,
+      room?.name || str(raw.displaySubject),
+    );
+    const id = str(raw._id, str(raw.id));
+    if (!id) return null;
+    return {
+      id: str(raw._id, str(raw.id)),
+      bookingId,
+      roomName,
+      subject: str(raw.displaySubject, str(raw.subject, roomName || "Melding")),
+      preview: str(raw.lastMessagePreview, str(raw.preview)),
+      updatedAt: Number(
+        raw.lastMessageAt ?? raw.updatedAt ?? raw._creationTime ?? Date.now(),
+      ),
+      unread: Number(raw.unreadCount ?? raw.unread ?? 0),
+      customerName: str(raw.userName),
+    };
+  }
+  private mapMessage(raw: Row, conversationId: string): Message {
+    return {
+      id: str(raw._id, str(raw.id)),
+      conversationId,
+      senderId: str(raw.senderId),
+      senderName: str(raw.senderName, str(raw.senderType, "Ukjent")),
+      fromAdmin: str(raw.senderType) === "admin",
+      content: str(raw.content),
+      createdAt: Number(raw._creationTime ?? raw.createdAt ?? Date.now()),
+    };
+  }
+  private async loadMessages(
+    conversationId: string,
+    user: User,
+  ): Promise<Message[]> {
+    try {
+      return list(
+        await query(this.c, "domain/messaging:listMessages", {
+          actorId: user.id,
+          conversationId,
+          visibilityFilter: user.isAdmin ? "all" : "public",
+        }),
+      )
+        .filter((m) => str(m.visibility) !== "internal")
+        .map((m) => this.mapMessage(m, conversationId));
+    } catch (error) {
+      this.messagingFailure(error);
+    }
+  }
+  async inbox(user: User): Promise<ConversationSummary[]> {
+    const rooms = await this.rooms();
+    try {
+      const rows = user.isAdmin
+        ? list(
+            await query(this.c, "domain/messaging:listConversationsForTenant", {
+              tenantId,
+              actorId: user.id,
+              limit: 100,
+            }),
+          )
+        : list(
+            await query(this.c, "domain/messaging:listConversations", {
+              tenantId,
+              userId: user.id,
+              limit: 100,
+            }),
+          );
+      return rows
+        .map((row) => this.mapConversation(row, rooms))
+        .filter((c): c is ConversationSummary => Boolean(c?.id))
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+    } catch (error) {
+      this.messagingFailure(error);
+    }
+  }
+  async bookingThread(
+    bookingId: string,
+    user: User,
+  ): Promise<ConversationThread> {
+    await this.booking(bookingId, user);
+    try {
+      const raw = row(
+        await query(this.c, "domain/messaging:getConversationByBooking", {
+          actorId: user.id,
+          tenantId,
+          bookingId,
+        }),
+      );
+      const id = str(raw._id, str(raw.id));
+      if (!id) return { conversation: null, messages: [] };
+      try {
+        await mutate(this.c, "domain/messaging:markMessagesAsRead", {
+          conversationId: id,
+          userId: user.id,
+        });
+      } catch {
+        /* unread is optional */
+      }
+      return {
+        conversation: this.mapConversation(raw, await this.rooms()),
+        messages: await this.loadMessages(id, user),
+      };
+    } catch (error) {
+      this.messagingFailure(error);
+    }
+  }
+  async conversationThread(
+    id: string,
+    user: User,
+  ): Promise<ConversationThread> {
+    try {
+      const raw = row(
+        await query(this.c, "domain/messaging:getConversation", {
+          actorId: user.id,
+          id,
+        }),
+      );
+      if (!str(raw._id, str(raw.id)))
+        throw new AppError(
+          404,
+          "Samtalen ble ikke funnet.",
+          "conversation_not_found",
+        );
+      if (raw.tenantId && str(raw.tenantId) !== tenantId)
+        throw new AppError(
+          404,
+          "Samtalen ble ikke funnet.",
+          "conversation_not_found",
+        );
+      if (!user.isAdmin) {
+        const bookingId = str(raw.bookingId);
+        if (!bookingId)
+          throw new AppError(
+            404,
+            "Samtalen ble ikke funnet.",
+            "conversation_not_found",
+          );
+        await this.booking(bookingId, user);
+      }
+      try {
+        await mutate(this.c, "domain/messaging:markMessagesAsRead", {
+          conversationId: id,
+          userId: user.id,
+        });
+      } catch {
+        /* unread is optional */
+      }
+      return {
+        conversation: this.mapConversation(raw, await this.rooms()),
+        messages: await this.loadMessages(id, user),
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      this.messagingFailure(error);
+    }
+  }
+  async sendBookingMessage(
+    bookingId: string,
+    content: string,
+    user: User,
+    clientMessageId?: string,
+  ): Promise<ConversationThread> {
+    const booking = await this.booking(bookingId, user);
+    const room = await this.room(booking.roomId);
+    try {
+      const created = row(
+        await mutate(
+          this.c,
+          "domain/messaging:getOrCreateConversationForBooking",
+          {
+            tenantId,
+            bookingId,
+            userId: user.id,
+            resourceId: room.sourceId,
+          },
+        ),
+      );
+      const conversationId = str(created.conversationId);
+      if (!conversationId)
+        throw new AppError(
+          502,
+          "Bookingtjenesten kunne ikke fullføre handlingen. Prøv igjen.",
+          "booking_service_incomplete",
+        );
+      await mutate(this.c, "domain/messaging:sendMessage", {
+        tenantId,
+        conversationId,
+        senderId: user.id,
+        senderType: user.isAdmin ? "admin" : "user",
+        visibility: "public",
+        content,
+        ...(clientMessageId ? { clientMessageId } : {}),
+      });
+      return this.bookingThread(bookingId, user);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      this.messagingFailure(error);
+    }
+  }
+  async sendConversationMessage(
+    id: string,
+    content: string,
+    user: User,
+    clientMessageId?: string,
+  ): Promise<ConversationThread> {
+    await this.conversationThread(id, user);
+    try {
+      await mutate(this.c, "domain/messaging:sendMessage", {
+        tenantId,
+        conversationId: id,
+        senderId: user.id,
+        senderType: user.isAdmin ? "admin" : "user",
+        visibility: "public",
+        content,
+        ...(clientMessageId ? { clientMessageId } : {}),
+      });
+      return this.conversationThread(id, user);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      this.messagingFailure(error);
+    }
   }
 }
