@@ -106,6 +106,13 @@ export interface AdminData {
   truncated: boolean;
 }
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
+export interface TenantMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  status: "active" | "invited";
+}
 export interface AccessRequest {
   id: string;
   createdAt: number;

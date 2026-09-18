@@ -47,6 +47,8 @@ const nb: Record<string, string> = {
   access_request_members_only:
     "Tilgangsforespørsler brukes bare når portalen er begrenset til medlemmer.",
   already_building_member: "Du er allerede medlem av dette bygget.",
+  membership_not_active:
+    "Aktivt medlemskap må først bekreftes i Digilist. Forespørselen er fortsatt åpen.",
   room_setup_unavailable:
     "Rommet {{name}} er ikke tilgjengelig i byggets oppsett.",
   admin_building_required: "Du har ikke administratortilgang til dette bygget.",
@@ -59,6 +61,9 @@ const nb: Record<string, string> = {
   invalid_period: "Ugyldig periode.",
   image_upload_demo_only: "I live-modus må rombilder publiseres i Digilist.",
   invalid_image_type: "Bruk WebP, JPEG eller PNG.",
+  invalid_image_url: "Bruk en HTTPS-adresse til bildet.",
+  image_gallery_managed_in_digilist:
+    "Rommet har flere bilder. Administrer bildegalleriet i Digilist før du bytter til illustrasjonsbildet.",
   invalid_image_size: "Bildet må være mellom 32 byte og 2 MB.",
   request_failed: "Noe gikk galt. Prøv igjen.",
   validation_failed: "Kontroller feltene og prøv igjen.",
@@ -156,6 +161,8 @@ const en: Record<string, string> = {
   access_request_members_only:
     "Access requests are only used when the portal is limited to members.",
   already_building_member: "You are already a member of this building.",
+  membership_not_active:
+    "Active membership must first be confirmed in Digilist. The request remains open.",
   room_setup_unavailable:
     "Room {{name}} is not available in the building setup.",
   admin_building_required:
@@ -171,6 +178,9 @@ const en: Record<string, string> = {
   image_upload_demo_only:
     "In live mode, room photos must be published in Digilist.",
   invalid_image_type: "Use WebP, JPEG or PNG.",
+  invalid_image_url: "Use an HTTPS photo URL.",
+  image_gallery_managed_in_digilist:
+    "This room has multiple photos. Manage its gallery in Digilist before switching to the catalogue illustration.",
   invalid_image_size: "The image must be between 32 bytes and 2 MB.",
   request_failed: "Something went wrong. Try again.",
   validation_failed: "Check the fields and try again.",

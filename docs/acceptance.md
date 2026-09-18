@@ -39,7 +39,7 @@ UI catalogs live in `src/i18n/locales/{nb,en}.json`. Default locale is **nb**. E
 
 ## Shared Digilist admin presentation
 
-Contract: [`docs/shared-digilist-dashboard.md`](shared-digilist-dashboard.md). Digilist is backend-only for Møterom. Admin booking list UI is Møterom-owned (`src/components/admin/`) and Digilist-inspired via existing design tokens. No Digilist source changes and no vendored Digilist UI package.
+Contract: [`docs/shared-digilist-dashboard.md`](shared-digilist-dashboard.md). Rebuild Digilist tenant-admin IA in Møterom; do not copy private dashboard source. Digilist stays the booking and membership backend. Access-request approve does not call `inviteMember`.
 
 ## Manual browser acceptance — still outstanding for launch
 
@@ -54,7 +54,7 @@ Before launch, review the built app in desktop and mobile browsers outside this 
 
 Use a dedicated staging tenant. Confirm the deployment matches the reviewed API contracts, then run free direct booking, approval-required booking, rejection, cancellation, edit request and admin blocking with two distinct Digilist users: one Digilist tenant-admin (owner/admin or equivalent for `DIGILIST_TENANT_ID`) who signs in with Digilist email and reaches `/admin`, and one customer Digilist user who reaches Mine bookinger and is denied admin APIs. Repeat a simultaneous booking attempt from separate sessions: exactly one can reserve the same room/time. Verify opening hours and buffer rules in Oslo winter and summer, plus membership revocation and cross-tenant denial.
 
-Agree on paid-booking behavior before enabling it. Confirm actual invoice/email/calendar behavior in Digilist rather than relying on demo presentation. Verify that contact details, accessibility information, both Eidefossen room names, capacities and photographs match the building.
+Møterom has no payments or invoices. Keep the rooms free and verify an atomic upstream no-payment policy, including changes between quote and write. Confirm actual email/calendar behavior in Digilist rather than relying on demo presentation. Verify that contact details, accessibility information, both Eidefossen room names, capacities and photographs match the building.
 
 Do not merge/deploy as a customer-ready release until these outstanding checks and configuration decisions are resolved. This is a reviewable implementation with a working isolated demo.
 
@@ -65,4 +65,35 @@ Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist
 - Local `npm run check` and `format:check` passed (55 tests). Digilist targeted Convex tests passed (163).
 - Digilist DEV tenant `skb-moterom-test` (`xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`) and seven private `tenant_portal` rooms were seeded. `config/rooms.json` slugs are filled. Marketplace REST leak checks passed (slug 404, guest checkout 404, public listing still 200). See [`docs/skb-private-portal.md`](skb-private-portal.md).
 - Local demo browser: grid confirm modal booked Sauda 1 without payment redirect; customer admin 403; phone 390×844 no overflow.
-- Still open: Hostinger `skb.digilist.no` stays demo; no git merge to `dev`/`main`; live member OTP booking against DEV was not run; Eidefossen names still need confirmation.
+- Still open: no git merge of `feat/digilist-admin-foundation` to `dev`/`main`; Eidefossen names still need confirmation. Hostinger `skb.digilist.no` is **live** and members-only (anonymous config 18 Sep 2026); it does not yet serve this branch (`/api/admin/members` 404). `wahidullah_rahmani@hotmail.com` can sign in as a member and booked once on this branch (see below).
+
+## Integration repairs — 18 September 2026
+
+See [the current integration review](architecture/moterom-digilist-review-2026-09-18.md) and [`shared-digilist-dashboard.md`](shared-digilist-dashboard.md). Historical rollout notes above are dated records.
+
+Node 24: `npm run check` and `format:check` passed (86 tests across 15 files, typecheck, production build). New checks use mocked Digilist contracts; they do not prove live tenant state or transactional concurrency.
+
+Local demo browser at `http://localhost:4173` (Chromium in Cursor): login showed email, SMS, BankID, access request, **Fortsett i demo** and **Prøv som kunde**; demo admin landed on `/admin`; Users had no Digilist deep-link and demo inbox copy; Settings showed membership-from-Digilist copy, a single Digilist link for hours/prices, and no payment settings. Dark theme and English on Settings remained readable. Not claimed: phone overflow measurement, keyboard-only pass, VoiceOver, live OTP, or Digilist `inviteMember`.
+
+Launch blockers include authenticated tenant verification (OTP), durable upstream idempotency, an atomic no-payment policy and a booking-only membership contract. Marketplace public-slug isolation was re-checked 18 September 2026 against Digilist DEV REST (see [`skb-private-portal.md`](skb-private-portal.md)). Møterom's request inbox no longer grants access independently of Digilist. Full Digilist dashboard migration is not complete.
+
+## Live isolation re-check — 18 September 2026 (afternoon)
+
+Anonymous only. No OTP, no bookings, no production tenant edits.
+
+- Digilist DEV REST: `GET /listings/skb-test-*` 404 for all seven slugs; listings page and featured contain no `skb-test` slugs; `xala-test-konferanserom` still 200; `POST /checkout/sessions` with a complete guest body for `skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
+- Local BFF from this branch, `DATA_MODE=live` on port 4175 (then stopped): `/api/config` mode live / members; `/api/rooms`, `/api/admin`, `/api/admin/members`, `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404 (no demo fallback).
+- Hostinger `https://skb.digilist.no`: `/api/config` mode **live**, access members, Digilist auth configured; rooms and admin 401; `/api/admin/members` **404** (deployed image is not this branch). Login shows email, SMS and access request; no BankID and no demo. Cluster URLs behind that host were not read.
+
+Still required: the same checks against a BFF on this branch pointed at DEV. Hostinger is not this branch.
+
+## Live OTP — 18 September 2026 (Hostinger, not this branch)
+
+`skb@digilist.no` signed in with Digilist email OTP on `https://skb.digilist.no`. Session: `isAdmin=true`, display name SKB allowlist admin, mode live, members-only. No bookings or blocks were created.
+
+- Sidebar routes loaded: Oversikt, Innsikt (live, 0 reserved hours, complete coverage), Kalender (all seven rooms including both Eidefossen), Bookinger (empty), Rom (seven cards, illustrasjonsfoto), Brukere (access-request inbox only), Innstillinger.
+- `/api/admin/members` still 404. Settings copy still says Møterom approval grants portal access. That is the deployed image, not `feat/digilist-admin-foundation`.
+
+Same afternoon: `wahidullah_rahmani@hotmail.com` had already completed Digilist OTP (`isMember` was false; Hostinger Godkjenn does not grant tenant membership). After an active `support` membership was written on DEV tenant `skb-moterom-test` (seed `ensureUser`/`ensureMembership`, not `inviteMember`), `/api/session` returned `isMember=true` and `/api/rooms` listed all seven rooms. Finn rom loaded for Wahid Rahmani. `skb.member@digilist.dev` was not used.
+
+Live member booking 18 September 2026 on this branch (`DATA_MODE=live`, `http://localhost:4173`, Chromium in Cursor), not Hostinger: Wahid Rahmani booked Sauda 1, Friday 18 September 2026, 16:00–17:00, purpose Teammøte, total **Ingen betaling**. Digilist created `js7fzc258aqewx31gwbvf6rv758em29r` (`confirmed`, reference `DGL-20260918-J77NNF`). Mine bookinger showed Bekreftet 1; booking detail persisted after navigation. `GET /api/admin` as this customer returned 403 `admin_required`. Quote first failed with Digilist `NO_PRICING_CONFIGURED` (“Ingen priskonfigurasjon funnet”); after 0 NOK hourly `resourcePricing` was seeded on DEV SKB rooms, `/api/quote` returned 200 total 0. Cancel, conflict, and idempotent retry were not run. Nothing was merged or deployed.

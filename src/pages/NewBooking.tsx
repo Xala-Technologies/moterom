@@ -218,7 +218,7 @@ export function NewBooking() {
       setError(err as Error);
       if (err instanceof ApiError && err.code === "quote_expired") {
         setQuote(undefined);
-        request.current = undefined;
+        setRevision((n) => n + 1);
       }
     } finally {
       submitting.current = false;
@@ -520,7 +520,7 @@ export function NewBooking() {
                   aria-label={t("booking.meeting_title")}
                   value={title}
                   maxLength={120}
-                  disabled={busy}
+                  disabled={busy || Boolean(request.current)}
                   onChange={(e) => {
                     setTitle(e.target.value);
                     request.current = undefined;
@@ -538,7 +538,7 @@ export function NewBooking() {
                   aria-label={t("booking.message_to_host")}
                   value={notes}
                   maxLength={1000}
-                  disabled={busy}
+                  disabled={busy || Boolean(request.current)}
                   onChange={(e) => {
                     setNotes(e.target.value);
                     request.current = undefined;

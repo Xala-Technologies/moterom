@@ -23,6 +23,14 @@ const other = {
 };
 
 describe("mapDigilistUser", () => {
+  it("does not treat a stale tenant claim without a role as membership", () => {
+    expect(
+      mapDigilistUser({ ...allowlisted, tenantRole: null }, building).isMember,
+    ).toBe(false);
+    expect(
+      mapDigilistUser({ ...allowlisted, tenantRole: "" }, building).isMember,
+    ).toBe(false);
+  });
   it("grants admin only when email is allowlisted and Digilist tenant role is admin-capable", () => {
     const user = mapDigilistUser(
       { ...allowlisted, tenantRole: "tenant_admin" },

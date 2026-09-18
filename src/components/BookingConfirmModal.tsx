@@ -160,7 +160,6 @@ export function BookingConfirmModal({
       setError(err as Error);
       if (err instanceof ApiError && err.code === "quote_expired") {
         setQuote(undefined);
-        request.current = undefined;
         setRevision((n) => n + 1);
       }
     } finally {
@@ -179,13 +178,13 @@ export function BookingConfirmModal({
     <Modal title={t("rooms.confirm_booking_title")} close={close}>
       {booking ? (
         <div className="booking-confirm-success">
-          <Status
-            status={booking.status === "pending" ? "pending" : "confirmed"}
-          />
+          <Status status={booking.status} />
           <p>
             {booking.status === "pending"
               ? t("booking.request_sent_body")
-              : t("booking.confirmed_body")}
+              : ["confirmed", "approved"].includes(booking.status)
+                ? t("booking.confirmed_body")
+                : t("booking.existing_booking_body")}
           </p>
           <p className="caption">
             {t("booking.reference", { reference: booking.reference })}
@@ -263,7 +262,7 @@ export function BookingConfirmModal({
               id="card-booking-purpose"
               value={purpose}
               maxLength={120}
-              disabled={busy}
+              disabled={busy || Boolean(request.current)}
               onChange={(e) => {
                 onPurposeChange(e.target.value);
                 request.current = undefined;
@@ -280,6 +279,7 @@ export function BookingConfirmModal({
                   name="name"
                   autoComplete="name"
                   required
+                  disabled={busy || Boolean(request.current)}
                   maxLength={100}
                   value={name}
                   aria-invalid={Boolean(nameIssue)}
@@ -310,6 +310,7 @@ export function BookingConfirmModal({
                   type="email"
                   autoComplete="email"
                   required
+                  disabled={busy || Boolean(request.current)}
                   maxLength={254}
                   value={email}
                   aria-invalid={Boolean(emailIssue)}

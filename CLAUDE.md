@@ -10,7 +10,7 @@ Day-to-day work lands on `dev`. Open a feature PR into `dev`. Release with `dev`
 
 ## Design
 
-The approved visual direction is Digilist: Inter, navy `#003057`, vendored tokens in `src/design/digilist/`, Digdir form primitives, existing header/sidebar/cards. Put application layout in `src/styles.css`. Do not edit vendored Digilist files. Do not introduce a new design system, palette, font, or navigation concept. Reuse shared components in `src/components/`. Keep customer and admin styling consistent. Product UI supports Norwegian Bokmål (`nb`, default) and English (`en`); room names and customer-entered content stay untranslated.
+The approved visual direction is Digilist: Inter, navy `#003057`, vendored tokens in `src/design/digilist/`, Digdir form primitives, existing header/sidebar/cards. Put application layout in `src/styles.css`. Do not edit vendored Digilist files. Do not copy Digilist dashboard React or SDK into this public repository; rebuild admin screens from the dashboard as a specification (`docs/shared-digilist-dashboard.md`). Do not introduce a new design system, palette, font, or navigation concept. Reuse shared components in `src/components/`. Keep customer and admin styling consistent. Product UI supports Norwegian Bokmål (`nb`, default) and English (`en`); room names and customer-entered content stay untranslated.
 
 ## Architecture
 
