@@ -65,7 +65,7 @@ Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist
 - Local `npm run check` and `format:check` passed (55 tests). Digilist targeted Convex tests passed (163).
 - Digilist DEV tenant `skb-moterom-test` (`xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`) and seven private `tenant_portal` rooms were seeded. `config/rooms.json` slugs are filled. Marketplace REST leak checks passed (slug 404, guest checkout 404, public listing still 200). See [`docs/skb-private-portal.md`](skb-private-portal.md).
 - Local demo browser: grid confirm modal booked Sauda 1 without payment redirect; customer admin 403; phone 390×844 no overflow.
-- Still open: Hostinger `skb.digilist.no` stays demo; no git merge to `dev`/`main`; live member OTP booking against DEV was not run; Eidefossen names still need confirmation.
+- Still open: no git merge of `feat/digilist-admin-foundation` to `dev`/`main`; live member OTP booking was not run; Eidefossen names still need confirmation. Hostinger `skb.digilist.no` is **live** and members-only (anonymous config 18 Sep 2026); it does not yet serve this branch (`/api/admin/members` 404).
 
 ## Integration repairs — 18 September 2026
 
@@ -75,4 +75,14 @@ Node 24: `npm run check` and `format:check` passed (86 tests across 15 files, ty
 
 Local demo browser at `http://localhost:4173` (Chromium in Cursor): login showed email, SMS, BankID, access request, **Fortsett i demo** and **Prøv som kunde**; demo admin landed on `/admin`; Users had no Digilist deep-link and demo inbox copy; Settings showed membership-from-Digilist copy, a single Digilist link for hours/prices, and no payment settings. Dark theme and English on Settings remained readable. Not claimed: phone overflow measurement, keyboard-only pass, VoiceOver, live OTP, or Digilist `inviteMember`.
 
-Launch blockers include authenticated tenant verification, marketplace/mobile isolation checks, durable upstream idempotency, an atomic no-payment policy and a booking-only membership contract. Møterom's request inbox no longer grants access independently of Digilist. Full Digilist dashboard migration is not complete.
+Launch blockers include authenticated tenant verification (OTP), durable upstream idempotency, an atomic no-payment policy and a booking-only membership contract. Marketplace public-slug isolation was re-checked 18 September 2026 against Digilist DEV REST (see [`skb-private-portal.md`](skb-private-portal.md)). Møterom's request inbox no longer grants access independently of Digilist. Full Digilist dashboard migration is not complete.
+
+## Live isolation re-check — 18 September 2026 (afternoon)
+
+Anonymous only. No OTP, no bookings, no production tenant edits.
+
+- Digilist DEV REST: `GET /listings/skb-test-*` 404 for all seven slugs; listings page and featured contain no `skb-test` slugs; `xala-test-konferanserom` still 200; `POST /checkout/sessions` with a complete guest body for `skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
+- Local BFF from this branch, `DATA_MODE=live` on port 4175 (then stopped): `/api/config` mode live / members; `/api/rooms`, `/api/admin`, `/api/admin/members`, `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404 (no demo fallback).
+- Hostinger `https://skb.digilist.no`: `/api/config` mode **live**, access members, Digilist auth configured; rooms and admin 401; `/api/admin/members` **404** (deployed image is not this branch). Login shows email, SMS and access request; no BankID and no demo. Cluster URLs behind that host were not read.
+
+Still required: OTP as `skb@digilist.no` and `skb.member@digilist.dev` against a BFF on this branch pointed at DEV.

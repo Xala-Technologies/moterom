@@ -9,15 +9,15 @@ On 17 September 2026 the Digilist **DEV Convex** at `convex-api.dev.digilist.no`
 
 ## Isolated DEV URLs
 
-| Variable                | DEV (this work)                               | Production (do not flip yet)             |
-| ----------------------- | --------------------------------------------- | ---------------------------------------- |
-| `DIGILIST_URL`          | `https://convex-api.dev.digilist.no`          | `https://convex-api.digilist.no`         |
-| `DIGILIST_HTTP_URL`     | `https://convex.dev.digilist.no`              | `https://convex.digilist.no`             |
-| `PUBLIC_ORIGIN`         | `http://localhost:4173`                       | `https://skb.digilist.no`                |
-| `DATA_MODE`             | `live` only on a local/DEV BFF pointed at DEV | stays `demo` on Hostinger until approval |
-| `BOOKING_ACCESS`        | `members`                                     | `members`                                |
-| `PAYMENT_MODE`          | unset                                         | unset                                    |
-| `ALLOW_DEMO_DEPLOYMENT` | unset                                         | must stay false on live                  |
+| Variable                | DEV (this work)                               | Production (do not flip yet)                                      |
+| ----------------------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| `DIGILIST_URL`          | `https://convex-api.dev.digilist.no`          | `https://convex-api.digilist.no`                                  |
+| `DIGILIST_HTTP_URL`     | `https://convex.dev.digilist.no`              | `https://convex.digilist.no`                                      |
+| `PUBLIC_ORIGIN`         | `http://localhost:4173`                       | `https://skb.digilist.no`                                         |
+| `DATA_MODE`             | `live` only on a local/DEV BFF pointed at DEV | **live** on Hostinger as of 18 Sep 2026 (anonymous `/api/config`) |
+| `BOOKING_ACCESS`        | `members`                                     | `members`                                                         |
+| `PAYMENT_MODE`          | unset                                         | unset                                                             |
+| `ALLOW_DEMO_DEPLOYMENT` | unset                                         | must stay false on live                                           |
 
 ## DEV tenant mapping
 
@@ -73,6 +73,8 @@ Against Digilist DEV after the Convex function push + seed (not Hostinger, not p
 - `GET /api/v1/listings/featured` does not mention `skb-test`.
 - `GET /api/v1/listings/xala-test-konferanserom` 200 (marketplace listing still public).
 - `POST /api/v1/checkout/sessions` with `listing: skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
+
+Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-test-*` public slugs 404; listings page and featured omit `skb-test`; marketplace `xala-test-konferanserom` still 200. Checkout with only `{ listing }` now returns 400 (start/end required); the same route with ISO start/end and a dummy guest still 404 `No listing 'skb-test-sauda-1'`. Hostinger `skb.digilist.no` `/api/config` is `mode=live`, `access=members` (deployed image is not `feat/digilist-admin-foundation`; `/api/admin/members` 404). OTP booking was still not run.
 
 Not run (needs a real Digilist OTP session for a seeded mailbox): member books from the Møterom grid in `DATA_MODE=live`, outsider access-pending, customer admin 403 against live, idempotent retry, conflict, cancel vs availability.
 
