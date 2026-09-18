@@ -68,6 +68,11 @@ export function Rooms() {
         <div>
           <h1>{t("rooms.heading")}</h1>
           <p>{t("rooms.intro")}</p>
+          {rooms.data ? (
+            <p className="page-heading-count">
+              {t("rooms.room_count", { count: rooms.data.length })}
+            </p>
+          ) : null}
         </div>
         {config?.floorplanAvailable && (
           <Button
@@ -79,16 +84,6 @@ export function Rooms() {
             {t("rooms.floorplan")}
           </Button>
         )}
-      </div>
-      <div className="results-heading">
-        <div>
-          <h2>{t("rooms.our_rooms")}</h2>
-          <span className="muted">
-            {t("rooms.rooms_summary", {
-              count: rooms.data?.length ?? 7,
-            })}
-          </span>
-        </div>
       </div>
       {rooms.error ? (
         <ErrorState error={rooms.error} retry={rooms.reload} />
