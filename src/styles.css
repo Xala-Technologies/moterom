@@ -2100,10 +2100,13 @@ a.login-option:hover {
   gap: 12px;
   max-height: 22rem;
   overflow: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 .message-bubble {
   max-width: min(36rem, 100%);
+  min-width: 0;
+  box-sizing: border-box;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--ds-color-neutral-border-subtle);
@@ -2185,6 +2188,195 @@ a.login-option:hover {
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
+.message-thread-fill {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 0;
+}
+.message-thread-fill .message-log {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.message-thread-fill .message-composer {
+  flex-direction: row;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.message-thread-fill .message-composer .ds-field {
+  flex: 1;
+  min-width: 0;
+}
+.message-thread-fill > .state {
+  flex: 1;
+  padding: 24px 16px;
+}
+.admin-messages {
+  flex: 1;
+  min-width: 0;
+  min-height: 28rem;
+  display: grid;
+  grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr);
+  gap: 16px;
+}
+.admin-messages-list,
+.admin-messages-thread {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: 12px;
+  background: var(--ds-color-neutral-background-default);
+  overflow: hidden;
+}
+.admin-messages-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+  flex-shrink: 0;
+}
+.admin-messages-toolbar-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-messages-toolbar h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.admin-messages-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.admin-messages-list .empty-state {
+  flex: 1;
+  padding: 32px 16px;
+  justify-content: center;
+}
+.admin-messages-list .empty-state p {
+  margin-bottom: 0;
+}
+.admin-messages-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+.admin-messages-list li:last-child .admin-messages-row {
+  border-bottom: 0;
+}
+.admin-messages-row.active {
+  background: var(--ds-color-accent-background-tinted);
+}
+.admin-messages-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.admin-messages-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-messages-row-top strong {
+  font-size: 0.9375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-messages-row-top time,
+.admin-messages-row-meta,
+.admin-messages-row-preview,
+.admin-messages-row-unread {
+  font-size: 0.8125rem;
+}
+.admin-messages-row-top time,
+.admin-messages-row-meta {
+  color: var(--ds-color-neutral-text-subtle);
+  flex-shrink: 0;
+}
+.admin-messages-row-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-messages-thread-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+  flex-shrink: 0;
+}
+.admin-messages-thread-header h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+.admin-messages-thread-header p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.admin-messages-back {
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
+.admin-messages-thread .message-thread-fill {
+  padding: 16px 20px 20px;
+}
+.admin-messages-thread-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+.admin-messages[data-narrow="true"] {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.admin-messages[data-narrow="true"][data-phone-pane="list"]
+  .admin-messages-thread,
+.admin-messages[data-narrow="true"][data-phone-pane="thread"]
+  .admin-messages-list {
+  display: none;
+}
+.admin-messages[data-narrow="true"] .message-thread-fill .message-composer {
+  flex-direction: column;
+  align-items: stretch;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-top: 8px;
+  background: var(--ds-color-neutral-background-default);
+}
 .info-message {
   background: var(--ds-color-info-background-tinted);
   color: var(--ds-color-info-text-default);
@@ -2225,6 +2417,17 @@ a.login-option:hover {
   grid-template-columns: 232px minmax(0, 1fr);
   min-height: calc(100dvh - var(--app-header-height));
   align-items: start;
+}
+.admin-layout:has(.admin-messages) {
+  align-items: stretch;
+}
+.admin-layout:has(.admin-messages[data-narrow="true"]) {
+  grid-template-columns: minmax(0, 1fr);
+  height: calc(
+    100dvh - var(--app-header-height) - 65px - env(safe-area-inset-bottom, 0px)
+  );
+  min-height: 0;
+  overflow: hidden;
 }
 .customer-pane {
   min-width: 0;
@@ -2292,6 +2495,20 @@ a.login-option:hover {
 .admin-content {
   padding: 30px 32px 55px;
   min-width: 0;
+}
+.admin-content:has(.admin-messages) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  height: 100%;
+  padding-bottom: 24px;
+  overflow-x: hidden;
+}
+.admin-content:has(.admin-messages) .admin-heading {
+  flex-shrink: 0;
+  margin-bottom: 16px;
 }
 .admin-heading {
   display: flex;
@@ -3259,6 +3476,18 @@ a.login-option:hover {
   border-color: var(--ds-color-neutral-border-default);
   background: var(--ds-color-neutral-background-tinted);
 }
+.admin-members-header,
+.admin-members-row {
+  grid-template-columns:
+    minmax(14rem, 1.8fr)
+    minmax(7rem, 0.7fr)
+    minmax(6rem, 0.55fr);
+}
+.admin-members-role {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ds-color-neutral-text-default);
+}
 .admin-users-identity {
   display: flex;
   align-items: center;
@@ -3353,6 +3582,15 @@ a.login-option:hover {
   .admin-users-actions {
     grid-area: actions;
   }
+  .admin-members-row {
+    grid-template-columns: 1.4fr auto;
+    grid-template-areas:
+      "identity status"
+      "role role";
+  }
+  .admin-members-role {
+    grid-area: role;
+  }
 }
 @media (max-width: 767px) {
   .admin-users-row {
@@ -3368,6 +3606,15 @@ a.login-option:hover {
   }
   .admin-users-message {
     -webkit-line-clamp: 4;
+  }
+  .admin-members-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "identity status"
+      "role role";
+  }
+  .admin-members-role {
+    grid-area: role;
   }
 }
 .settings-props {
@@ -3509,6 +3756,10 @@ a.login-option:hover {
   }
   .admin-layout {
     grid-template-columns: 1fr;
+  }
+  .admin-layout:has(.admin-messages) {
+    grid-template-rows: auto 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .admin-sidebar {
     position: static;
@@ -3842,6 +4093,29 @@ a.login-option:hover {
   .message-inbox {
     grid-template-columns: 1fr;
   }
+  .admin-messages {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .admin-messages[data-phone-pane="list"] .admin-messages-thread,
+  .admin-messages[data-phone-pane="thread"] .admin-messages-list {
+    display: none;
+  }
+  .message-thread-fill .message-composer {
+    flex-direction: column;
+    align-items: stretch;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding-top: 8px;
+    background: var(--ds-color-neutral-background-default);
+  }
+  .admin-messages-thread .message-thread-fill {
+    padding: 16px 16px 20px;
+  }
+  .admin-messages-thread-header {
+    padding: 14px 16px;
+  }
   .booking-info-panel {
     padding: 18px 20px;
   }
@@ -3898,6 +4172,14 @@ a.login-option:hover {
   }
   .admin-content {
     padding: 24px 18px 35px;
+  }
+  .admin-layout:has(.admin-messages) {
+    min-height: calc(
+      100dvh - var(--app-header-height) - 65px - env(safe-area-inset-bottom)
+    );
+  }
+  .admin-content:has(.admin-messages) {
+    padding: 24px 18px 16px;
   }
   .admin-heading {
     flex-direction: column;
