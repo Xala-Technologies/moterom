@@ -3354,10 +3354,13 @@ a.login-option:hover {
   margin: 6px 0;
 }
 .settings-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-  max-width: 760px;
+  align-items: start;
+}
+.settings-card-span {
+  grid-column: 1 / -1;
 }
 .settings-card {
   border: 1px solid var(--ds-color-neutral-border-subtle);
@@ -3624,6 +3627,53 @@ a.login-option:hover {
   font-weight: 550;
   overflow-wrap: anywhere;
 }
+.settings-missing {
+  color: var(--ds-color-neutral-text-subtle);
+  font-weight: 500;
+}
+.settings-rules {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+}
+.settings-rules > div {
+  display: grid;
+  grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);
+  gap: 8px 24px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+}
+.settings-rules > div:first-child {
+  padding-top: 0;
+}
+.settings-rules > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.settings-rules dt {
+  margin: 0;
+  color: var(--ds-color-neutral-text-subtle);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.settings-rules dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 550;
+}
+.settings-rules a {
+  font-size: 0.875rem;
+  font-weight: 550;
+  color: var(--ds-color-accent-text-default);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .settings-access {
   display: flex;
   flex-direction: column;
@@ -3662,8 +3712,15 @@ a.login-option:hover {
   line-height: 1.5;
 }
 @media (max-width: 767px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
   .settings-props {
     grid-template-columns: 1fr;
+  }
+  .settings-rules > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
   .settings-digilist-btn {
     width: 100%;

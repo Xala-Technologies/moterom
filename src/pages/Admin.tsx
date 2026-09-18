@@ -696,7 +696,25 @@ export function Admin() {
                       </div>
                       <div>
                         <dt>{t("admin.settings_address")}</dt>
-                        <dd>{config?.address || t("admin.address_missing")}</dd>
+                        <dd
+                          className={
+                            config?.address ? undefined : "settings-missing"
+                          }
+                        >
+                          {config?.address || t("admin.address_missing")}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{t("admin.settings_contact")}</dt>
+                        <dd
+                          className={
+                            config?.contactEmail
+                              ? undefined
+                              : "settings-missing"
+                          }
+                        >
+                          {config?.contactEmail || t("admin.address_missing")}
+                        </dd>
                       </div>
                       <div>
                         <dt>{t("admin.settings_timezone")}</dt>
@@ -710,7 +728,7 @@ export function Admin() {
                     <h2>{t("admin.settings_access")}</h2>
                     <p>{t("admin.settings_access_caption")}</p>
                   </header>
-                  <div className="settings-card-body">
+                  <div className="settings-card-body settings-card-action">
                     <div className="settings-access">
                       <span className="settings-access-pill">
                         {config?.access === "members"
@@ -723,33 +741,42 @@ export function Admin() {
                           : t("admin.access_public")}
                       </p>
                     </div>
-                  </div>
-                </section>
-                <section className="settings-card">
-                  <header className="settings-card-header">
-                    <h2>{t("admin.settings_users")}</h2>
-                    <p>{t("admin.settings_users_caption")}</p>
-                  </header>
-                  <div className="settings-card-body settings-card-action">
-                    <p>{t("admin.settings_users_body")}</p>
                     <div className="settings-card-actions">
                       <Link
                         to="/admin/users"
                         className="ds-button"
-                        data-variant="primary"
+                        data-variant="secondary"
                       >
                         {t("admin.settings_users_open_inbox")}
                       </Link>
                     </div>
                   </div>
                 </section>
-                <section className="settings-card">
+                <section className="settings-card settings-card-span">
                   <header className="settings-card-header">
                     <h2>{t("admin.settings_rules")}</h2>
                     <p>{t("admin.settings_rules_caption")}</p>
                   </header>
                   <div className="settings-card-body settings-card-action">
-                    <p>{t("admin.settings_rules_body")}</p>
+                    <dl className="settings-rules">
+                      <div>
+                        <dt>{t("admin.settings_rule_approval")}</dt>
+                        <dd>
+                          <span>{t("admin.settings_rule_approval_value")}</span>
+                          <Link to="/admin/rooms">
+                            {t("admin.settings_open_rooms")}
+                          </Link>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{t("admin.settings_rule_hours")}</dt>
+                        <dd>{t("admin.settings_rule_hours_value")}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("admin.settings_rule_payment")}</dt>
+                        <dd>{t("admin.settings_rule_payment_value")}</dd>
+                      </div>
+                    </dl>
                     <a
                       href={config?.dashboardUrl}
                       className="ds-button settings-digilist-btn"
@@ -768,7 +795,7 @@ export function Admin() {
                 </section>
                 {config?.mode === "demo" && (
                   <aside
-                    className="settings-callout"
+                    className="settings-card-span settings-callout"
                     aria-labelledby="settings-prelaunch-title"
                   >
                     <h2 id="settings-prelaunch-title">
