@@ -373,7 +373,15 @@ export class Digilist {
     const issues = list(raw.validation);
     const errors = issues.filter((r) => r.severity === "error");
     if (errors.length)
-      throw new AppError(409, errors.map((e) => str(e.message)).join(" "));
+      throw new AppError(
+        409,
+        errors
+          .map((e) => str(e.message) || str(e.code) || str(e.title))
+          .filter(Boolean)
+          .join(" ") ||
+          "Pristilbudet kunne ikke beregnes for dette tidspunktet.",
+        "quote_rejected",
+      );
     const priceOnRequest = issues.some((r) =>
       ["PRICE_ON_REQUEST", "NO_PRICING_CONFIGURED"].includes(str(r.code)),
     );

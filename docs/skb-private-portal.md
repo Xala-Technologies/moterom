@@ -26,7 +26,7 @@ Created on Digilist DEV (not marketplace, not Verdal). Re-run with `node scripts
 - Tenant slug: `skb-moterom-test`
 - Tenant id: `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`
 - `settings.portalOrigin`: `https://skb.digilist.no`
-- Rooms: `visibility=private`, `accessChannel=tenant_portal`, free (`paymentRequired=false`, `basePrice=0`)
+- Rooms: `visibility=private`, `accessChannel=tenant_portal`, free (`paymentRequired=false`, `basePrice=0`). DEV also has idempotent 0 NOK hourly `resourcePricing` rows; without them Digilist quote returns `NO_PRICING_CONFIGURED`.
 - Portal `id`s stay `sauda-1`…`eidefossen-b`. Names/capacities taken from `config/rooms.json`. Photos remain illustrative.
 
 | Portal id    | Confirmed name     | Capacity used | Digilist slug           | DEV tenant id                      | Resource id                        | Notes                         |
@@ -81,9 +81,11 @@ Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-t
 
 Live OTP 18 September 2026 on Hostinger only: `skb@digilist.no` reached `/admin` as `isAdmin`. All seven rooms render. Insights reports live + complete coverage with 0 bookings. `/api/admin/members` remains 404. No booking was created.
 
-Live member 18 September 2026 on Hostinger: `wahidullah_rahmani@hotmail.com` (Digilist OTP already in session; not `hotmaiil.com`) became `isMember` after the DEV tenant membership was written. `/` shows Finn rom with seven rooms. No booking was created. `skb.member@digilist.dev` was not used.
+Live member 18 September 2026 on Hostinger: `wahidullah_rahmani@hotmail.com` (Digilist OTP already in session; not `hotmaiil.com`) became `isMember` after the DEV tenant membership was written. `/` shows Finn rom with seven rooms. `skb.member@digilist.dev` was not used.
 
-Not run: outsider access-pending; customer admin 403 against live; idempotent retry; conflict; cancel vs availability; OTP against this branch’s local live BFF.
+Live member booking 18 September 2026 on this branch only (`DATA_MODE=live`, `http://localhost:4173`): Wahid Rahmani booked Sauda 1, 18 Sep 2026 16:00–17:00, Teammøte, **Ingen betaling**. Digilist id `js7fzc258aqewx31gwbvf6rv758em29r`, status `confirmed`, reference `DGL-20260918-J77NNF`. Mine bookinger and booking detail showed the same reservation. Customer `GET /api/admin` 403 `admin_required`. Rooms needed 0 NOK hourly `resourcePricing` on DEV before quote succeeded; missing rate cards returned Digilist `NO_PRICING_CONFIGURED`. Hostinger was not used for this booking.
+
+Not run: outsider access-pending; idempotent retry; conflict; cancel vs availability.
 
 Covered by Digilist unit tests on `feat/tenant-portal-listings` (163 tests): marketplace default; private and `tenant_portal` public slug 404; guest create against private/`tenant_portal` rejected; storefront `listMine` omits `tenant_portal`.
 
@@ -99,4 +101,4 @@ Local `DATA_MODE=demo` at `http://localhost:4173` as Kari Nordmann. This is **no
 - Customer `/admin`: “Denne siden er for administratorer”; `GET /api/admin` 403 `admin_required`.
 - Phone viewport 390×844: seven cards, `scrollWidth` 390 (no overflow), mobile nav, no `digilist.no` links on the rooms page.
 
-Not claimed: live member book on DEV, outsider pending on DEV, marketplace leak against deployed Convex, physical device, production `skb.digilist.no`.
+Not claimed: outsider pending on DEV, marketplace leak against deployed Convex, physical device, Hostinger serving this branch, production `skb.digilist.no` booking.

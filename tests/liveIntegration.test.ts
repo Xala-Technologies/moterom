@@ -261,6 +261,29 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .send(input())
       .expect(409);
     expect(paid.body.code).toBe("skb_internal_booking_only");
+    mocks.query.mockImplementation(async (ref, args) =>
+      getFunctionName(ref) === "domain/pricing:quote"
+        ? {
+            summary: { total: 0 },
+            currency: "NOK",
+            validation: [
+              {
+                severity: "error",
+                code: "NO_PRICING_CONFIGURED",
+                message: "Ingen priskonfigurasjon funnet",
+              },
+            ],
+          }
+        : baseQuery(ref, args),
+    );
+    const missingPrice = await request(app)
+      .post("/api/quote")
+      .set("Origin", origin)
+      .set("Cookie", await cookie())
+      .send(input())
+      .expect(409);
+    expect(missingPrice.body.code).toBe("quote_rejected");
+    expect(missingPrice.body.message).toBe("Ingen priskonfigurasjon funnet");
     mocks.query.mockRejectedValue(new Error("upstream unavailable"));
     await request(app)
       .get("/api/rooms")
