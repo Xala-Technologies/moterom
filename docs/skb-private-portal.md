@@ -41,13 +41,16 @@ Created on Digilist DEV (not marketplace, not Verdal). Re-run with `node scripts
 
 Test users on that tenant (Digilist user rows; OTP login still requires a real mailbox):
 
-| Email                       | Role         | Membership |
-| --------------------------- | ------------ | ---------- |
-| `skb.admin@digilist.dev`    | tenant_admin | active     |
-| `skb@digilist.no`           | tenant_admin | active     |
-| `skb.member@digilist.dev`   | support      | active     |
-| `skb.outsider@digilist.dev` | —            | none       |
-| `skb.revoked@digilist.dev`  | support      | removed    |
+| Email                            | Role         | Membership |
+| -------------------------------- | ------------ | ---------- |
+| `skb.admin@digilist.dev`         | tenant_admin | active     |
+| `skb@digilist.no`                | tenant_admin | active     |
+| `skb.member@digilist.dev`        | support      | active     |
+| `wahidullah_rahmani@hotmail.com` | support      | active     |
+| `skb.outsider@digilist.dev`      | —            | none       |
+| `skb.revoked@digilist.dev`       | support      | removed    |
+
+`wahidullah_rahmani@hotmail.com` is the real portal booker. The misspelling `hotmaiil.com` is not a mailbox. Hostinger **Godkjenn** does not grant this membership; it was added as an active `tenantUsers` row on DEV tenant `skb-moterom-test` (`support`), not via `inviteMember`.
 
 ## Production rollout (requires explicit approval)
 
@@ -78,7 +81,9 @@ Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-t
 
 Live OTP 18 September 2026 on Hostinger only: `skb@digilist.no` reached `/admin` as `isAdmin`. All seven rooms render. Insights reports live + complete coverage with 0 bookings. `/api/admin/members` remains 404. No booking was created.
 
-Not run: member OTP as `skb.member@digilist.dev` on this branch; outsider access-pending; customer admin 403 against live; idempotent retry; conflict; cancel vs availability.
+Live member 18 September 2026 on Hostinger: `wahidullah_rahmani@hotmail.com` (Digilist OTP already in session; not `hotmaiil.com`) became `isMember` after the DEV tenant membership was written. `/` shows Finn rom with seven rooms. No booking was created. `skb.member@digilist.dev` was not used.
+
+Not run: outsider access-pending; customer admin 403 against live; idempotent retry; conflict; cancel vs availability; OTP against this branch’s local live BFF.
 
 Covered by Digilist unit tests on `feat/tenant-portal-listings` (163 tests): marketplace default; private and `tenant_portal` public slug 404; guest create against private/`tenant_portal` rejected; storefront `listMine` omits `tenant_portal`.
 

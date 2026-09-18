@@ -65,7 +65,7 @@ Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist
 - Local `npm run check` and `format:check` passed (55 tests). Digilist targeted Convex tests passed (163).
 - Digilist DEV tenant `skb-moterom-test` (`xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`) and seven private `tenant_portal` rooms were seeded. `config/rooms.json` slugs are filled. Marketplace REST leak checks passed (slug 404, guest checkout 404, public listing still 200). See [`docs/skb-private-portal.md`](skb-private-portal.md).
 - Local demo browser: grid confirm modal booked Sauda 1 without payment redirect; customer admin 403; phone 390×844 no overflow.
-- Still open: no git merge of `feat/digilist-admin-foundation` to `dev`/`main`; live member OTP booking was not run; Eidefossen names still need confirmation. Hostinger `skb.digilist.no` is **live** and members-only (anonymous config 18 Sep 2026); it does not yet serve this branch (`/api/admin/members` 404).
+- Still open: no git merge of `feat/digilist-admin-foundation` to `dev`/`main`; live member **booking** was not run; Eidefossen names still need confirmation. Hostinger `skb.digilist.no` is **live** and members-only (anonymous config 18 Sep 2026); it does not yet serve this branch (`/api/admin/members` 404). `wahidullah_rahmani@hotmail.com` can sign in as a member (see below).
 
 ## Integration repairs — 18 September 2026
 
@@ -85,7 +85,7 @@ Anonymous only. No OTP, no bookings, no production tenant edits.
 - Local BFF from this branch, `DATA_MODE=live` on port 4175 (then stopped): `/api/config` mode live / members; `/api/rooms`, `/api/admin`, `/api/admin/members`, `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404 (no demo fallback).
 - Hostinger `https://skb.digilist.no`: `/api/config` mode **live**, access members, Digilist auth configured; rooms and admin 401; `/api/admin/members` **404** (deployed image is not this branch). Login shows email, SMS and access request; no BankID and no demo. Cluster URLs behind that host were not read.
 
-Still required: OTP as `skb@digilist.no` and `skb.member@digilist.dev` against a BFF on this branch pointed at DEV.
+Still required: the same checks against a BFF on this branch pointed at DEV. Hostinger is not this branch.
 
 ## Live OTP — 18 September 2026 (Hostinger, not this branch)
 
@@ -93,4 +93,5 @@ Still required: OTP as `skb@digilist.no` and `skb.member@digilist.dev` against a
 
 - Sidebar routes loaded: Oversikt, Innsikt (live, 0 reserved hours, complete coverage), Kalender (all seven rooms including both Eidefossen), Bookinger (empty), Rom (seven cards, illustrasjonsfoto), Brukere (access-request inbox only), Innstillinger.
 - `/api/admin/members` still 404. Settings copy still says Møterom approval grants portal access. That is the deployed image, not `feat/digilist-admin-foundation`.
-- Member OTP (`skb.member@digilist.dev`), outsider pending, live booking, cancel, and conflict were not run. Nothing was merged or deployed from this check.
+
+Same afternoon: `wahidullah_rahmani@hotmail.com` had already completed Digilist OTP (`isMember` was false; Hostinger Godkjenn does not grant tenant membership). After an active `support` membership was written on DEV tenant `skb-moterom-test` (seed `ensureUser`/`ensureMembership`, not `inviteMember`), `/api/session` returned `isMember=true` and `/api/rooms` listed all seven rooms. Finn rom loaded for Wahid Rahmani. No booking was created. `skb.member@digilist.dev` was not used. Nothing was merged or deployed.
