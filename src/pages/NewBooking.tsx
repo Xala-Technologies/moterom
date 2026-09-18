@@ -369,7 +369,9 @@ export function NewBooking() {
                                 ? selected
                                   ? "is-selected"
                                   : "is-available"
-                                : "is-unavailable"
+                                : slot.state === "error"
+                                  ? "is-unknown"
+                                  : "is-unavailable"
                             }
                             aria-pressed={selected}
                             aria-label={

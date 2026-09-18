@@ -247,7 +247,7 @@ a.brand {
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1;
-  color: var(--ds-color-accent-base-default, #003057);
+  color: var(--ds-color-accent-text-default, #003057);
 }
 .app-header .brand-mark-name {
   font-size: 1rem;
@@ -621,6 +621,11 @@ a.brand {
   color: var(--ds-color-neutral-text-default);
   font-size: 1.0625rem;
 }
+.page-heading p.page-heading-count {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  color: var(--ds-color-neutral-text-subtle);
+}
 .user-name-link {
   color: inherit;
   text-decoration: none;
@@ -772,21 +777,6 @@ a.brand {
   color: var(--ds-color-accent-text-subtle);
   font-size: 0.8125rem;
   margin-left: 10px;
-}
-.results-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 38px 0 22px;
-}
-.results-heading h2 {
-  font-size: 1.5rem;
-}
-.results-heading .muted {
-  display: block;
-  font-size: 0.875rem;
-  margin-top: 4px;
-  color: var(--ds-color-neutral-text-default);
 }
 .view-switch {
   display: flex;
@@ -1006,16 +996,22 @@ a.brand {
   z-index: 1;
 }
 .room-schedule-date {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 .room-schedule-date label {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--ds-color-neutral-text-default);
 }
-.room-schedule-date input {
+.room-date-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
   min-height: var(--ds-touch-target-min, 44px);
   padding: 8px 12px;
   border: 1px solid var(--ds-color-neutral-border-default);
@@ -1023,6 +1019,55 @@ a.brand {
   background: var(--ds-color-neutral-background-default);
   color: var(--ds-color-neutral-text-default);
   font: inherit;
+  font-size: 0.875rem;
+  text-align: start;
+  cursor: pointer;
+}
+.room-date-trigger svg {
+  flex-shrink: 0;
+}
+.room-date-popover {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 16px 16px 8px;
+  background: var(--ds-color-neutral-background-default);
+  border: 1px solid var(--ds-color-neutral-border-default);
+  border-radius: var(--digilist-radius-lg);
+  box-shadow: var(--ds-shadow-md);
+}
+.room-date-popover .month-calendar {
+  margin: 0;
+  max-width: none;
+  border: 0;
+  padding: 0 0 8px;
+}
+.room-date-popover .month-heading {
+  font-size: 1rem;
+}
+.room-date-popover .month-weekdays {
+  font-size: 0.875rem;
+}
+.room-date-popover .month-days {
+  gap: 6px;
+}
+.room-date-popover .month-days button {
+  min-height: 48px;
+  font-size: 1rem;
+}
+.room-date-popover .month-calendar > .caption {
+  font-size: 0.875rem;
+}
+@media (max-width: 767px) {
+  .room-date-popover {
+    scroll-margin-bottom: var(--app-mobile-nav-offset);
+  }
+}
+.room-card:has(.room-date-popover) {
+  overflow: visible;
+  z-index: 4;
 }
 .room-schedule-slots {
   display: grid;
@@ -1044,25 +1089,11 @@ a.brand {
 .room-schedule-slots button:hover:not(:disabled) {
   border-color: var(--ds-color-accent-base-default);
 }
-.room-schedule-slots button.is-available {
-  border-color: var(
-    --ds-color-success-border-default,
-    var(--ds-color-accent-border-subtle)
-  );
-}
 .room-schedule-slots button.is-selected,
 .room-schedule-slots button[aria-pressed="true"] {
   background: var(--ds-color-accent-base-default);
   border-color: var(--ds-color-accent-base-default);
   color: var(--ds-color-accent-base-contrast-default);
-}
-.room-schedule-slots button.is-unavailable,
-.room-schedule-slots button:disabled {
-  color: var(--ds-color-neutral-text-subtle);
-  background: var(--ds-color-neutral-surface-default);
-  border-color: var(--ds-color-neutral-border-subtle);
-  cursor: not-allowed;
-  text-decoration: line-through;
 }
 .room-schedule-actions {
   display: flex;
@@ -2127,16 +2158,49 @@ a.login-option:hover {
 .wizard-room-pick button:hover {
   border-color: var(--ds-color-accent-base-default);
 }
+.wizard-slots button.is-selected,
 .wizard-slots button[aria-pressed="true"],
 .wizard-room-pick button[aria-pressed="true"] {
   background: var(--ds-color-accent-base-default);
   border-color: var(--ds-color-accent-base-default);
   color: var(--ds-color-accent-base-contrast-default);
 }
+.room-schedule-slots button.is-available,
+.wizard-slots button.is-available {
+  background: var(--digilist-status-available-bg);
+  border-color: var(--digilist-status-available-border);
+  color: var(--digilist-status-available-fg);
+}
+.room-schedule-slots button.is-available:hover:not(:disabled),
+.wizard-slots button.is-available:hover:not(:disabled) {
+  background: var(--digilist-status-available-bg-hover);
+  border-color: var(--digilist-status-available-border);
+}
+.room-schedule-slots button.is-selected,
+.wizard-slots button.is-selected {
+  background: var(--ds-color-accent-base-default);
+  border-color: var(--ds-color-accent-base-default);
+  color: var(--ds-color-accent-base-contrast-default);
+}
+.room-schedule-slots button.is-unavailable,
+.wizard-slots button.is-unavailable {
+  background: var(--digilist-status-unavailable-bg);
+  border-color: var(--digilist-status-unavailable-border);
+  color: var(--digilist-status-unavailable-fg);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.room-schedule-slots button.is-unknown,
+.wizard-slots button.is-unknown {
+  background: var(--ds-color-warning-surface-tinted);
+  border-color: var(--ds-color-warning-border-default);
+  color: var(--ds-color-warning-text-default);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.room-schedule-slots button:disabled,
 .wizard-slots button:disabled {
-  color: var(--ds-color-neutral-text-subtle);
-  background: var(--ds-color-neutral-surface-default);
-  border-color: var(--ds-color-neutral-border-subtle);
+  cursor: not-allowed;
 }
 .wizard-change-room {
   display: inline-flex;
@@ -4221,15 +4285,6 @@ a.login-option:hover {
   }
   .search-summary button {
     margin-left: 0;
-  }
-  .results-heading {
-    margin-top: 28px;
-  }
-  .results-heading h2 {
-    font-size: 1.3125rem;
-  }
-  .results-heading .muted {
-    font-size: 0.875rem;
   }
   .rooms-grid {
     gap: 20px;
