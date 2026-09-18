@@ -65,7 +65,7 @@ Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist
 - Local `npm run check` and `format:check` passed (55 tests). Digilist targeted Convex tests passed (163).
 - Digilist DEV tenant `skb-moterom-test` (`xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`) and seven private `tenant_portal` rooms were seeded. `config/rooms.json` slugs are filled. Marketplace REST leak checks passed (slug 404, guest checkout 404, public listing still 200). See [`docs/skb-private-portal.md`](skb-private-portal.md).
 - Local demo browser: grid confirm modal booked Sauda 1 without payment redirect; customer admin 403; phone 390×844 no overflow.
-- Still open: no git merge of `feat/digilist-admin-foundation` to `dev`/`main`; Eidefossen names still need confirmation. Hostinger `skb.digilist.no` is **live** and members-only (anonymous config 18 Sep 2026); it does not yet serve this branch (`/api/admin/members` 404). `wahidullah_rahmani@hotmail.com` can sign in as a member and booked once on this branch (see below).
+- Still open: Eidefossen names still need confirmation. `feat/digilist-admin-foundation` is merged to `dev` (#16) and `main` (#17). Hostinger `skb.digilist.no` was rebuilt from `main` `2b5c9d6` on 18 Sep 2026 (`/api/admin/members` 401 anonymous / 403 as customer).
 
 ## Integration repairs — 18 September 2026
 
@@ -83,9 +83,9 @@ Anonymous only. No OTP, no bookings, no production tenant edits.
 
 - Digilist DEV REST: `GET /listings/skb-test-*` 404 for all seven slugs; listings page and featured contain no `skb-test` slugs; `xala-test-konferanserom` still 200; `POST /checkout/sessions` with a complete guest body for `skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
 - Local BFF from this branch, `DATA_MODE=live` on port 4175 (then stopped): `/api/config` mode live / members; `/api/rooms`, `/api/admin`, `/api/admin/members`, `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404 (no demo fallback).
-- Hostinger `https://skb.digilist.no`: `/api/config` mode **live**, access members, Digilist auth configured; rooms and admin 401; `/api/admin/members` **404** (deployed image is not this branch). Login shows email, SMS and access request; no BankID and no demo. Cluster URLs behind that host were not read.
+- Hostinger `https://skb.digilist.no` (afternoon, before rebuild): `/api/config` mode **live**, access members; `/api/admin/members` **404** (old image).
 
-Still required: the same checks against a BFF on this branch pointed at DEV. Hostinger is not this branch.
+Still required at that time: the same checks against a BFF on this branch pointed at DEV. Hostinger was not this branch until the evening rebuild below.
 
 ## Live OTP — 18 September 2026 (Hostinger, not this branch)
 
@@ -96,4 +96,12 @@ Still required: the same checks against a BFF on this branch pointed at DEV. Hos
 
 Same afternoon: `wahidullah_rahmani@hotmail.com` had already completed Digilist OTP (`isMember` was false; Hostinger Godkjenn does not grant tenant membership). After an active `support` membership was written on DEV tenant `skb-moterom-test` (seed `ensureUser`/`ensureMembership`, not `inviteMember`), `/api/session` returned `isMember=true` and `/api/rooms` listed all seven rooms. Finn rom loaded for Wahid Rahmani. `skb.member@digilist.dev` was not used.
 
-Live member booking 18 September 2026 on this branch (`DATA_MODE=live`, `http://localhost:4173`, Chromium in Cursor), not Hostinger: Wahid Rahmani booked Sauda 1, Friday 18 September 2026, 16:00–17:00, purpose Teammøte, total **Ingen betaling**. Digilist created `js7fzc258aqewx31gwbvf6rv758em29r` (`confirmed`, reference `DGL-20260918-J77NNF`). Mine bookinger showed Bekreftet 1; booking detail persisted after navigation. `GET /api/admin` as this customer returned 403 `admin_required`. Quote first failed with Digilist `NO_PRICING_CONFIGURED` (“Ingen priskonfigurasjon funnet”); after 0 NOK hourly `resourcePricing` was seeded on DEV SKB rooms, `/api/quote` returned 200 total 0. Cancel, conflict, and idempotent retry were not run. Nothing was merged or deployed.
+Live member booking 18 September 2026 on this branch (`DATA_MODE=live`, `http://localhost:4173`, Chromium in Cursor), then Hostinger: Wahid Rahmani booked Sauda 1, Friday 18 September 2026, 16:00–17:00, purpose Teammøte, total **Ingen betaling**. Digilist created `js7fzc258aqewx31gwbvf6rv758em29r` (`confirmed`, reference `DGL-20260918-J77NNF`). Mine bookinger showed Bekreftet 1; booking detail persisted after navigation. `GET /api/admin` as this customer returned 403 `admin_required`. Quote first failed with Digilist `NO_PRICING_CONFIGURED` (“Ingen priskonfigurasjon funnet”); after 0 NOK hourly `resourcePricing` was seeded on DEV SKB rooms, `/api/quote` returned 200 total 0. Cancel, conflict, and idempotent retry were not run.
+
+## Hostinger rebuild — 18 September 2026 (evening)
+
+Merged [#16](https://github.com/Xala-Technologies/moterom/pull/16) into `dev` and [#17](https://github.com/Xala-Technologies/moterom/pull/17) into `main`. Rebuilt the Hostinger container from `main` `2b5c9d6`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged.
+
+Anonymous: `/api/config` live / members; `/api/rooms`, `/api/admin`, `/api/admin/members`, `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404. Container healthy.
+
+Signed in as Wahid Rahmani on `https://skb.digilist.no`: Finn rom listed 7 rooms; `/api/admin` and `/api/admin/members` 403 `admin_required` (route exists); Mine bookinger showed the Teammøte 16:00–17:00 booking plus a later confirmed Sauda 1 on 24 Sep (`DGL-20260918-MG0QKK`). No new booking was created during this rebuild.
