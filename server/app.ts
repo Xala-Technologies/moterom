@@ -206,14 +206,6 @@ async function context(
         );
       throw e;
     }
-    if (
-      config.access === "members" &&
-      user &&
-      !user.isMember &&
-      accessRequests.hasApproved(user.email)
-    ) {
-      user = { ...user, isMember: true };
-    }
   }
   if (
     (requireUser || (config.access === "members" && !allowAnonymous)) &&
@@ -352,13 +344,7 @@ app.get("/api/session", async (req, res) => {
       // Digilist session still valid; surface identity without Convex access.
       try {
         const user = await liveUser(session);
-        const member =
-          config.access === "members" &&
-          !user.isMember &&
-          accessRequests.hasApproved(user.email)
-            ? { ...user, isMember: true }
-            : user;
-        res.json({ user: member });
+        res.json({ user });
       } catch (inner) {
         if (inner instanceof AppError && inner.status === 401) {
           clearSession(res);
@@ -567,7 +553,11 @@ app.get("/api/availability/slots", async (req, res) => {
               : translateMessage(locale, "invalid_datetime"),
         };
       }
-      const availability = await ctx.provider.availability(search, locale);
+      const availability = await ctx.provider.availability(
+        search,
+        locale,
+        roomId,
+      );
       const relevant = roomId
         ? availability.filter((item) => item.roomId === roomId)
         : availability;
@@ -615,9 +605,9 @@ app.post("/api/quote", async (req, res) => {
   const ctx = await contextForQuote(req, res);
   const search = parseSearch(req.body);
   const roomId = z.string().max(100).parse(req.body.roomId);
-  const availability = (await ctx.provider.availability(search)).find(
-    (a) => a.roomId === roomId,
-  );
+  const availability = (
+    await ctx.provider.availability(search, requestLocale(req), roomId)
+  ).find((a) => a.roomId === roomId);
   if (availability?.state !== "available")
     throw new AppError(
       409,
@@ -656,6 +646,12 @@ app.post("/api/bookings", async (req, res) => {
       "E-posten må være den du er innlogget med.",
       "email_must_match_session",
     );
+  // An authenticated retry is a read of an existing reservation. Reconcile
+  // it before refreshing an expired quote or checking its now-occupied slot.
+  if (ctx.provider instanceof Digilist) {
+    const existing = await ctx.provider.replay(input, ctx.user!, key);
+    if (existing) return res.status(201).json(existing);
+  }
   let claims: Awaited<ReturnType<typeof verifyQuote>>;
   try {
     claims = await verifyQuote(input.quoteToken);
@@ -796,6 +792,7 @@ app.post("/api/access-requests", async (req, res) => {
   const body = accessRequestCreateSchema.parse(req.body);
   const created = accessRequests.create({
     ...body,
+    ...(ctx.user ? { name: ctx.user.name, email: ctx.user.email } : {}),
     userId: ctx.user?.id,
   });
   res.status(201).json(created);
@@ -805,9 +802,35 @@ app.get("/api/admin/access-requests", async (req, res) => {
   res.json(accessRequests.list());
 });
 app.patch("/api/admin/access-requests/:id", async (req, res) => {
-  await context(req, res, true, true);
+  const ctx = await context(req, res, true, true);
   const status = accessRequestStatusSchema.parse(req.body?.status);
+  if (status === "approved" && ctx.provider instanceof Digilist) {
+    const item = accessRequests.get(String(req.params.id));
+    const members = await ctx.provider.members(ctx.user!);
+    if (
+      !members.some(
+        (member) =>
+          member.status === "active" &&
+          member.email.trim().toLowerCase() ===
+            item.email.trim().toLowerCase() &&
+          (!item.userId || member.userId === item.userId),
+      )
+    )
+      throw new AppError(
+        409,
+        "Aktivt medlemskap må først bekreftes i Digilist. Forespørselen er fortsatt åpen.",
+        "membership_not_active",
+      );
+  }
   res.json(accessRequests.updateStatus(String(req.params.id), status));
+});
+app.get("/api/admin/members", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  res.json(
+    ctx.provider instanceof Digilist
+      ? await ctx.provider.members(ctx.user!)
+      : [],
+  );
 });
 app.get("/api/admin", async (req, res) => {
   const ctx = await context(req, res, true, true);

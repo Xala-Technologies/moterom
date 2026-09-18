@@ -254,7 +254,7 @@
     "meeting_title": "Møtetittel",
     "meeting_title_placeholder": "For eksempel teammøte",
     "message_to_host": "Beskjed til utleier",
-    "retry_same_order": "Du kan forsøke å bekrefte samme bestilling igjen hvis du er usikker på om den ble registrert.",
+    "retry_same_order": "Prøv samme bestilling igjen for å sjekke om den ble lagret. Behold opplysningene mens resultatet er usikkert.",
     "checking_availability": "Kontrollerer ledighet …",
     "consent_checked": "Jeg har kontrollert rom, dato og tidspunkt.",
     "hosted_payment_note": "Betaling og endelig bekreftelse fullføres i Digilist. Dette steget overfører ikke tidspunktet eller innloggingen.",
@@ -298,7 +298,8 @@
     "send_edit_request": "Send endringsforespørsel",
     "notify_edit_sent": "Endringsforespørselen er sendt. Opprinnelig tid gjelder frem til godkjenning.",
     "notify_cancelled": "Bookingen er kansellert.",
-    "login_required_body": "Logg inn for å fortsette bestillingen."
+    "login_required_body": "Logg inn for å fortsette bestillingen.",
+    "existing_booking_body": "Den opprinnelige bestillingen ble funnet. Gjeldende status vises her."
   },
   "dashboard": {
     "document_title": "Mine bookinger",
@@ -436,7 +437,7 @@
     "settings_rules_caption": "Priser, åpningstider og medarbeidere.",
     "settings_rules_body": "Åpningstider, pauser mellom bookinger, priser og medarbeidertilgang styres i Digilist. Det samme oppsettet gjelder her.",
     "users": {
-      "caption": "Godkjenn forespørsler for å gi tilgang til portalen. Uten godkjenning får brukeren ikke inn.",
+      "caption": "Tilgang styres av aktivt medlemskap i byggets Digilist-leietaker. Gi eller fjern medlemskap der. Innboksen følger bare forespørsler; avslag fjerner ikke et eksisterende medlemskap.",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -456,14 +457,17 @@
         "status": "Status",
         "actions": "Handlinger"
       },
-      "mark_approved": "Godkjenn",
+      "mark_approved": "Kontroller medlemskap",
       "mark_rejected": "Avslå",
       "mark_pending": "Tilbakestill",
       "toasts": {
-        "marked_approved": "Tilgang er godkjent. Brukeren kan logge inn på nytt.",
+        "marked_approved": "Aktivt medlemskap er kontrollert i Digilist. Forespørselen er ferdigbehandlet.",
         "marked_rejected": "Forespørselen er avslått.",
-        "marked_pending": "Forespørselen er satt tilbake til venter."
-      }
+        "marked_pending": "Forespørselen er satt tilbake til venter.",
+        "marked_approved_demo": "Demoforespørselen er ferdigbehandlet."
+      },
+      "caption_demo": "Demoforespørsler lagres lokalt og endrer ingen medlemskap i Digilist.",
+      "mark_approved_demo": "Merk som behandlet"
     },
     "prelaunch_title": "Før kundelansering",
     "prelaunch_body": "Bekreft navnene på Eidefossen-rommene, kapasitet per oppsett, rombilder og bookingregler. Demoen sender ikke e-post og krever ingen betaling.",
@@ -558,7 +562,18 @@
       "value_col": "Verdi",
       "today_tab": "I dag",
       "insights_tab": "Innsikt"
-    }
+    },
+    "members": {
+      "title": "Byggets medlemmer",
+      "caption": "Gjeldende medlemskap i byggets Digilist-leietaker. Inviterte brukere får tilgang først etter at invitasjonen er akseptert. Roller vises slik de er lagret i Digilist.",
+      "refresh": "Oppdater medlemmer",
+      "role": "Digilist-rolle",
+      "active": "Aktiv",
+      "invited": "Invitert",
+      "empty": "Ingen aktive medlemmer eller invitasjoner ble returnert."
+    },
+    "room_image_url": "Bildeadresse",
+    "room_image_url_hint": "Bruk en godkjent HTTPS-adresse. La feltet stå tomt for å bruke illustrasjonsbildet fra katalogen. Velg riktig bildetype."
   },
   "validation": {
     "name_required": "Skriv inn navn.",

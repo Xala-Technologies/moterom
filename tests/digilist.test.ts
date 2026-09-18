@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
+import { ConvexError } from "convex/values";
 import { addDays, today } from "../shared/time";
 process.env.DATA_MODE = "demo";
 process.env.DIGILIST_TENANT_ID = "building-test";
@@ -11,7 +12,7 @@ vi.mock("convex/browser", () => ({
     setAuth() {}
   },
 }));
-const { Digilist } = await import("../server/digilist");
+const { Digilist, setBuildingContext } = await import("../server/digilist");
 const { inventory } = await import("../server/config");
 const source = {
   _id: "source-room",
@@ -20,6 +21,7 @@ const source = {
   capacity: 12,
   requiresApproval: false,
   accessChannel: "tenant_portal",
+  visibility: "private",
   bookingConfig: { approvalRequired: true, minBookingDurationMinutes: 60 },
   images: [],
   amenities: [],
@@ -40,7 +42,89 @@ beforeEach(() => {
   );
   mocks.mutation.mockResolvedValue({});
 });
+afterEach(() => vi.unstubAllGlobals());
 describe("Digilist boundary contracts from the reviewed source", () => {
+  it("requires private visibility as well as the tenant-portal channel", async () => {
+    mocks.query.mockResolvedValue({ ...source, visibility: "public" });
+    await expect(new Digilist().rooms()).rejects.toThrow("ikke tilgjengelig");
+  });
+  it("does not let legacy metadata override an explicit marketplace channel", async () => {
+    mocks.query.mockResolvedValue({
+      ...source,
+      accessChannel: "marketplace",
+      metadata: { accessChannel: "tenant_portal" },
+    });
+    await expect(new Digilist().rooms()).rejects.toThrow("ikke tilgjengelig");
+  });
+  it("permits only the explicit non-member tenant-switch error", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          accessToken: "access",
+          expiresAt: Date.now() + 3600000,
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    mocks.mutation.mockRejectedValueOnce(
+      new ConvexError({ type: "auth/forbidden_tenant", status: 403 }),
+    );
+    await expect(
+      setBuildingContext({ token: "outsider" }),
+    ).resolves.toBeUndefined();
+    mocks.mutation.mockRejectedValueOnce(new Error("connection lost"));
+    await expect(setBuildingContext({ token: "member" })).rejects.toThrow(
+      "connection lost",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("cancels with the opaque user session token required by the REST API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    mocks.query.mockImplementation(async (ref) =>
+      getFunctionName(ref).includes("getBySlug")
+        ? source
+        : {
+            _id: "booking-1",
+            tenantId: "building-test",
+            resourceId: source._id,
+            userId: user.id,
+            startTime: Date.now() + 86400000,
+            endTime: Date.now() + 90000000,
+          },
+    );
+    await new Digilist({
+      token: "opaque-session",
+      accessToken: "convex-jwt",
+    }).updateBooking("booking-1", "cancel", { ...user, isAdmin: false });
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe(
+      "Bearer opaque-session",
+    );
+  });
+  it("preserves photo variants and the gallery on content-only edits", async () => {
+    const first = {
+      url: "https://images.example.invalid/room.webp",
+      variants: { thumb: "thumb.webp" },
+    };
+    mocks.query.mockResolvedValue({
+      ...source,
+      images: [first, { url: "https://images.example.invalid/other.webp" }],
+    });
+    await new Digilist().updateRoom(
+      inventory[0].id,
+      {
+        name: "Sauda",
+        capacity: 12,
+        description: "Edited",
+        requiresApproval: false,
+        image: first.url,
+        imageKind: "actual",
+        descriptionEn: "Updated",
+      },
+      user,
+    );
+    expect(mocks.mutation.mock.calls[0][1]).not.toHaveProperty("images");
+  });
   it("uses the canonical approvalRequired flag even when the legacy flag is false", async () => {
     expect((await new Digilist().rooms())[0].requiresApproval).toBe(true);
   });

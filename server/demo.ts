@@ -124,9 +124,10 @@ export class DemoStore {
   availability(
     search: Search,
     locale: Locale = DEFAULT_LOCALE,
+    roomId?: string,
   ): Availability[] {
     const span = interval(search);
-    return this.rooms().map((room) => {
+    return (roomId ? [this.room(roomId)] : this.rooms()).map((room) => {
       const occupied =
         this.all<Booking>("bookings").some(
           (b) =>

@@ -68,6 +68,7 @@ import {
 } from "../../shared/time";
 import { AdminInsights } from "./AdminInsights";
 import { AdminAccessRequests } from "../components/admin/AdminAccessRequests";
+import { AdminMembers } from "../components/admin/AdminMembers";
 import { roomCopy, useFormatters, useI18nLocale, useT } from "../i18n";
 type CalendarEvent = {
   id: string;
@@ -675,7 +676,10 @@ export function Admin() {
               </div>
             )}
             {section === "users" && (
-              <AdminAccessRequests result={accessResult} />
+              <div className="stack">
+                {config?.mode === "live" && <AdminMembers />}
+                <AdminAccessRequests result={accessResult} />
+              </div>
             )}
             {section === "settings" && (
               <div className="settings-grid">
@@ -920,6 +924,9 @@ export function Admin() {
                       capacityLabelEn: editRoom.capacityLabelEn,
                       requiresApproval: editRoom.requiresApproval,
                       imageKind: editRoom.imageKind || "illustrative",
+                      image: editRoom.image?.startsWith("/rooms/")
+                        ? undefined
+                        : editRoom.image,
                       amenities: editRoom.amenities,
                       arrivalInfo: editRoom.arrivalInfo || "",
                       ...(imageFile ? { imageFile } : {}),
@@ -938,42 +945,66 @@ export function Admin() {
                 }}
               />
             </div>
-            <Field>
-              <Label>{t("admin.room_image_upload")}</Label>
-              <Input
-                aria-label={t("admin.room_image_upload")}
-                type="file"
-                accept="image/webp,image/jpeg,image/png"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const type = file.type as
-                    "image/webp" | "image/jpeg" | "image/png";
-                  if (!["image/webp", "image/jpeg", "image/png"].includes(type))
-                    return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const result = String(reader.result || "");
-                    const data = result.includes(",")
-                      ? result.slice(result.indexOf(",") + 1)
-                      : result;
-                    const preview = URL.createObjectURL(file);
-                    setImagePreview(preview);
-                    setImageFile({
-                      filename: file.name,
-                      contentType: type,
-                      data,
-                    });
-                    setEditRoom({
-                      ...editRoom,
-                      imageKind: editRoom.imageKind || "illustrative",
-                    });
-                  };
-                  reader.readAsDataURL(file);
-                }}
-              />
-              <p className="caption">{t("admin.room_image_upload_hint")}</p>
-            </Field>
+            {config?.mode === "live" ? (
+              <Field>
+                <Label htmlFor="room-image-url">
+                  {t("admin.room_image_url")}
+                </Label>
+                <Input
+                  id="room-image-url"
+                  type="url"
+                  value={
+                    editRoom.image?.startsWith("/rooms/")
+                      ? ""
+                      : editRoom.image || ""
+                  }
+                  placeholder="https://"
+                  onChange={(e) =>
+                    setEditRoom({ ...editRoom, image: e.target.value })
+                  }
+                />
+                <p className="caption">{t("admin.room_image_url_hint")}</p>
+              </Field>
+            ) : (
+              <Field>
+                <Label>{t("admin.room_image_upload")}</Label>
+                <Input
+                  aria-label={t("admin.room_image_upload")}
+                  type="file"
+                  accept="image/webp,image/jpeg,image/png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const type = file.type as
+                      "image/webp" | "image/jpeg" | "image/png";
+                    if (
+                      !["image/webp", "image/jpeg", "image/png"].includes(type)
+                    )
+                      return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const result = String(reader.result || "");
+                      const data = result.includes(",")
+                        ? result.slice(result.indexOf(",") + 1)
+                        : result;
+                      const preview = URL.createObjectURL(file);
+                      setImagePreview(preview);
+                      setImageFile({
+                        filename: file.name,
+                        contentType: type,
+                        data,
+                      });
+                      setEditRoom({
+                        ...editRoom,
+                        imageKind: editRoom.imageKind || "illustrative",
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                <p className="caption">{t("admin.room_image_upload_hint")}</p>
+              </Field>
+            )}
             <Field>
               <Label>{t("admin.room_image_kind")}</Label>
               <Select

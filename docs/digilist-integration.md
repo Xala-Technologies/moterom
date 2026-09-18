@@ -1,6 +1,6 @@
 # Digilist integration contracts
 
-Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc3ef5e1637bb0c7`. These are source-reviewed contracts, not a claim that the customer's live deployment has been tested.
+Integration rechecked against `Xala-Technologies/Digilist` development commit `13ca70d311eb2dc3a0d55ddf038e2fb781540ebe` on 18 September 2026. These are source-reviewed contracts, not authenticated staging acceptance. See [the integration review](architecture/moterom-digilist-review-2026-09-18.md).
 
 | Capability                   | Existing operation                                                                                                                                                                                  |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -14,9 +14,9 @@ Reviewed against `Xala-Technologies/digilist` commit `16a8025d52cc69b917f9c255cc
 | Published rooms              | Convex `domain/resources:getBySlug` (session + `DIGILIST_TENANT_ID`; `accessChannel=tenant_portal`)                                                                                                 |
 | Whole-interval availability  | Convex `domain/bookings:validateBookingSlot`                                                                                                                                                        |
 | Authoritative quote          | Convex `domain/pricing:quote` (total must be 0; paid quotes fail closed)                                                                                                                            |
-| Idempotent creation          | Convex `domain/bookings:create` with `metadata.moteromIdempotencyKey` namespaced `tenantId:userId:key`                                                                                              |
+| Creation and retry recovery  | Convex `domain/bookings:create` with `metadata.moteromIdempotencyKey` namespaced `tenantId:userId:key`, plus request fingerprint; bounded replay lookup, not an atomic idempotency index            |
 | Customer bookings            | Convex `domain/bookings:listMine`, `domain/bookings:get`                                                                                                                                            |
-| Customer cancellation        | REST `POST /api/v1/me/bookings/:id/cancel`                                                                                                                                                          |
+| Customer cancellation        | REST `POST /api/v1/me/bookings/:id/cancel` with the opaque session token (not the Convex JWT)                                                                                                       |
 | Change request               | Convex `domain/bookings:requestBookingEdit`                                                                                                                                                         |
 | Admin bookings               | Convex `domain/bookings:list`, `approve`, `reject`, `cancel`                                                                                                                                        |
 | Admin insights (Møterom BFF) | `GET /api/admin/insights` aggregates `domain/bookings:list` with `startAfter`/`startBefore`, a 36-hour lookback, internal paging, and a completeness flag. This is not Digilist `domain/analytics`. |
@@ -37,22 +37,21 @@ Other Digilist accounts (even Digilist tenant admins) are not Møterom admins un
 
 ### Access requests (Admin → Brukere)
 
-When `BOOKING_ACCESS=members`, non-members can submit a local access request (`POST /api/access-requests`, SQLite). Admin → **Brukere** can approve or decline.
+Live mode requires `BOOKING_ACCESS=members`. Non-members can submit an access request to Møterom's local inbox. For signed-in requests, identity comes from the verified session. The inbox does not grant or revoke Digilist membership.
 
-Portal `isMember` is true when either:
+Portal access requires Digilist `/auth/me` to return the configured tenant **and a current tenant role**. Historical local approvals never override that result, including during access-token refresh failures.
 
-1. Digilist `/auth/me` reports `tenantId` matching `DIGILIST_TENANT_ID`, or
-2. That email has an **approved** access request in Møterom.
+Admin → **Brukere** now reads active and invited members using `domain/tenantTeam:listMembers`, scoped server-side to the building and authenticated actor. **Kontroller medlemskap** completes a request only after the adapter verifies an active, matching Digilist member. An invitation alone is insufficient. Declining a request does not revoke existing membership; revoke it in Digilist. New members may need to sign in again to establish the building session context.
 
-Without Digilist membership and without approval, the user stays on the access-pending screen. Rejecting a request removes portal access granted via (2). Digilist tenant switch failures no longer block session creation; the membership checks above decide access after login.
+Membership write operations remain in Digilist. Its reviewed `tenantTeam:inviteMember` grants staff roles and sends an invitation. Do not automatically map a room-access request to a staff role or silently send an invitation. A booking-only membership workflow needs a reviewed permission contract.
 
-Live Digilist booking writes still need Digilist tenant context when `DATA_MODE=live`. Demo mode uses the local demo store after approval.
+Tenant switching tolerates only Digilist's explicit `auth/forbidden_tenant` response, so a non-member can sign in to request access. Network, invalid-session and other errors remain failures.
 
 Admin insights are aggregated in the Express BFF. The live booking list is filtered on `startTime`, so overlapping reservations that started more than 36 hours before the period can be missed. `coverage: "truncated"` means the page cap was hit and totals are a lower bound. Demo uses the same formulas on the full SQLite set and is labelled demodata. Insights payloads do not include guest names, emails or `people`.
 
-Room approval must mirror Digilist's actual booking write rule: `bookingConfig.approvalRequired || requiresApproval`. Room edits preserve the rest of `bookingConfig`. The test suite includes this compatibility case.
+Room approval must mirror Digilist's actual booking write rule: `bookingConfig.approvalRequired || requiresApproval`. Room edits preserve the rest of `bookingConfig` and resource metadata. English copy, capacity labels and photo provenance persist under `metadata.moterom`; arrival instructions remain under `metadata.arrivalInfo`. The adapter invalidates its request-local cache after saving. A content-only save preserves image variants and other gallery photos. Live photo editing accepts HTTPS URLs; binary uploads remain unsupported in live mode. The test suite includes this compatibility case.
 
-Authenticated `domain/bookings:create` uses the session user, env tenant, mapped `resourceId`, Oslo interval, and purpose in notes/title. The BFF stamps `metadata.moteromIdempotencyKey` so a retry of the same confirmation can replay. The portal does not fabricate Stripe sessions, card charges, invoices, email receipts or reminders. Guest REST checkout is not used for SKB.
+Authenticated `domain/bookings:create` uses the session user, env tenant, mapped `resourceId`, Oslo interval, and purpose in notes/title. The BFF stamps `metadata.moteromIdempotencyKey` and `moteromFingerprint`. An authenticated matching replay is read before quote expiry or occupied-slot checks. Changed retry details fail with 409. The lookup scans the latest 500 user bookings and is not a durable, atomic idempotency guarantee; Digilist still owns transactional conflict protection. The portal does not fabricate Stripe sessions, card charges, invoices, email receipts or reminders. Guest REST checkout is not used for SKB.
 
 ## Boundaries to validate in staging
 
@@ -60,8 +59,8 @@ Authenticated `domain/bookings:create` uses the session user, env tenant, mapped
 - Check room changes that trigger Digilist re-moderation. A listing that becomes marketplace-visible is a launch blocker.
 - Test opening hours in Europe/Oslo, including winter/summer. The reviewed component availability implementation uses JavaScript `Date` local-time accessors for its opening-hours comparison. Confirm the deployed backend's behavior with Oslo fixtures; this portal must not paper over an upstream timezone discrepancy.
 - Booking writes rely on Digilist's transactional conflict checks. Block creation performs an advisory pre-check; confirm the upstream mutation's race behavior when a booking and maintenance block are created concurrently. A frontend check alone cannot provide atomicity.
-- Quotes are rechecked immediately before creation. Paid or price-on-request rooms fail closed in Møterom; they are not redirected to Digilist.
+- Quotes are rechecked immediately before creation. Paid or price-on-request quotes fail closed in Møterom. Digilist recomputes pricing inside its mutation and can schedule an invoice for a positive balance. A price change between quote and mutation therefore still needs an upstream atomic no-payment policy for this tenant. Do not claim that a BFF zero-price check alone guarantees no invoice.
 - Edit requests keep the original time reserved. Approval, repricing and final application of that request remain in Digilist's established workflow. The demo records the request for review; it does not simulate an actual invoice or approval worker.
 - Verify `ADMIN_EMAILS` plus Digilist tenant role, and membership revocation, with the real test users. Backend permission checks remain authoritative even when the portal exposes an admin action.
 
-Any required backend changes belong in the Digilist repository under `feat/tenant-portal-listings`. Do not push that branch to Digilist `dev` or `main` (those deploy). This implementation does not duplicate that production domain or silently modify it.
+Required backend changes belong on a separate Digilist review branch. Follow that repository’s impact-analysis and validation gates before editing shared functions. Do not push directly to Digilist `dev` or `main` (those deploy). This Møterom change does not modify Digilist source or deployed data.

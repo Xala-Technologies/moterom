@@ -49,7 +49,11 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
       );
       notify(
         status === "approved"
-          ? t("admin.users.toasts.marked_approved")
+          ? t(
+              config?.mode === "live"
+                ? "admin.users.toasts.marked_approved"
+                : "admin.users.toasts.marked_approved_demo",
+            )
           : status === "rejected"
             ? t("admin.users.toasts.marked_rejected")
             : t("admin.users.toasts.marked_pending"),
@@ -72,7 +76,13 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
 
   return (
     <div className="admin-users stack">
-      <p className="muted">{t("admin.users.caption")}</p>
+      <p className="muted">
+        {t(
+          config?.mode === "live"
+            ? "admin.users.caption"
+            : "admin.users.caption_demo",
+        )}
+      </p>
       <div className="admin-users-toolbar">
         <div
           className="view-switch"
@@ -174,7 +184,11 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
                       disabled={busyId === row.id}
                       onClick={() => void setStatus(row.id, "approved")}
                     >
-                      {t("admin.users.mark_approved")}
+                      {t(
+                        config?.mode === "live"
+                          ? "admin.users.mark_approved"
+                          : "admin.users.mark_approved_demo",
+                      )}
                     </Button>
                   )}
                   {row.status !== "rejected" && (

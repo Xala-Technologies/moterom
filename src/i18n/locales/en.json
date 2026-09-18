@@ -254,7 +254,7 @@
     "meeting_title": "Meeting title",
     "meeting_title_placeholder": "For example team meeting",
     "message_to_host": "Message to the host",
-    "retry_same_order": "You can try confirming the same booking again if you are unsure whether it was registered.",
+    "retry_same_order": "Retry the same booking to check whether it was saved. Keep these details unchanged while the result is uncertain.",
     "checking_availability": "Checking availability …",
     "consent_checked": "I have checked the room, date and time.",
     "hosted_payment_note": "Payment and final confirmation are completed in Digilist. This step does not transfer the time slot or your sign-in.",
@@ -298,7 +298,8 @@
     "send_edit_request": "Send change request",
     "notify_edit_sent": "Change request sent. The original time applies until approval.",
     "notify_cancelled": "The booking has been cancelled.",
-    "login_required_body": "Sign in to continue your booking."
+    "login_required_body": "Sign in to continue your booking.",
+    "existing_booking_body": "Your original booking was found. Its current status is shown here."
   },
   "dashboard": {
     "document_title": "My bookings",
@@ -436,7 +437,7 @@
     "settings_rules_caption": "Pricing, opening hours and staff.",
     "settings_rules_body": "Opening hours, gaps between bookings, prices and staff access are managed in Digilist. The same setup applies here.",
     "users": {
-      "caption": "Approve requests to grant portal access. Without approval the user cannot get in.",
+      "caption": "Access comes from active building membership in Digilist. Grant or revoke membership there. This inbox only tracks requests; declining a request does not revoke existing membership.",
       "loading": "Loading requests …",
       "filter_aria": "Filter requests",
       "filter_pending": "Pending",
@@ -456,14 +457,17 @@
         "status": "Status",
         "actions": "Actions"
       },
-      "mark_approved": "Approve",
+      "mark_approved": "Verify membership",
       "mark_rejected": "Decline",
       "mark_pending": "Reset",
       "toasts": {
-        "marked_approved": "Access approved. The user can sign in again.",
+        "marked_approved": "Active membership verified in Digilist. Request completed.",
         "marked_rejected": "Request declined.",
-        "marked_pending": "Request set back to pending."
-      }
+        "marked_pending": "Request set back to pending.",
+        "marked_approved_demo": "Demo request marked handled."
+      },
+      "caption_demo": "Demo requests are stored locally and do not change any Digilist membership.",
+      "mark_approved_demo": "Mark handled"
     },
     "prelaunch_title": "Before customer launch",
     "prelaunch_body": "Confirm the Eidefossen room names, capacity per layout, room photos and booking rules. The demo does not send email and does not require payment.",
@@ -558,7 +562,18 @@
       "value_col": "Value",
       "today_tab": "Today",
       "insights_tab": "Insights"
-    }
+    },
+    "members": {
+      "title": "Building members",
+      "caption": "Current membership in this building’s Digilist tenant. Invited users gain access only after accepting their invitation. Roles are shown as stored in Digilist.",
+      "refresh": "Refresh members",
+      "role": "Digilist role",
+      "active": "Active",
+      "invited": "Invited",
+      "empty": "No active members or invitations were returned."
+    },
+    "room_image_url": "Photo URL",
+    "room_image_url_hint": "Use an approved HTTPS photo URL. Leave empty to use the catalogue illustration. Select the correct photo type."
   },
   "validation": {
     "name_required": "Enter a name.",

@@ -54,7 +54,7 @@ Before launch, review the built app in desktop and mobile browsers outside this 
 
 Use a dedicated staging tenant. Confirm the deployment matches the reviewed API contracts, then run free direct booking, approval-required booking, rejection, cancellation, edit request and admin blocking with two distinct Digilist users: one Digilist tenant-admin (owner/admin or equivalent for `DIGILIST_TENANT_ID`) who signs in with Digilist email and reaches `/admin`, and one customer Digilist user who reaches Mine bookinger and is denied admin APIs. Repeat a simultaneous booking attempt from separate sessions: exactly one can reserve the same room/time. Verify opening hours and buffer rules in Oslo winter and summer, plus membership revocation and cross-tenant denial.
 
-Agree on paid-booking behavior before enabling it. Confirm actual invoice/email/calendar behavior in Digilist rather than relying on demo presentation. Verify that contact details, accessibility information, both Eidefossen room names, capacities and photographs match the building.
+Møterom has no payments or invoices. Keep the rooms free and verify an atomic upstream no-payment policy, including changes between quote and write. Confirm actual email/calendar behavior in Digilist rather than relying on demo presentation. Verify that contact details, accessibility information, both Eidefossen room names, capacities and photographs match the building.
 
 Do not merge/deploy as a customer-ready release until these outstanding checks and configuration decisions are resolved. This is a reviewable implementation with a working isolated demo.
 
@@ -66,3 +66,11 @@ Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist
 - Digilist DEV tenant `skb-moterom-test` (`xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`) and seven private `tenant_portal` rooms were seeded. `config/rooms.json` slugs are filled. Marketplace REST leak checks passed (slug 404, guest checkout 404, public listing still 200). See [`docs/skb-private-portal.md`](skb-private-portal.md).
 - Local demo browser: grid confirm modal booked Sauda 1 without payment redirect; customer admin 403; phone 390×844 no overflow.
 - Still open: Hostinger `skb.digilist.no` stays demo; no git merge to `dev`/`main`; live member OTP booking against DEV was not run; Eidefossen names still need confirmation.
+
+## Integration repairs — 18 September 2026
+
+See [the current integration review](architecture/moterom-digilist-review-2026-09-18.md) for source references, deployed observations, repaired defects and remaining dashboard work. Historical rollout notes above are dated records.
+
+Node 24.19.0: the updated suite passed 82 tests across 14 files, with successful typecheck and production build. New checks use mocked Digilist contracts; they do not prove live tenant state or transactional concurrency. Local browser access was blocked in this environment, so the changed admin and booking screens still need visual/keyboard/mobile acceptance.
+
+Launch blockers include authenticated tenant verification, marketplace/mobile isolation checks, durable upstream idempotency, an atomic no-payment policy and a booking-only membership contract. Møterom's request inbox no longer grants access independently of Digilist. Full Digilist dashboard migration is not complete.

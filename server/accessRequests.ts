@@ -88,7 +88,7 @@ export class AccessRequestStore {
     return row;
   }
 
-  updateStatus(id: string, status: AccessRequestStatus): AccessRequest {
+  get(id: string): AccessRequest {
     const existing = this.db
       .prepare(
         `SELECT id, created, updated, name, email, message, user_id, status
@@ -101,13 +101,18 @@ export class AccessRequestStore {
         "Forespørselen ble ikke funnet.",
         "access_request_not_found",
       );
+    return this.map(existing);
+  }
+
+  updateStatus(id: string, status: AccessRequestStatus): AccessRequest {
+    const existing = this.get(id);
     const updated = Date.now();
     this.db
       .prepare(
         `UPDATE access_requests SET status = ?, updated = ? WHERE id = ?`,
       )
       .run(status, updated, id);
-    return this.map({ ...existing, status, updated });
+    return { ...existing, status, updatedAt: updated };
   }
 
   /** True when this email has an admin-approved access request. */

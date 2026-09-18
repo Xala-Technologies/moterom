@@ -2,7 +2,7 @@
 
 A bilingual (Norwegian Bokmål default + English) meeting-room portal for one building, using Digilist's visual language and existing booking services. Includes a working local demo and a server-side Digilist integration adapter.
 
-**Status:** implemented for review. Production needs the building's tenant configuration, seven published room slugs, and staging acceptance. No live customer data or Digilist configuration was changed while building this application.
+**Status:** review branch with a dedicated SKB development tenant and seven private room slugs documented in the repository. Authenticated staging acceptance and remaining shared-backend contracts are still open; see [the integration review](docs/architecture/moterom-digilist-review-2026-09-18.md). No Digilist deployment or customer data was changed by this review.
 
 ## Run locally
 
@@ -29,7 +29,7 @@ The test suite covers booking conflicts, idempotency, ownership, role checks, si
 
 - **Find a room:** seven room cards, date/time/attendee filter, grid/list display and an optional privately configured floor plan. Only rooms available for the entire selected interval are shown after filtering. A service failure is displayed as an error, never as a trustworthy availability result.
 - **Book:** choose the room and date/time → sign in if necessary → review and confirm. Availability and price are checked again on the server. A room that requires approval produces a request, not a false confirmation. After confirm, the customer sees the booking detail (cancel, calendar download, book again, and a request to change time). The original reservation remains in place until an edit is approved in Digilist.
-- **Administration:** daily overview, day/7-day room calendar, customer/reference search, status filters, approve/reject, room content/capacity/approval editing, and maintenance blocks. Existing Digilist screens handle pricing, opening hours, staff access and edit approval.
+- **Administration:** daily overview, day/7-day room calendar, customer/reference search, status filters, approve/reject, room content/capacity/approval editing, and maintenance blocks. The Users screen shows Digilist members and verifies membership before completing access requests. Room copy and photo labels persist in Digilist. Existing Digilist screens still handle opening hours, staff access and edit approval.
 - **Mobile:** stacked booking controls, room cards, and an agenda in place of the wide admin timeline. Administrators also get header and bottom navigation to Finn rom and Administrasjon. Light/dark themes, labelled inputs, keyboard-operable dialogs, focus styles, skip link and status announcements are included.
 
 ## Design provenance
@@ -84,9 +84,9 @@ The browser calls the same-origin Express backend. Live mode uses Digilist's exi
 
 The supplied floor-plan image is excluded from the repository because automatic review did not approve uploading that private attachment. Set `FLOORPLAN_PATH` to an approved, privately mounted PNG to enable the floor-plan control. It follows the room catalogue's access gate; see `assets/README.md`.
 
-Email-code sign-in and MFA reuse Digilist. The opaque Digilist session and short-lived Convex access token remain in an encrypted, HttpOnly, SameSite cookie (Secure and `__Host-` in production) for up to 30 days, matching Digilist stay-logged-in. Every authenticated request revalidates the live session; all writes enforce the configured Origin. Admin access is bound to `ADMIN_EMAILS` **and** a Digilist tenant admin role on this building. Booking identity comes from that verified session, never from a browser-provided customer ID.
+Email-code sign-in and MFA reuse Digilist. The opaque Digilist session and short-lived Convex access token remain in an encrypted, HttpOnly, SameSite cookie (Secure and `__Host-` in production) for up to 30 days, matching Digilist stay-logged-in. Every authenticated request revalidates the live session; production writes accept only the configured Origin, regardless of forwarded Host headers. Admin access is bound to `ADMIN_EMAILS` **and** a Digilist tenant admin role on this building. Booking identity comes from that verified session, never from a browser-provided customer ID.
 
-Signed five-minute quotes bind the reviewed room, interval, attendees, price and approval mode to the user. Booking submissions retain their idempotency key and exact booking details on an uncertain network result. Live idempotency keys are namespaced by tenant and user. If an old quote expires after an uncertain submission, customers retry the same confirmation; changing or reloading the entire checkout is a new transaction. Digilist is the authority for write-time conflicts and final pricing.
+Signed five-minute quotes bind the reviewed room, interval, attendees, price and approval mode to the user. Booking submissions retain their idempotency key and exact booking details on an uncertain network result. Live idempotency keys are namespaced by tenant and user. A matching committed booking is recovered before quote-expiry and occupied-slot checks; quote renewal preserves the retry key. Changed retry details are rejected. Replay currently searches the latest 500 user bookings; a dedicated atomic idempotency endpoint remains an upstream requirement. Changing or reloading the entire checkout is a new transaction. Digilist is the authority for write-time conflicts and final pricing.
 
 Admin history currently loads at most 1,000 bookings and shows a warning at the cap; customers load up to 500. Full tenant history remains in Digilist. The app uses request-based refresh, not live subscription updates. Recurring bookings, waitlists, door access, catering, automatic reminders and payment collection are outside this first implementation.
 
