@@ -39,7 +39,7 @@ UI catalogs live in `src/i18n/locales/{nb,en}.json`. Default locale is **nb**. E
 
 ## Shared Digilist admin presentation
 
-Contract: [`docs/shared-digilist-dashboard.md`](shared-digilist-dashboard.md). Digilist is backend-only for Møterom. Admin booking list UI is Møterom-owned (`src/components/admin/`) and Digilist-inspired via existing design tokens. No Digilist source changes and no vendored Digilist UI package.
+Contract: [`docs/shared-digilist-dashboard.md`](shared-digilist-dashboard.md). Rebuild Digilist tenant-admin IA in Møterom; do not copy private dashboard source. Digilist stays the booking and membership backend. Access-request approve does not call `inviteMember`.
 
 ## Manual browser acceptance — still outstanding for launch
 
@@ -69,8 +69,10 @@ Møterom `feat/skb-private-portal` (baseline `6cd4730` plus this work). Digilist
 
 ## Integration repairs — 18 September 2026
 
-See [the current integration review](architecture/moterom-digilist-review-2026-09-18.md) for source references, deployed observations, repaired defects and remaining dashboard work. Historical rollout notes above are dated records.
+See [the current integration review](architecture/moterom-digilist-review-2026-09-18.md) and [`shared-digilist-dashboard.md`](shared-digilist-dashboard.md). Historical rollout notes above are dated records.
 
-Node 24.19.0: the updated suite passed 82 tests across 14 files, with successful typecheck and production build. New checks use mocked Digilist contracts; they do not prove live tenant state or transactional concurrency. Local browser access was blocked in this environment, so the changed admin and booking screens still need visual/keyboard/mobile acceptance.
+Node 24: `npm run check` and `format:check` passed (86 tests across 15 files, typecheck, production build). New checks use mocked Digilist contracts; they do not prove live tenant state or transactional concurrency.
+
+Local demo browser at `http://localhost:4173` (Chromium in Cursor): login showed email, SMS, BankID, access request, **Fortsett i demo** and **Prøv som kunde**; demo admin landed on `/admin`; Users had no Digilist deep-link and demo inbox copy; Settings showed membership-from-Digilist copy, a single Digilist link for hours/prices, and no payment settings. Dark theme and English on Settings remained readable. Not claimed: phone overflow measurement, keyboard-only pass, VoiceOver, live OTP, or Digilist `inviteMember`.
 
 Launch blockers include authenticated tenant verification, marketplace/mobile isolation checks, durable upstream idempotency, an atomic no-payment policy and a booking-only membership contract. Møterom's request inbox no longer grants access independently of Digilist. Full Digilist dashboard migration is not complete.

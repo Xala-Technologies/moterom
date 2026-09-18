@@ -366,6 +366,11 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .set("Cookie", await cookie("admin"))
       .send({ status: "approved" })
       .expect(200);
+    expect(
+      mocks.mutation.mock.calls.some(
+        ([ref]) => getFunctionName(ref) === "domain/tenantTeam:inviteMember",
+      ),
+    ).toBe(false);
     // Historical local approval cannot override Digilist's current denial.
     await request(app)
       .get("/api/rooms")

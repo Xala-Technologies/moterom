@@ -18,6 +18,7 @@ import { BrandMark } from "../components/BrandMark";
 import { useApp } from "../context";
 import { ApiError, post } from "../api";
 import { useT } from "../i18n";
+import { postLoginPath } from "../postLoginPath";
 
 type Method = "menu" | "email" | "sms" | "request";
 type Step = "form" | "code" | "mfa";
@@ -37,13 +38,8 @@ export function Login() {
   const [params] = useSearchParams();
   const nav = useNavigate();
   const digilistAuth = config?.digilistAuthConfigured === true;
-  const candidate = params.get("returnTo") || "/";
-  const returnTo =
-    candidate.startsWith("/") &&
-    !candidate.startsWith("//") &&
-    !candidate.includes("\\")
-      ? candidate
-      : "/";
+  const demoMode = config?.mode === "demo";
+  const returnTo = params.get("returnTo") || "/";
 
   const [method, setMethod] = useState<Method>("menu");
   const [step, setStep] = useState<Step>("form");
@@ -88,11 +84,7 @@ export function Login() {
   const done = async (destination = returnTo) => {
     const next = await refresh();
     if (config?.access === "members" && next && !next.isMember) return;
-    let target = destination;
-    if (destination === "/" || destination === "") {
-      target = next?.isAdmin ? "/admin" : "/";
-    }
-    nav(target, { replace: true });
+    nav(postLoginPath(destination, next), { replace: true });
   };
 
   const resetFlow = () => {
@@ -120,6 +112,18 @@ export function Login() {
     setVerification(r.verificationId);
     setStep("code");
     setCode("");
+  };
+
+  const startBankId = async () => {
+    const r = await post<{ url: string }>("/auth/oauth/bankid", {
+      returnPath: returnTo,
+    });
+    window.location.assign(r.url);
+  };
+
+  const demoSignIn = async (role: "customer" | "admin") => {
+    await post("/auth/demo", { role });
+    await done("/");
   };
 
   const verifyEmail = async () => {
@@ -159,6 +163,17 @@ export function Login() {
     await done();
   };
 
+  const run = async (task: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await task();
+    } catch (err) {
+      setError(err as Error);
+      setBusy(false);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -192,9 +207,7 @@ export function Login() {
   const active = slides[Math.min(slide, slides.length - 1)]!;
 
   if (user && (user.isMember || config?.access !== "members")) {
-    let target = returnTo || "/";
-    if ((target === "/" || target === "") && user.isAdmin) target = "/admin";
-    return <Navigate replace to={target} />;
+    return <Navigate replace to={postLoginPath(returnTo, user)} />;
   }
   if (user && config?.access === "members" && !user.isMember) {
     return (
@@ -279,6 +292,24 @@ export function Login() {
                         type="button"
                         className="login-option"
                         disabled={busy}
+                        onClick={() => void run(startBankId)}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <ShieldCheck size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.bankid_title")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.bankid_desc")}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
                         onClick={() => {
                           setError(undefined);
                           setMethod("request");
@@ -306,6 +337,50 @@ export function Login() {
                     <p className="login-micro">
                       {t("auth.digilist_admin_hint")}
                     </p>
+                  )}
+
+                  {demoMode && (
+                    <>
+                      {digilistAuth ? (
+                        <p className="login-micro">{t("auth.or_divider")}</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
+                        onClick={() => void run(() => demoSignIn("admin"))}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <ShieldCheck size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.log_in_as_admin")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.log_in_as_admin_desc")}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
+                        onClick={() => void run(() => demoSignIn("customer"))}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <UserRoundPlus size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.try_as_customer")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.try_as_customer_desc")}
+                          </span>
+                        </span>
+                      </button>
+                    </>
                   )}
 
                   {!digilistAuth && (

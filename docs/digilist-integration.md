@@ -43,7 +43,7 @@ Portal access requires Digilist `/auth/me` to return the configured tenant **and
 
 Admin → **Brukere** now reads active and invited members using `domain/tenantTeam:listMembers`, scoped server-side to the building and authenticated actor. **Kontroller medlemskap** completes a request only after the adapter verifies an active, matching Digilist member. An invitation alone is insufficient. Declining a request does not revoke existing membership; revoke it in Digilist. New members may need to sign in again to establish the building session context.
 
-Membership write operations remain in Digilist. Its reviewed `tenantTeam:inviteMember` grants staff roles and sends an invitation. Do not automatically map a room-access request to a staff role or silently send an invitation. A booking-only membership workflow needs a reviewed permission contract.
+Membership write operations remain in Digilist. `tenantTeam:inviteMember` grants staff roles, hard-codes `appId: "backoffice"`, and emails `{appOrigin}/auth/magic-link`. Møterom does not call that mutation: there is no booking-only role, and this app has no magic-link consumer. Completing a live access request still requires an already-active member on the configured tenant. A later Digilist change can add a portal booker invite that returns to `PUBLIC_ORIGIN`.
 
 Tenant switching tolerates only Digilist's explicit `auth/forbidden_tenant` response, so a non-member can sign in to request access. Network, invalid-session and other errors remain failures.
 

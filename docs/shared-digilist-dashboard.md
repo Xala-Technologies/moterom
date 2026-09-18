@@ -1,40 +1,44 @@
-# Digilist-inspired admin UI in Møterom
+# Digilist dashboard as Møterom admin foundation
 
-Status: Møterom owns its admin presentation. Digilist is the booking backend only.
+Status: Møterom rebuilds the tenant-admin experience against its Express BFF. Digilist remains the booking and membership backend. Digilist source is read-only for this programme.
 
-## Rule
+## Decisions (18 September 2026)
 
-Do **not** change Digilist source, extract Digilist dashboard packages, or vendor Digilist UI tarballs for Møterom. Digilist remains a multi-tenant SaaS used by other applications. Møterom must not create Digilist PRs for presentation sharing.
+1. **Do not copy Digilist dashboard source into Møterom.** Digilist is a private `UNLICENSED` repository; Møterom is public. Vendored files stay limited to the theme tokens already recorded in [`design-source.md`](design-source.md). Dashboard screens are a visual and information-architecture specification, reimplemented with Digdir, existing tokens, and `src/components/`.
+2. **Do not call `domain/tenantTeam:inviteMember` from Møterom yet.** That mutation grants Digilist staff roles, hard-codes `appId: "backoffice"`, and emails a magic link to `{appOrigin}/auth/magic-link`. Møterom has no magic-link consumer, and a booking-only membership contract does not exist. Live access still requires an **active** Digilist tenant role on `DIGILIST_TENANT_ID`. The Users inbox verifies that membership; it does not grant it.
+3. **Live adapter work from `fix/moterom-digilist-integration` is the baseline** on this branch (membership source of truth, booking retry, members list). Presentation continues in Møterom.
+
+Visual spec version (Digilist, read-only): `feat/tenant-portal-listings` @ `e8226e0d4db2fc6a3f71c168f62f0a61065ce4cf`.
 
 ## Architecture
 
 ```text
-Møterom Admin UI  →  Express BFF  →  Digilist REST / Convex
+Møterom Admin UI  →  same-origin Express BFF  →  Digilist REST / Convex
 ```
 
-- Public booking journey, admin navigation, nb/en, and Express stay in Møterom.
-- Digilist remains the live booking authority for create/approve/reject/cancel/blocks.
-- Admin list and calendar UX may **look** Digilist-like using tokens already vendored under `src/design/digilist/`.
-- Presentation components live under `src/components/admin/` and `src/pages/Admin.tsx`.
+- The browser never talks to Convex.
+- Identity, tenant membership, rooms, availability, bookings, and conflicts stay in Digilist.
+- Møterom-only data is the access-request inbox (existing SQLite) and `config/rooms.json`.
+- No payments, invoices, checkout, or payment settings.
 
-## What was reused (patterns only)
+## What to rebuild vs exclude
 
-| Need               | Approach                                                                |
-| ------------------ | ----------------------------------------------------------------------- |
-| Dense booking rows | Local `AdminBookingList` / `AdminBookingRowView`                        |
-| Approve / reject   | Existing `/api/bookings/:id/approve` and `/reject`                      |
-| Payment honesty    | Outstanding only when `paymentRequired`; never invent “paid” from price |
-| Image provenance   | Room `image` / `imageKind` from Møterom config                          |
-| Visual language    | Digilist CSS tokens already in the app                                  |
+| Screen       | In Møterom                                       | Digilist analogue        | Exclude                                       |
+| ------------ | ------------------------------------------------ | ------------------------ | --------------------------------------------- |
+| Overview     | `/admin` stats, programme, embedded day calendar | `/` `DashboardPage`      | Onboarding, Bli utleier, revenue              |
+| Calendar     | `/admin/calendar` day/7-day (month later)        | `/tenant/calendar`       | Wallet chrome, platform-global calendar       |
+| Bookings     | `/admin/bookings` list, approve/reject           | `/tenant/bookings`       | Payment filters, invoices, refunds            |
+| Rooms        | `/admin/rooms` content for seven portal rooms    | `/tenant/listings`       | Create listing, marketplace, pricing          |
+| Members      | `/admin/users` read-only Digilist roster         | `/tenant/team`           | Role change, staff invite until a booker API  |
+| Access inbox | `/admin/users` local requests                    | none                     | Treating local approve as Digilist membership |
+| Insights     | `/admin/innsikt` occupancy aggregates            | `/tenant/innsikt`        | Revenue, CRM                                  |
+| Settings     | Building + members-only flag                     | `/account` minus billing | Payouts, subscription, Stripe, embed          |
 
-## Explicit non-goals
+## Future Digilist work (separate repo, GitNexus required)
 
-- No Digilist commits, packages, or GitNexus refactors for Møterom
-- No browser connection from Møterom to Convex
-- No shared npm package between Digilist and Møterom for admin UI
-- Calendar can be polished in Møterom later without Digilist extraction
+A booking-only membership mutation, magic-link `appId` that can return to `PUBLIC_ORIGIN`, and an atomic no-payment policy on `domain/bookings:create`. None of that is implemented here.
 
 ## Verification
 
-- Digilist tree left on `origin/dev` with no Møterom-driven feature branch
-- Møterom `npm run check` and `npm run format:check`
+- Digilist tree is not modified by this branch.
+- Møterom `npm run check` and `npm run format:check`.

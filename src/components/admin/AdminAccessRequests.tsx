@@ -1,5 +1,4 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
-import { ArrowUpRight } from "lucide-react";
 import { Button, Empty, ErrorState, Loading, Status } from "../ui";
 import { api } from "../../api";
 import { useApp } from "../../context";
@@ -107,20 +106,6 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
             </button>
           ))}
         </div>
-        {config?.dashboardUrl ? (
-          <a
-            href={config.dashboardUrl}
-            className="ds-button"
-            data-variant="secondary"
-            data-size="sm"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("common.open_digilist")}
-            <ArrowUpRight size={16} />
-            <span className="sr-only"> {t("common.opens_new_tab")}</span>
-          </a>
-        ) : null}
       </div>
 
       {rows.length === 0 ? (

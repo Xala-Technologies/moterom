@@ -14,7 +14,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:4173`. Digilist login (email OTP, SMS OTP, BankID) appears when `DIGILIST_URL` and `DIGILIST_HTTP_URL` are set; the BFF calls Digilist’s auth APIs. Without those URLs, only demo sign-in is offered. In demo mode, **Fortsett i demo** remains available for a local session. BankID on `localhost` may require Digilist `EXTRA_CORS_ORIGINS` to include `PUBLIC_ORIGIN`. Customer demo login is parked in `src/pages/Login.tsx` (`SHOW_DEMO_CUSTOMER_LOGIN`). The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
+Open `http://localhost:4173`. Digilist login (email OTP, SMS OTP, BankID) appears when `DIGILIST_URL` and `DIGILIST_HTTP_URL` are set; the BFF calls Digilist’s auth APIs. Without those URLs, only demo sign-in is offered. In `DATA_MODE=demo`, **Fortsett i demo** and **Prøv som kunde** remain available even when Digilist auth URLs are set. BankID on `localhost` may require Digilist `EXTRA_CORS_ORIGINS` to include `PUBLIC_ORIGIN`. The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
 
 ```sh
 npm run check
@@ -29,7 +29,7 @@ The test suite covers booking conflicts, idempotency, ownership, role checks, si
 
 - **Find a room:** seven room cards, date/time/attendee filter, grid/list display and an optional privately configured floor plan. Only rooms available for the entire selected interval are shown after filtering. A service failure is displayed as an error, never as a trustworthy availability result.
 - **Book:** choose the room and date/time → sign in if necessary → review and confirm. Availability and price are checked again on the server. A room that requires approval produces a request, not a false confirmation. After confirm, the customer sees the booking detail (cancel, calendar download, book again, and a request to change time). The original reservation remains in place until an edit is approved in Digilist.
-- **Administration:** daily overview, day/7-day room calendar, customer/reference search, status filters, approve/reject, room content/capacity/approval editing, and maintenance blocks. The Users screen shows Digilist members and verifies membership before completing access requests. Room copy and photo labels persist in Digilist. Existing Digilist screens still handle opening hours, staff access and edit approval.
+- **Administration:** daily overview, day/7-day room calendar, customer/reference search, status filters, approve/reject, room content/capacity/approval editing, and maintenance blocks. Admin → Brukere lists Digilist members and a local access-request inbox; completing a live request only verifies an already-active Digilist membership. Opening hours, buffers and paid listing tools stay in Digilist until wrapped APIs exist. Møterom has no payments.
 - **Mobile:** stacked booking controls, room cards, and an agenda in place of the wide admin timeline. Administrators also get header and bottom navigation to Finn rom and Administrasjon. Light/dark themes, labelled inputs, keyboard-operable dialogs, focus styles, skip link and status announcements are included.
 
 ## Design provenance

@@ -5,6 +5,7 @@ import { AccessRequestFromLogin } from "../components/RequireAuth";
 import { useApp } from "../context";
 import { ApiError, post } from "../api";
 import { useT } from "../i18n";
+import { postLoginPath } from "../postLoginPath";
 
 /** Digilist OAuth callback — receives sessionToken from Digilist auth redirect. */
 export function AuthCallback() {
@@ -21,12 +22,6 @@ export function AuthCallback() {
       const oauthError = params.get("error");
       const returnPath =
         params.get("returnPath") || params.get("redirect") || "/";
-      const safeReturn =
-        returnPath.startsWith("/") &&
-        !returnPath.startsWith("//") &&
-        !returnPath.includes("\\")
-          ? returnPath
-          : "/";
       if (oauthError) {
         setError(new Error(t("auth.bankid_error")));
         return;
@@ -43,7 +38,7 @@ export function AuthCallback() {
           nav("/login", { replace: true });
           return;
         }
-        nav(safeReturn, { replace: true });
+        nav(postLoginPath(returnPath, next), { replace: true });
       } catch (e) {
         if (!cancelled) setError(e as Error);
       }

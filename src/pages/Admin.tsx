@@ -136,18 +136,7 @@ export function Admin() {
         replace
       />
     );
-  if (!user.isAdmin)
-    return (
-      <Empty
-        icon={<ShieldCheck size={32} />}
-        title={t("admin.forbidden_title")}
-      >
-        <p>{t("admin.forbidden_body")}</p>
-        <Link className="ds-button" to="/">
-          {t("common.to_room_overview")}
-        </Link>
-      </Empty>
-    );
+  if (!user.isAdmin) return <Navigate replace to="/" />;
   if (section === "today" && params.get("visning") === "innsikt") {
     const copy = new URLSearchParams(params);
     copy.delete("visning");
@@ -740,20 +729,6 @@ export function Admin() {
                       >
                         {t("admin.settings_users_open_inbox")}
                       </Link>
-                      <a
-                        href={config?.dashboardUrl}
-                        className="ds-button settings-digilist-btn"
-                        data-variant="secondary"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {t("common.open_digilist")}
-                        <ArrowUpRight size={17} />
-                        <span className="sr-only">
-                          {" "}
-                          {t("common.opens_new_tab")}
-                        </span>
-                      </a>
                     </div>
                   </div>
                 </section>
