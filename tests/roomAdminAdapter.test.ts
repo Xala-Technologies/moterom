@@ -39,6 +39,25 @@ describe("toAdminBookingRow", () => {
     expect(row.paymentTone).toBe("none");
     expect(row.paymentStatusLabel).toBeNull();
     expect(row.actions.map((a) => a.id)).toEqual(["approve", "reject"]);
+    expect(row.editRequestNote).toBeNull();
+  });
+
+  it("offers cancel only while the booking can still be cancelled", () => {
+    const row = toAdminBookingRow(
+      { ...base, status: "confirmed", cancellationAllowed: true },
+      { t: (key) => key, formatters, canCancel: true },
+    );
+    expect(row.actions.map((a) => a.id)).toEqual(["cancel"]);
+    const blocked = toAdminBookingRow(
+      { ...base, status: "confirmed", cancellationAllowed: false },
+      { t: (key) => key, formatters, canCancel: true },
+    );
+    expect(blocked.actions).toEqual([]);
+    const edited = toAdminBookingRow(
+      { ...base, editRequested: true },
+      { t: (key) => key, formatters },
+    );
+    expect(edited.editRequestNote).toBe("admin.edit_request_note");
   });
 
   it("marks outstanding payment only when the server requires it", () => {

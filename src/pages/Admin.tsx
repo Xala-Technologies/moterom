@@ -37,6 +37,7 @@ import { useApp } from "../context";
 import { api, post, useApi } from "../api";
 import { RoomPhoto } from "../components/RoomPhoto";
 import { AdminBookingList } from "../components/admin/AdminBookingList";
+import { adminCanCancel } from "../components/admin/adminBookingRow";
 import {
   Button,
   Empty,
@@ -498,6 +499,12 @@ export function Admin() {
                             t("admin.toasts.rejected"),
                           )
                         }
+                        onCancel={(b) =>
+                          run(
+                            () => post(`/bookings/${b.id}/cancel`),
+                            t("admin.toasts.cancelled"),
+                          )
+                        }
                       />
                     </div>
                   </>
@@ -625,6 +632,12 @@ export function Admin() {
                         run(
                           () => post(`/bookings/${b.id}/reject`),
                           t("admin.toasts.rejected"),
+                        )
+                      }
+                      onCancel={(b) =>
+                        run(
+                          () => post(`/bookings/${b.id}/cancel`),
+                          t("admin.toasts.cancelled"),
                         )
                       }
                     />
@@ -844,6 +857,11 @@ export function Admin() {
                 ) : null}
               </p>
               <p className="caption">{event.booking.reference}</p>
+              {event.booking.editRequested && (
+                <p className="info-message" role="status">
+                  {t("admin.edit_request_digilist")}
+                </p>
+              )}
               <p className="preserve-lines">{event.booking.notes}</p>
             </>
           )}
@@ -902,6 +920,22 @@ export function Admin() {
                       {t("admin.reject")}
                     </Button>
                   </>
+                )}
+                {event.booking && adminCanCancel(event.booking) && (
+                  <Button
+                    disabled={busy}
+                    variant="secondary"
+                    data-color="danger"
+                    onClick={() =>
+                      run(
+                        () => post(`/bookings/${event.id}/cancel`),
+                        t("admin.toasts.cancelled"),
+                      )
+                    }
+                  >
+                    <X size={16} />
+                    {t("admin.cancel")}
+                  </Button>
                 )}
               </>
             )}

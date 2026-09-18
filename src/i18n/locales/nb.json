@@ -423,6 +423,7 @@
     "pending_section": "Venter på godkjenning",
     "approve": "Godkjenn",
     "reject": "Avslå",
+    "cancel": "Avbestill",
     "todays_programme": "Dagens program",
     "programme_show_all": "Se alle ({{count}})",
     "programme_more": "Viser de neste {{shown}} av {{total}}. Åpne kalender for hele dagen.",
@@ -440,6 +441,8 @@
     "all_statuses": "Alle statuser",
     "follow_up": "Følg opp",
     "open_booking_aria": "Åpne booking {{room}}, referanse {{reference}}",
+    "edit_request_note": "Endring venter i Digilist",
+    "edit_request_digilist": "Endringsforespørselen er registrert. Opprinnelig rom og tidspunkt gjelder til Digilist godkjenner endringen. Denne portalen kan ikke godkjenne endringen.",
     "cols": {
       "resource": "Rom",
       "schedule": "Tidspunkt",
@@ -550,6 +553,7 @@
       "blocked": "Tidsrommet er blokkert.",
       "approved": "Bookingen er godkjent.",
       "rejected": "Forespørselen er avslått.",
+      "cancelled": "Bookingen er avbestilt.",
       "block_removed": "Blokkeringen er fjernet.",
       "room_updated": "Rommet er oppdatert."
     },

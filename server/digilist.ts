@@ -584,7 +584,17 @@ export class Digilist {
     op: "cancel" | "approve" | "reject",
     user: User,
   ) {
-    await this.booking(id, user);
+    const current = await this.booking(id, user);
+    if (
+      op === "cancel" &&
+      (current.cancellationAllowed === false ||
+        ["cancelled", "rejected", "completed"].includes(current.status))
+    )
+      throw new AppError(
+        409,
+        "Denne bookingen kan ikke avbestilles.",
+        "booking_not_cancellable",
+      );
     if (op !== "cancel" && !user.isAdmin)
       throw new AppError(
         403,

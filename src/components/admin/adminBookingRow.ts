@@ -11,7 +11,7 @@ export type AdminFormatters = {
   money: (amount: number, currency: string) => string;
 };
 
-export type AdminBookingActionId = "approve" | "reject";
+export type AdminBookingActionId = "approve" | "reject" | "cancel";
 
 export type AdminBookingAction = {
   id: AdminBookingActionId;
@@ -45,6 +45,7 @@ export type AdminBookingRow = {
   paymentStatusLabel: string | null;
   paymentTone: AdminPaymentTone;
   openAriaLabel: string;
+  editRequestNote: string | null;
   actions: AdminBookingAction[];
 };
 
@@ -80,6 +81,17 @@ function statusLabel(status: string, t: AdminTranslate): string {
 }
 
 /**
+ * Cancel is allowed only when the server still treats the booking as cancellable.
+ * Pending is not confirmed; a change request is not an approval.
+ */
+export function adminCanCancel(booking: Booking): boolean {
+  return (
+    booking.cancellationAllowed !== false &&
+    !["cancelled", "rejected", "completed"].includes(booking.status)
+  );
+}
+
+/**
  * Build a Digilist-inspired admin row from a Møterom booking.
  * Payment stays unknown unless the server marks payment as required.
  */
@@ -91,10 +103,11 @@ export function toAdminBookingRow(
     room?: Room;
     canApprove?: boolean;
     canReject?: boolean;
+    canCancel?: boolean;
     busy?: boolean;
   },
 ): AdminBookingRow {
-  const { t, formatters, room, canApprove, canReject, busy } = opts;
+  const { t, formatters, room, canApprove, canReject, canCancel, busy } = opts;
   const actions: AdminBookingAction[] = [];
   if (canApprove && booking.status === "pending") {
     actions.push({
@@ -108,6 +121,14 @@ export function toAdminBookingRow(
     actions.push({
       id: "reject",
       label: t("admin.reject"),
+      disabled: busy,
+      tone: "danger",
+    });
+  }
+  if (canCancel && adminCanCancel(booking)) {
+    actions.push({
+      id: "cancel",
+      label: t("admin.cancel"),
       disabled: busy,
       tone: "danger",
     });
@@ -155,6 +176,9 @@ export function toAdminBookingRow(
       room: booking.roomName,
       reference: booking.reference,
     }),
+    editRequestNote: booking.editRequested
+      ? t("admin.edit_request_note")
+      : null,
     actions,
   };
 }
