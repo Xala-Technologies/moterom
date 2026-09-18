@@ -40,6 +40,7 @@ import {
   accessRequestCreateSchema,
   accessRequestStatusSchema,
   bookingSchema,
+  messageCreateSchema,
   roomSchema,
   searchSchema,
 } from "../shared/validation";
@@ -711,6 +712,48 @@ app.get("/api/bookings/:id", async (req, res) => {
   const ctx = await context(req, res, true);
   res.json(await ctx.provider.booking(String(req.params.id), ctx.user!));
 });
+app.get("/api/bookings/:id/messages", async (req, res) => {
+  const ctx = await context(req, res, true);
+  res.json(await ctx.provider.bookingThread(String(req.params.id), ctx.user!));
+});
+app.post("/api/bookings/:id/messages", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const body = messageCreateSchema.parse(req.body);
+  res
+    .status(201)
+    .json(
+      await ctx.provider.sendBookingMessage(
+        String(req.params.id),
+        body.content,
+        ctx.user!,
+        body.clientMessageId,
+      ),
+    );
+});
+app.get("/api/messages", async (req, res) => {
+  const ctx = await context(req, res, true);
+  res.json(await ctx.provider.inbox(ctx.user!));
+});
+app.get("/api/messages/:id", async (req, res) => {
+  const ctx = await context(req, res, true);
+  res.json(
+    await ctx.provider.conversationThread(String(req.params.id), ctx.user!),
+  );
+});
+app.post("/api/messages/:id", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const body = messageCreateSchema.parse(req.body);
+  res
+    .status(201)
+    .json(
+      await ctx.provider.sendConversationMessage(
+        String(req.params.id),
+        body.content,
+        ctx.user!,
+        body.clientMessageId,
+      ),
+    );
+});
 app.post("/api/bookings/:id/:action", async (req, res) => {
   const op = z
     .enum(["cancel", "approve", "reject", "edit"])
@@ -806,21 +849,7 @@ app.patch("/api/admin/access-requests/:id", async (req, res) => {
   const status = accessRequestStatusSchema.parse(req.body?.status);
   if (status === "approved" && ctx.provider instanceof Digilist) {
     const item = accessRequests.get(String(req.params.id));
-    const members = await ctx.provider.members(ctx.user!);
-    if (
-      !members.some(
-        (member) =>
-          member.status === "active" &&
-          member.email.trim().toLowerCase() ===
-            item.email.trim().toLowerCase() &&
-          (!item.userId || member.userId === item.userId),
-      )
-    )
-      throw new AppError(
-        409,
-        "Aktivt medlemskap må først bekreftes i Digilist. Forespørselen er fortsatt åpen.",
-        "membership_not_active",
-      );
+    await ctx.provider.ensureActiveBooker(item.email, item.name, ctx.user!);
   }
   res.json(accessRequests.updateStatus(String(req.params.id), status));
 });
@@ -831,6 +860,30 @@ app.get("/api/admin/members", async (req, res) => {
       ? await ctx.provider.members(ctx.user!)
       : [],
   );
+});
+app.get("/api/admin/messages", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  res.json(await ctx.provider.inbox(ctx.user!));
+});
+app.get("/api/admin/messages/:id", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  res.json(
+    await ctx.provider.conversationThread(String(req.params.id), ctx.user!),
+  );
+});
+app.post("/api/admin/messages/:id", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  const body = messageCreateSchema.parse(req.body);
+  res
+    .status(201)
+    .json(
+      await ctx.provider.sendConversationMessage(
+        String(req.params.id),
+        body.content,
+        ctx.user!,
+        body.clientMessageId,
+      ),
+    );
 });
 app.get("/api/admin", async (req, res) => {
   const ctx = await context(req, res, true, true);

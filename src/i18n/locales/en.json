@@ -69,6 +69,7 @@
     "slot_unknown": "{{label}}, availability unknown",
     "slot_unavailable": "{{label}}, not available",
     "admin_nav": "Administration menu",
+    "dashboard_nav": "Dashboard menu",
     "calendar_view": "Calendar view",
     "calendar_date": "Calendar date",
     "previous_day": "Previous day",
@@ -303,6 +304,7 @@
   },
   "dashboard": {
     "document_title": "My bookings",
+    "area": "Dashboard",
     "nav": "My bookings",
     "eyebrow": "Your overview",
     "heading": "My bookings",
@@ -320,6 +322,22 @@
     "empty_history_title": "No past bookings",
     "empty_history_body": "Completed and cancelled bookings will appear here."
   },
+  "messages": {
+    "document_title": "Messages",
+    "nav": "Messages",
+    "heading": "Messages",
+    "intro": "Write to the building administrator about a booking. Replies appear here and in admin.",
+    "booking_intro": "The message goes to the building administrator. You both see the same conversation.",
+    "compose_label": "Message",
+    "send": "Send message",
+    "thread_aria": "Conversation",
+    "empty_title": "No messages yet",
+    "empty_body": "Open a booking and send a message to the administrator.",
+    "empty_thread": "No messages in this conversation yet. Write the first one.",
+    "empty_admin_title": "No conversations",
+    "empty_admin_body": "When a customer sends a message from a booking, it appears here.",
+    "customer_fallback": "Customer"
+  },
   "admin": {
     "document": {
       "overview": "Overview",
@@ -328,6 +346,7 @@
       "bookings": "Bookings",
       "rooms": "Rooms",
       "users": "Users",
+      "messages": "Messages",
       "settings": "Settings",
       "administration": "Administration"
     },
@@ -340,6 +359,7 @@
       "bookings": "Bookings",
       "rooms": "Rooms",
       "users": "Users",
+      "messages": "Messages",
       "settings": "Settings"
     },
     "sidebar_footer": "You administer this building.",
@@ -367,6 +387,10 @@
       "users": {
         "title": "Users",
         "body": "Approve or decline access requests."
+      },
+      "messages": {
+        "title": "Messages",
+        "body": "Reply to member questions about bookings."
       },
       "settings": {
         "title": "Access and settings",
@@ -431,13 +455,13 @@
     "access_public_short": "Open room overview",
     "settings_users": "Access",
     "settings_users_caption": "Membership is read from Digilist. Requests are tracked here.",
-    "settings_users_body": "New users send a request under Users. Completing a live request only verifies that Digilist already has an active building member with that email. Declining a request does not revoke Digilist membership.",
+    "settings_users_body": "New users send a request under Users. Verify membership activates them as a booker in Digilist. Declining a request does not revoke Digilist membership.",
     "settings_users_open_inbox": "Open users",
     "settings_rules": "Still in Digilist",
     "settings_rules_caption": "Opening hours and listing prices.",
     "settings_rules_body": "Opening hours, turnaround time and listing prices are still edited in Digilist. Møterom has no payment settings. Building members are listed under Users.",
     "users": {
-      "caption": "Access comes from active building membership in Digilist. Grant or revoke membership there. This inbox only tracks requests; declining a request does not revoke existing membership.",
+      "caption": "Access comes from active building membership in Digilist. Verify membership activates the person as a booker in Digilist. Declining a request does not revoke existing membership.",
       "loading": "Loading requests …",
       "filter_aria": "Filter requests",
       "filter_pending": "Pending",
@@ -461,7 +485,7 @@
       "mark_rejected": "Decline",
       "mark_pending": "Reset",
       "toasts": {
-        "marked_approved": "Active membership verified in Digilist. Request completed.",
+        "marked_approved": "Membership activated in Digilist. Request completed.",
         "marked_rejected": "Request declined.",
         "marked_pending": "Request set back to pending.",
         "marked_approved_demo": "Demo request marked handled."

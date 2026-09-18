@@ -5,6 +5,7 @@ import {
   CalendarDays,
   LayoutDashboard,
   LogOut,
+  MessageCircle,
   Moon,
   Sun,
 } from "lucide-react";
@@ -47,8 +48,10 @@ export function Shell() {
       "/admin/bookings": t("admin.document.bookings"),
       "/admin/rooms": t("admin.document.rooms"),
       "/admin/users": t("admin.document.users"),
+      "/admin/messages": t("admin.document.messages"),
       "/admin/settings": t("admin.document.settings"),
       "/mine-bookinger": t("dashboard.document_title"),
+      "/meldinger": t("messages.document_title"),
       "/login": t("auth.document_title"),
     };
     const fallback = location.pathname.startsWith("/ny-booking")
@@ -76,8 +79,47 @@ export function Shell() {
       notify((e as Error).message);
     }
   };
+  const dashboardPath =
+    location.pathname.startsWith("/mine-bookinger") ||
+    location.pathname.startsWith("/meldinger") ||
+    location.pathname.startsWith("/booking/");
+  const customer = Boolean(user && !user.isAdmin && !login && !admin);
+  const customerNav = customer && dashboardPath;
+  const dashboardClass = () => (dashboardPath ? "active" : undefined);
+  const customerLinks = [
+    {
+      to: "/mine-bookinger",
+      icon: CalendarDays,
+      label: t("dashboard.nav"),
+    },
+    {
+      to: "/meldinger",
+      icon: MessageCircle,
+      label: t("messages.nav"),
+    },
+  ];
+  const footer = (
+    <footer className="app-footer">
+      <span>
+        {building} <span aria-hidden>·</span>{" "}
+        {t("common.powered_by_digilist_footer")}
+      </span>
+      <span>{config?.address || t("common.default_timezone_note")}</span>
+      {config?.contactEmail && (
+        <a href={`mailto:${config.contactEmail}`}>{t("common.contact_us")}</a>
+      )}
+    </footer>
+  );
   return (
-    <div className={login ? "app-shell auth-shell" : "app-shell"}>
+    <div
+      className={
+        login
+          ? "app-shell auth-shell"
+          : customerNav
+            ? "app-shell customer-shell"
+            : "app-shell"
+      }
+    >
       <a href="#main-content" className="skip-link">
         {t("a11y.skip_to_content")}
       </a>
@@ -88,14 +130,26 @@ export function Shell() {
           </NavLink>
           {user && (
             <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
-              <NavLink to="/" end>
-                {t("common.find_rooms")}
-              </NavLink>
-              {!user.isAdmin && (
-                <NavLink to="/mine-bookinger">{t("dashboard.nav")}</NavLink>
-              )}
-              {user.isAdmin && (
-                <NavLink to="/admin">{t("common.administration")}</NavLink>
+              {user.isAdmin ? (
+                <>
+                  <NavLink to="/" end>
+                    {t("common.find_rooms")}
+                  </NavLink>
+                  <NavLink to="/admin">{t("common.administration")}</NavLink>
+                </>
+              ) : (
+                <>
+                  <NavLink
+                    to="/mine-bookinger"
+                    className={dashboardClass}
+                    aria-current={dashboardPath ? "page" : undefined}
+                  >
+                    {t("dashboard.area")}
+                  </NavLink>
+                  <NavLink to="/" end>
+                    {t("common.find_rooms")}
+                  </NavLink>
+                </>
               )}
             </nav>
           )}
@@ -153,7 +207,11 @@ export function Shell() {
         id="main-content"
         tabIndex={-1}
         className={
-          admin ? "admin-main" : login ? "page-main auth-main" : "page-main"
+          admin || customerNav
+            ? "admin-main"
+            : login
+              ? "page-main auth-main"
+              : "page-main"
         }
       >
         {login && (
@@ -179,39 +237,61 @@ export function Shell() {
             </Button>
           </div>
         )}
-        <Outlet />
+        {customerNav ? (
+          <div className="admin-layout">
+            <aside className="admin-sidebar customer-sidebar">
+              <nav aria-label={t("a11y.dashboard_nav")}>
+                {customerLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <NavLink key={link.to} to={link.to}>
+                      <Icon size={19} />
+                      {link.label}
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </aside>
+            <div className="customer-pane">
+              <div className="page-main">
+                <Outlet />
+              </div>
+              {footer}
+            </div>
+          </div>
+        ) : (
+          <Outlet />
+        )}
       </main>
-      {!admin && !login && (
-        <footer className="app-footer">
-          <span>
-            {building} <span aria-hidden>·</span>{" "}
-            {t("common.powered_by_digilist_footer")}
-          </span>
-          <span>{config?.address || t("common.default_timezone_note")}</span>
-          {config?.contactEmail && (
-            <a href={`mailto:${config.contactEmail}`}>
-              {t("common.contact_us")}
-            </a>
-          )}
-        </footer>
-      )}
+      {!admin && !login && !customerNav && footer}
       {user && !login && (
         <nav className="mobile-nav" aria-label={t("a11y.mobile_nav")}>
-          <NavLink to="/" end>
-            <Building2 size={21} />
-            {t("common.find_rooms")}
-          </NavLink>
-          {!user.isAdmin && (
-            <NavLink to="/mine-bookinger">
-              <CalendarDays size={21} />
-              {t("dashboard.nav")}
-            </NavLink>
-          )}
-          {user.isAdmin && (
-            <NavLink to="/admin">
-              <LayoutDashboard size={21} />
-              {t("common.administration")}
-            </NavLink>
+          {user.isAdmin ? (
+            <>
+              <NavLink to="/" end>
+                <Building2 size={21} />
+                {t("common.find_rooms")}
+              </NavLink>
+              <NavLink to="/admin">
+                <LayoutDashboard size={21} />
+                {t("common.administration")}
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <NavLink
+                to="/mine-bookinger"
+                className={dashboardClass}
+                aria-current={dashboardPath ? "page" : undefined}
+              >
+                <LayoutDashboard size={21} />
+                {t("dashboard.area")}
+              </NavLink>
+              <NavLink to="/" end>
+                <Building2 size={21} />
+                {t("common.find_rooms")}
+              </NavLink>
+            </>
           )}
         </nav>
       )}

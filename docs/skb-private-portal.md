@@ -47,10 +47,11 @@ Test users on that tenant (Digilist user rows; OTP login still requires a real m
 | `skb@digilist.no`                | tenant_admin | active     |
 | `skb.member@digilist.dev`        | support      | active     |
 | `wahidullah_rahmani@hotmail.com` | support      | active     |
+| `burnerlbv12@gmail.com`          | support      | active     |
 | `skb.outsider@digilist.dev`      | —            | none       |
 | `skb.revoked@digilist.dev`       | support      | removed    |
 
-`wahidullah_rahmani@hotmail.com` is the real portal booker. The misspelling `hotmaiil.com` is not a mailbox. Hostinger **Godkjenn** does not grant this membership; it was added as an active `tenantUsers` row on DEV tenant `skb-moterom-test` (`support`), not via `inviteMember`.
+`wahidullah_rahmani@hotmail.com` and `burnerlbv12@gmail.com` are real portal bookers. The misspelling `hotmaiil.com` is not a mailbox. **Kontroller medlemskap** calls `domain/tenantTeam:ensureActiveBooker` (not `inviteMember`) to activate a `support` portal booker on DEV tenant `skb-moterom-test`. Seed `ensureUser`/`ensureMembership` remains a fallback when the live image cannot grant.
 
 ## Production rollout (requires explicit approval)
 

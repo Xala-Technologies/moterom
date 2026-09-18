@@ -2084,6 +2084,107 @@ a.login-option:hover {
   overflow-wrap: anywhere;
   font-weight: 500;
 }
+.booking-messages {
+  margin-top: 20px;
+  scroll-margin-top: calc(var(--app-header-height) + 16px);
+}
+.message-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.message-log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 22rem;
+  overflow: auto;
+  padding-right: 4px;
+}
+.message-bubble {
+  max-width: min(36rem, 100%);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  background: var(--ds-color-neutral-background-default);
+}
+.message-bubble.from-admin {
+  align-self: flex-start;
+  background: var(--ds-color-accent-background-tinted);
+  border-color: var(--ds-color-accent-border-subtle);
+}
+.message-bubble.from-customer {
+  align-self: flex-end;
+}
+.message-bubble header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.message-bubble header time,
+.message-bubble header strong {
+  font-size: 0.8125rem;
+}
+.message-bubble header time {
+  color: var(--ds-color-neutral-text-subtle);
+}
+.message-bubble p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.message-composer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.message-composer .ds-field {
+  width: 100%;
+}
+.message-inbox {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.message-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--ds-color-neutral-background-default);
+}
+.message-inbox-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.message-inbox-list li:last-child button {
+  border-bottom: 0;
+}
+.message-inbox-list button.active {
+  background: var(--ds-color-accent-background-tinted);
+}
+.message-inbox-list button span {
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
 .info-message {
   background: var(--ds-color-info-background-tinted);
   color: var(--ds-color-info-text-default);
@@ -2124,6 +2225,15 @@ a.login-option:hover {
   grid-template-columns: 232px minmax(0, 1fr);
   min-height: calc(100dvh - var(--app-header-height));
   align-items: start;
+}
+.customer-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - var(--app-header-height));
+}
+.customer-pane .page-main {
+  flex: 1;
 }
 .admin-sidebar {
   position: sticky;
@@ -3728,6 +3838,9 @@ a.login-option:hover {
   .booking-information {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+  .message-inbox {
+    grid-template-columns: 1fr;
   }
   .booking-info-panel {
     padding: 18px 20px;

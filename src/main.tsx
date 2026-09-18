@@ -27,6 +27,7 @@ import { AuthCallback } from "./pages/AuthCallback";
 import { Checkout } from "./pages/Checkout";
 import { NewBooking } from "./pages/NewBooking";
 import { MyBookings, BookingDetail } from "./pages/MyBookings";
+import { Messages } from "./pages/Messages";
 import { bookHref } from "./components/RoomCard";
 function LegacyRoomRedirect() {
   const { id = "" } = useParams();
@@ -88,6 +89,7 @@ function App() {
           <Route path="ny-booking" element={<NewBooking />} />
           <Route path="bestill/:id" element={<Checkout />} />
           <Route path="mine-bookinger" element={<MyBookings />} />
+          <Route path="meldinger" element={<Messages />} />
           <Route path="booking/:id" element={<BookingDetail />} />
           <Route
             path="admin/*"
