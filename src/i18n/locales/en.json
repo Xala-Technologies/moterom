@@ -336,7 +336,21 @@
     "empty_thread": "No messages in this conversation yet. Write the first one.",
     "empty_admin_title": "No conversations",
     "empty_admin_body": "When a customer sends a message from a booking, it appears here.",
-    "customer_fallback": "Customer"
+    "customer_fallback": "Customer",
+    "list_aria": "Conversations",
+    "list_count": "Conversations ({{count}})",
+    "search_label": "Search conversations",
+    "search_placeholder": "Search by customer, room or subject",
+    "filter_aria": "Filter conversations",
+    "filter_all": "All",
+    "filter_unread": "Unread",
+    "unread": "{{count}} unread",
+    "empty_unread_title": "No unread conversations",
+    "empty_unread_body": "Every enquiry has been read. Choose All to see the full list.",
+    "empty_search_title": "No matches",
+    "empty_search_body": "Try another search, or show all conversations.",
+    "select_conversation": "Select a conversation in the list to read and reply.",
+    "back_to_list": "Back to the list"
   },
   "admin": {
     "document": {
@@ -461,7 +475,7 @@
     "settings_rules_caption": "Opening hours and listing prices.",
     "settings_rules_body": "Opening hours, turnaround time and listing prices are still edited in Digilist. Møterom has no payment settings. Building members are listed under Users.",
     "users": {
-      "caption": "Access comes from active building membership in Digilist. Verify membership activates the person as a booker in Digilist. Declining a request does not revoke existing membership.",
+      "caption": "The inbox is access requests. Building members are listed above. Verify membership activates the person as a booker in Digilist. Declining a request does not revoke existing membership.",
       "loading": "Loading requests …",
       "filter_aria": "Filter requests",
       "filter_pending": "Pending",
@@ -589,12 +603,14 @@
     },
     "members": {
       "title": "Building members",
-      "caption": "Current membership in this building’s Digilist tenant. Invited users gain access only after accepting their invitation. Roles are shown as stored in Digilist.",
+      "caption": "People who already have access to the building. Internal test accounts are hidden. New access requests are in the inbox below.",
       "refresh": "Refresh members",
-      "role": "Digilist role",
+      "role": "Role",
+      "role_administrator": "Administrator",
+      "role_member": "Member",
       "active": "Active",
       "invited": "Invited",
-      "empty": "No active members or invitations were returned."
+      "empty": "No members to show."
     },
     "room_image_url": "Photo URL",
     "room_image_url_hint": "Use an approved HTTPS photo URL. Leave empty to use the catalogue illustration. Select the correct photo type."

@@ -122,17 +122,21 @@ export function Status({ status }: { status: string }) {
     reserved: t("common.status.reserved"),
     blocked: t("common.status.blocked"),
     approved: t("common.status.approved"),
+    active: t("admin.members.active"),
+    invited: t("admin.members.invited"),
   };
-  const tone = ["confirmed", "completed", "approved"].includes(status)
+  const tone = ["confirmed", "completed", "approved", "active"].includes(status)
     ? "success"
-    : status === "pending"
+    : status === "pending" || status === "invited"
       ? "warning"
       : status === "blocked"
         ? "blocked"
         : "neutral";
   return (
     <span className={`status status-${tone}`}>
-      {status === "confirmed" || status === "approved" ? (
+      {status === "confirmed" ||
+      status === "approved" ||
+      status === "active" ? (
         <Check size={13} />
       ) : (
         <span className="status-dot" />

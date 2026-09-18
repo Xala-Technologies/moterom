@@ -569,4 +569,48 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
     );
     expect(call?.[1]).toEqual({ tenantId: "building-test", actorId: admin.id });
   });
+
+  it("returns one professional row per building member", async () => {
+    tenantMembers = [
+      {
+        userId: "dev-admin",
+        name: "SKB DEV Admin",
+        email: "skb.admin@digilist.dev",
+        role: "tenant_admin",
+        status: "active",
+      },
+      {
+        userId: "dup-invited",
+        name: "LIJSERIBST",
+        email: "burnerlbv12@gmail.com",
+        role: "support",
+        status: "invited",
+      },
+      {
+        userId: "dup-active",
+        name: "LIJSERIBST",
+        email: "burnerlbv12@gmail.com",
+        role: "support",
+        status: "active",
+      },
+      {
+        userId: "admin-row",
+        name: "SKB allowlist admin",
+        email: "skb@digilist.no",
+        role: "tenant_admin",
+        status: "active",
+      },
+    ];
+    const body = (
+      await request(app)
+        .get("/api/admin/members")
+        .set("Cookie", await cookie("admin"))
+        .expect(200)
+    ).body;
+    expect(body.map((row: { email: string }) => row.email)).toEqual([
+      "skb@digilist.no",
+      "burnerlbv12@gmail.com",
+    ]);
+    expect(body[1].userId).toBe("dup-active");
+  });
 });

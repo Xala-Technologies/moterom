@@ -10,10 +10,12 @@ export function MessageThread({
   endpoint,
   emptyHint,
   onSent,
+  fill = false,
 }: {
   endpoint: string | null;
   emptyHint: string;
   onSent?: () => void;
+  fill?: boolean;
 }) {
   const { t } = useT();
   const { displayDate, shortTime } = useFormatters();
@@ -67,11 +69,17 @@ export function MessageThread({
       setBusy(false);
     }
   };
+  const frame = fill ? "message-thread message-thread-fill" : "message-thread";
   if (!endpoint) return null;
-  if (loading) return <Loading />;
+  if (loading)
+    return (
+      <div className={frame}>
+        <Loading />
+      </div>
+    );
   const messages = thread?.messages || [];
   return (
-    <div className="message-thread">
+    <div className={frame}>
       <div
         className="message-log"
         ref={log}
