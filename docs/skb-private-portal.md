@@ -77,13 +77,13 @@ Against Digilist DEV after the Convex function push + seed (not Hostinger, not p
 - `GET /api/v1/listings/xala-test-konferanserom` 200 (marketplace listing still public).
 - `POST /api/v1/checkout/sessions` with `listing: skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
 
-Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-test-*` public slugs 404; listings page and featured omit `skb-test`; marketplace `xala-test-konferanserom` still 200. Checkout with only `{ listing }` now returns 400 (start/end required); the same route with ISO start/end and a dummy guest still 404 `No listing 'skb-test-sauda-1'`. Hostinger `skb.digilist.no` `/api/config` is `mode=live`, `access=members` (deployed image is not `feat/digilist-admin-foundation`; `/api/admin/members` 404).
+Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-test-*` public slugs 404; listings page and featured omit `skb-test`; marketplace `xala-test-konferanserom` still 200. Checkout with only `{ listing }` now returns 400 (start/end required); the same route with ISO start/end and a dummy guest still 404 `No listing 'skb-test-sauda-1'`. Hostinger `skb.digilist.no` `/api/config` was already `mode=live`, `access=members`; the afternoon image still 404’d `/api/admin/members`. Evening rebuild from `main` `2b5c9d6` (PRs #16/#17) serves that route (401 anonymous, 403 as customer).
 
 Live OTP 18 September 2026 on Hostinger only: `skb@digilist.no` reached `/admin` as `isAdmin`. All seven rooms render. Insights reports live + complete coverage with 0 bookings. `/api/admin/members` remains 404. No booking was created.
 
 Live member 18 September 2026 on Hostinger: `wahidullah_rahmani@hotmail.com` (Digilist OTP already in session; not `hotmaiil.com`) became `isMember` after the DEV tenant membership was written. `/` shows Finn rom with seven rooms. `skb.member@digilist.dev` was not used.
 
-Live member booking 18 September 2026 on this branch only (`DATA_MODE=live`, `http://localhost:4173`): Wahid Rahmani booked Sauda 1, 18 Sep 2026 16:00–17:00, Teammøte, **Ingen betaling**. Digilist id `js7fzc258aqewx31gwbvf6rv758em29r`, status `confirmed`, reference `DGL-20260918-J77NNF`. Mine bookinger and booking detail showed the same reservation. Customer `GET /api/admin` 403 `admin_required`. Rooms needed 0 NOK hourly `resourcePricing` on DEV before quote succeeded; missing rate cards returned Digilist `NO_PRICING_CONFIGURED`. Hostinger was not used for this booking.
+Live member booking 18 September 2026 (`DATA_MODE=live`, first `http://localhost:4173` then Hostinger after `main` `2b5c9d6`): Wahid Rahmani booked Sauda 1, 18 Sep 2026 16:00–17:00, Teammøte, **Ingen betaling**. Digilist id `js7fzc258aqewx31gwbvf6rv758em29r`, status `confirmed`, reference `DGL-20260918-J77NNF`. After the Hostinger rebuild, Mine bookinger on `https://skb.digilist.no` showed that reservation. Customer `/api/admin` and `/api/admin/members` 403 `admin_required`. Rooms needed 0 NOK hourly `resourcePricing` on DEV before quote succeeded. Digilist git isolation was not merged.
 
 Not run: outsider access-pending; idempotent retry; conflict; cancel vs availability.
 
@@ -101,4 +101,4 @@ Local `DATA_MODE=demo` at `http://localhost:4173` as Kari Nordmann. This is **no
 - Customer `/admin`: “Denne siden er for administratorer”; `GET /api/admin` 403 `admin_required`.
 - Phone viewport 390×844: seven cards, `scrollWidth` 390 (no overflow), mobile nav, no `digilist.no` links on the rooms page.
 
-Not claimed: outsider pending on DEV, marketplace leak against deployed Convex, physical device, Hostinger serving this branch, production `skb.digilist.no` booking.
+Not claimed: outsider pending on DEV, marketplace leak against deployed Convex, physical device, production Digilist tenant (Hostinger still uses DEV Convex `skb-moterom-test`).
