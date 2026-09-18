@@ -115,3 +115,9 @@ Hostinger **Kontroller medlemskap** for `burnerlbv12@gmail.com` (LIJSERIBST) ret
 Merged [#20](https://github.com/Xala-Technologies/moterom/pull/20) into `dev` and [#21](https://github.com/Xala-Technologies/moterom/pull/21) into `main`. Rebuilt the Hostinger container from `main` `68576a3`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged; DEV Convex already had `ensureActiveBooker`.
 
 Anonymous: `/api/config` live / members; `/api/rooms` and `/api/admin/access-requests` 401 `login_required`; `POST /api/auth/demo` 404 with Origin. Container healthy. The public bundle includes the new Users caption (**Kontroller medlemskap aktiverer personen som booker i Digilist**) and no longer the verify-only copy. Not claimed: an admin click of **Kontroller medlemskap** after this rebuild (needs OTP).
+
+## Hostinger rebuild — 18 September 2026 (member directory and admin inbox)
+
+Merged [#23](https://github.com/Xala-Technologies/moterom/pull/23) into `dev` and [#24](https://github.com/Xala-Technologies/moterom/pull/24) into `main`. Rebuilt the Hostinger container from `main` `df3c4a8`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged.
+
+Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo` 404. Container healthy. The public CSS includes `.admin-messages`. Not claimed: signed-in Brukere or Meldinger after this rebuild (needs OTP).
