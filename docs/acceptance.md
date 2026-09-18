@@ -86,3 +86,11 @@ Anonymous only. No OTP, no bookings, no production tenant edits.
 - Hostinger `https://skb.digilist.no`: `/api/config` mode **live**, access members, Digilist auth configured; rooms and admin 401; `/api/admin/members` **404** (deployed image is not this branch). Login shows email, SMS and access request; no BankID and no demo. Cluster URLs behind that host were not read.
 
 Still required: OTP as `skb@digilist.no` and `skb.member@digilist.dev` against a BFF on this branch pointed at DEV.
+
+## Live OTP — 18 September 2026 (Hostinger, not this branch)
+
+`skb@digilist.no` signed in with Digilist email OTP on `https://skb.digilist.no`. Session: `isAdmin=true`, display name SKB allowlist admin, mode live, members-only. No bookings or blocks were created.
+
+- Sidebar routes loaded: Oversikt, Innsikt (live, 0 reserved hours, complete coverage), Kalender (all seven rooms including both Eidefossen), Bookinger (empty), Rom (seven cards, illustrasjonsfoto), Brukere (access-request inbox only), Innstillinger.
+- `/api/admin/members` still 404. Settings copy still says Møterom approval grants portal access. That is the deployed image, not `feat/digilist-admin-foundation`.
+- Member OTP (`skb.member@digilist.dev`), outsider pending, live booking, cancel, and conflict were not run. Nothing was merged or deployed from this check.

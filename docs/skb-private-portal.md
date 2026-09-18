@@ -74,9 +74,11 @@ Against Digilist DEV after the Convex function push + seed (not Hostinger, not p
 - `GET /api/v1/listings/xala-test-konferanserom` 200 (marketplace listing still public).
 - `POST /api/v1/checkout/sessions` with `listing: skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
 
-Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-test-*` public slugs 404; listings page and featured omit `skb-test`; marketplace `xala-test-konferanserom` still 200. Checkout with only `{ listing }` now returns 400 (start/end required); the same route with ISO start/end and a dummy guest still 404 `No listing 'skb-test-sauda-1'`. Hostinger `skb.digilist.no` `/api/config` is `mode=live`, `access=members` (deployed image is not `feat/digilist-admin-foundation`; `/api/admin/members` 404). OTP booking was still not run.
+Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-test-*` public slugs 404; listings page and featured omit `skb-test`; marketplace `xala-test-konferanserom` still 200. Checkout with only `{ listing }` now returns 400 (start/end required); the same route with ISO start/end and a dummy guest still 404 `No listing 'skb-test-sauda-1'`. Hostinger `skb.digilist.no` `/api/config` is `mode=live`, `access=members` (deployed image is not `feat/digilist-admin-foundation`; `/api/admin/members` 404).
 
-Not run (needs a real Digilist OTP session for a seeded mailbox): member books from the Møterom grid in `DATA_MODE=live`, outsider access-pending, customer admin 403 against live, idempotent retry, conflict, cancel vs availability.
+Live OTP 18 September 2026 on Hostinger only: `skb@digilist.no` reached `/admin` as `isAdmin`. All seven rooms render. Insights reports live + complete coverage with 0 bookings. `/api/admin/members` remains 404. No booking was created.
+
+Not run: member OTP as `skb.member@digilist.dev` on this branch; outsider access-pending; customer admin 403 against live; idempotent retry; conflict; cancel vs availability.
 
 Covered by Digilist unit tests on `feat/tenant-portal-listings` (163 tests): marketplace default; private and `tenant_portal` public slug 404; guest create against private/`tenant_portal` rejected; storefront `listMine` omits `tenant_portal`.
 
