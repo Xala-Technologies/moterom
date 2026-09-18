@@ -121,3 +121,9 @@ Anonymous: `/api/config` live / members; `/api/rooms` and `/api/admin/access-req
 Merged [#23](https://github.com/Xala-Technologies/moterom/pull/23) into `dev` and [#24](https://github.com/Xala-Technologies/moterom/pull/24) into `main`. Rebuilt the Hostinger container from `main` `df3c4a8`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged.
 
 Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo` 404. Container healthy. The public CSS includes `.admin-messages`. Not claimed: signed-in Brukere or Meldinger after this rebuild (needs OTP).
+
+## Hostinger rebuild — 18 September 2026 (card-only Finn rom)
+
+Merged [#26](https://github.com/Xala-Technologies/moterom/pull/26) into `dev` and [#27](https://github.com/Xala-Technologies/moterom/pull/27) into `main`. Rebuilt the Hostinger container from `main` `aade799`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged.
+
+Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo` 404 with Origin. Container healthy. Public JS has no `Listevisning`; public CSS has no `.rooms-list`. Not claimed: signed-in Finn rom after this rebuild (needs OTP).
