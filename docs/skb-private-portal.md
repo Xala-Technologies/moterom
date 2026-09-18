@@ -9,15 +9,15 @@ On 17 September 2026 the Digilist **DEV Convex** at `convex-api.dev.digilist.no`
 
 ## Isolated DEV URLs
 
-| Variable                | DEV (this work)                               | Production (do not flip yet)             |
-| ----------------------- | --------------------------------------------- | ---------------------------------------- |
-| `DIGILIST_URL`          | `https://convex-api.dev.digilist.no`          | `https://convex-api.digilist.no`         |
-| `DIGILIST_HTTP_URL`     | `https://convex.dev.digilist.no`              | `https://convex.digilist.no`             |
-| `PUBLIC_ORIGIN`         | `http://localhost:4173`                       | `https://skb.digilist.no`                |
-| `DATA_MODE`             | `live` only on a local/DEV BFF pointed at DEV | stays `demo` on Hostinger until approval |
-| `BOOKING_ACCESS`        | `members`                                     | `members`                                |
-| `PAYMENT_MODE`          | unset                                         | unset                                    |
-| `ALLOW_DEMO_DEPLOYMENT` | unset                                         | must stay false on live                  |
+| Variable                | DEV (this work)                               | Production (do not flip yet)                                      |
+| ----------------------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| `DIGILIST_URL`          | `https://convex-api.dev.digilist.no`          | `https://convex-api.digilist.no`                                  |
+| `DIGILIST_HTTP_URL`     | `https://convex.dev.digilist.no`              | `https://convex.digilist.no`                                      |
+| `PUBLIC_ORIGIN`         | `http://localhost:4173`                       | `https://skb.digilist.no`                                         |
+| `DATA_MODE`             | `live` only on a local/DEV BFF pointed at DEV | **live** on Hostinger as of 18 Sep 2026 (anonymous `/api/config`) |
+| `BOOKING_ACCESS`        | `members`                                     | `members`                                                         |
+| `PAYMENT_MODE`          | unset                                         | unset                                                             |
+| `ALLOW_DEMO_DEPLOYMENT` | unset                                         | must stay false on live                                           |
 
 ## DEV tenant mapping
 
@@ -26,7 +26,7 @@ Created on Digilist DEV (not marketplace, not Verdal). Re-run with `node scripts
 - Tenant slug: `skb-moterom-test`
 - Tenant id: `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`
 - `settings.portalOrigin`: `https://skb.digilist.no`
-- Rooms: `visibility=private`, `accessChannel=tenant_portal`, free (`paymentRequired=false`, `basePrice=0`)
+- Rooms: `visibility=private`, `accessChannel=tenant_portal`, free (`paymentRequired=false`, `basePrice=0`). DEV also has idempotent 0 NOK hourly `resourcePricing` rows; without them Digilist quote returns `NO_PRICING_CONFIGURED`.
 - Portal `id`s stay `sauda-1`…`eidefossen-b`. Names/capacities taken from `config/rooms.json`. Photos remain illustrative.
 
 | Portal id    | Confirmed name     | Capacity used | Digilist slug           | DEV tenant id                      | Resource id                        | Notes                         |
@@ -41,13 +41,16 @@ Created on Digilist DEV (not marketplace, not Verdal). Re-run with `node scripts
 
 Test users on that tenant (Digilist user rows; OTP login still requires a real mailbox):
 
-| Email                       | Role         | Membership |
-| --------------------------- | ------------ | ---------- |
-| `skb.admin@digilist.dev`    | tenant_admin | active     |
-| `skb@digilist.no`           | tenant_admin | active     |
-| `skb.member@digilist.dev`   | support      | active     |
-| `skb.outsider@digilist.dev` | —            | none       |
-| `skb.revoked@digilist.dev`  | support      | removed    |
+| Email                            | Role         | Membership |
+| -------------------------------- | ------------ | ---------- |
+| `skb.admin@digilist.dev`         | tenant_admin | active     |
+| `skb@digilist.no`                | tenant_admin | active     |
+| `skb.member@digilist.dev`        | support      | active     |
+| `wahidullah_rahmani@hotmail.com` | support      | active     |
+| `skb.outsider@digilist.dev`      | —            | none       |
+| `skb.revoked@digilist.dev`       | support      | removed    |
+
+`wahidullah_rahmani@hotmail.com` is the real portal booker. The misspelling `hotmaiil.com` is not a mailbox. Hostinger **Godkjenn** does not grant this membership; it was added as an active `tenantUsers` row on DEV tenant `skb-moterom-test` (`support`), not via `inviteMember`.
 
 ## Production rollout (requires explicit approval)
 
@@ -74,7 +77,15 @@ Against Digilist DEV after the Convex function push + seed (not Hostinger, not p
 - `GET /api/v1/listings/xala-test-konferanserom` 200 (marketplace listing still public).
 - `POST /api/v1/checkout/sessions` with `listing: skb-test-sauda-1` 404 `No listing 'skb-test-sauda-1'`.
 
-Not run (needs a real Digilist OTP session for a seeded mailbox): member books from the Møterom grid in `DATA_MODE=live`, outsider access-pending, customer admin 403 against live, idempotent retry, conflict, cancel vs availability.
+Re-checked 18 September 2026 (anonymous, no writes to tenants): all seven `skb-test-*` public slugs 404; listings page and featured omit `skb-test`; marketplace `xala-test-konferanserom` still 200. Checkout with only `{ listing }` now returns 400 (start/end required); the same route with ISO start/end and a dummy guest still 404 `No listing 'skb-test-sauda-1'`. Hostinger `skb.digilist.no` `/api/config` is `mode=live`, `access=members` (deployed image is not `feat/digilist-admin-foundation`; `/api/admin/members` 404).
+
+Live OTP 18 September 2026 on Hostinger only: `skb@digilist.no` reached `/admin` as `isAdmin`. All seven rooms render. Insights reports live + complete coverage with 0 bookings. `/api/admin/members` remains 404. No booking was created.
+
+Live member 18 September 2026 on Hostinger: `wahidullah_rahmani@hotmail.com` (Digilist OTP already in session; not `hotmaiil.com`) became `isMember` after the DEV tenant membership was written. `/` shows Finn rom with seven rooms. `skb.member@digilist.dev` was not used.
+
+Live member booking 18 September 2026 on this branch only (`DATA_MODE=live`, `http://localhost:4173`): Wahid Rahmani booked Sauda 1, 18 Sep 2026 16:00–17:00, Teammøte, **Ingen betaling**. Digilist id `js7fzc258aqewx31gwbvf6rv758em29r`, status `confirmed`, reference `DGL-20260918-J77NNF`. Mine bookinger and booking detail showed the same reservation. Customer `GET /api/admin` 403 `admin_required`. Rooms needed 0 NOK hourly `resourcePricing` on DEV before quote succeeded; missing rate cards returned Digilist `NO_PRICING_CONFIGURED`. Hostinger was not used for this booking.
+
+Not run: outsider access-pending; idempotent retry; conflict; cancel vs availability.
 
 Covered by Digilist unit tests on `feat/tenant-portal-listings` (163 tests): marketplace default; private and `tenant_portal` public slug 404; guest create against private/`tenant_portal` rejected; storefront `listMine` omits `tenant_portal`.
 
@@ -90,4 +101,4 @@ Local `DATA_MODE=demo` at `http://localhost:4173` as Kari Nordmann. This is **no
 - Customer `/admin`: “Denne siden er for administratorer”; `GET /api/admin` 403 `admin_required`.
 - Phone viewport 390×844: seven cards, `scrollWidth` 390 (no overflow), mobile nav, no `digilist.no` links on the rooms page.
 
-Not claimed: live member book on DEV, outsider pending on DEV, marketplace leak against deployed Convex, physical device, production `skb.digilist.no`.
+Not claimed: outsider pending on DEV, marketplace leak against deployed Convex, physical device, Hostinger serving this branch, production `skb.digilist.no` booking.

@@ -31,9 +31,16 @@ if (new URL(origin).origin !== origin)
   );
 if (production && !origin.startsWith("https://"))
   throw new Error("Production requires an HTTPS PUBLIC_ORIGIN.");
-const access = env("BOOKING_ACCESS") ?? "public";
+const access =
+  env("BOOKING_ACCESS") ?? (mode === "live" ? "members" : "public");
 if (access !== "public" && access !== "members")
   throw new Error("BOOKING_ACCESS must be public or members.");
+if (mode === "live" && access !== "members")
+  throw new Error("The live Møterom portal requires BOOKING_ACCESS=members.");
+if (mode === "live" && env("PAYMENT_MODE"))
+  throw new Error(
+    "Møterom has no payments. Leave PAYMENT_MODE unset in live mode.",
+  );
 if (
   env("PAYMENT_MODE") &&
   !["hosted", "invoice"].includes(env("PAYMENT_MODE")!)
@@ -83,6 +90,9 @@ export function isAllowedOrigin(
 ) {
   if (!requestOrigin) return false;
   if (requestOrigin === origin) return true;
+  // Forwarded headers are not an origin allowlist. Production accepts only
+  // its configured customer origin, regardless of proxy/Host headers.
+  if (production) return false;
   const hostname = host?.split(",")[0]?.trim();
   if (!hostname) return false;
   try {

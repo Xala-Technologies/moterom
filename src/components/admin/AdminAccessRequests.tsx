@@ -1,5 +1,4 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
-import { ArrowUpRight } from "lucide-react";
 import { Button, Empty, ErrorState, Loading, Status } from "../ui";
 import { api } from "../../api";
 import { useApp } from "../../context";
@@ -49,7 +48,11 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
       );
       notify(
         status === "approved"
-          ? t("admin.users.toasts.marked_approved")
+          ? t(
+              config?.mode === "live"
+                ? "admin.users.toasts.marked_approved"
+                : "admin.users.toasts.marked_approved_demo",
+            )
           : status === "rejected"
             ? t("admin.users.toasts.marked_rejected")
             : t("admin.users.toasts.marked_pending"),
@@ -72,7 +75,13 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
 
   return (
     <div className="admin-users stack">
-      <p className="muted">{t("admin.users.caption")}</p>
+      <p className="muted">
+        {t(
+          config?.mode === "live"
+            ? "admin.users.caption"
+            : "admin.users.caption_demo",
+        )}
+      </p>
       <div className="admin-users-toolbar">
         <div
           className="view-switch"
@@ -97,20 +106,6 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
             </button>
           ))}
         </div>
-        {config?.dashboardUrl ? (
-          <a
-            href={config.dashboardUrl}
-            className="ds-button"
-            data-variant="secondary"
-            data-size="sm"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("common.open_digilist")}
-            <ArrowUpRight size={16} />
-            <span className="sr-only"> {t("common.opens_new_tab")}</span>
-          </a>
-        ) : null}
       </div>
 
       {rows.length === 0 ? (
@@ -174,7 +169,11 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
                       disabled={busyId === row.id}
                       onClick={() => void setStatus(row.id, "approved")}
                     >
-                      {t("admin.users.mark_approved")}
+                      {t(
+                        config?.mode === "live"
+                          ? "admin.users.mark_approved"
+                          : "admin.users.mark_approved_demo",
+                      )}
                     </Button>
                   )}
                   {row.status !== "rejected" && (

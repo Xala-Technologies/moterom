@@ -142,10 +142,10 @@
     "slide1_headline": "Bookinger og rom i ett bygg.",
     "slide1_subline": "Godkjenn forespørsler, administrer rom og hold kalenderen oppdatert.",
     "slide2_headline": "Samme Digilist-innlogging.",
-    "slide2_subline": "E-post eller SMS med engangskode — samme konto som i Digilist.",
+    "slide2_subline": "E-post, SMS eller BankID — samme konto som i Digilist.",
     "slide3_headline": "Bygd for norske krav.",
     "slide3_subline": "GDPR fra dag én. Digilist er bookingautoriteten.",
-    "panel_micro": "E-post · SMS · GDPR",
+    "panel_micro": "E-post · SMS · BankID · GDPR",
     "aside_eyebrow": "Møterom",
     "aside_title": "Bookinger og rom i ett bygg",
     "aside_body": "Administrer forespørsler, rominnhold og kalender med samme visuelle språk som Digilist.",
@@ -254,7 +254,7 @@
     "meeting_title": "Møtetittel",
     "meeting_title_placeholder": "For eksempel teammøte",
     "message_to_host": "Beskjed til utleier",
-    "retry_same_order": "Du kan forsøke å bekrefte samme bestilling igjen hvis du er usikker på om den ble registrert.",
+    "retry_same_order": "Prøv samme bestilling igjen for å sjekke om den ble lagret. Behold opplysningene mens resultatet er usikkert.",
     "checking_availability": "Kontrollerer ledighet …",
     "consent_checked": "Jeg har kontrollert rom, dato og tidspunkt.",
     "hosted_payment_note": "Betaling og endelig bekreftelse fullføres i Digilist. Dette steget overfører ikke tidspunktet eller innloggingen.",
@@ -298,7 +298,8 @@
     "send_edit_request": "Send endringsforespørsel",
     "notify_edit_sent": "Endringsforespørselen er sendt. Opprinnelig tid gjelder frem til godkjenning.",
     "notify_cancelled": "Bookingen er kansellert.",
-    "login_required_body": "Logg inn for å fortsette bestillingen."
+    "login_required_body": "Logg inn for å fortsette bestillingen.",
+    "existing_booking_body": "Den opprinnelige bestillingen ble funnet. Gjeldende status vises her."
   },
   "dashboard": {
     "document_title": "Mine bookinger",
@@ -425,18 +426,18 @@
     "settings_access": "Tilgang",
     "settings_access_caption": "Hvem som kan se rom og bestille her.",
     "access_members": "Kun byggets medlemmer",
-    "access_members_hint": "Bare godkjente brukere kan bruke bookingløsningen. Se forespørsler under Brukere.",
+    "access_members_hint": "Bare Digilist-medlemmer av bygget kan bruke bookingløsningen. Se medlemmer og forespørsler under Brukere.",
     "access_public": "Åpen romoversikt. Innlogging kreves ved booking.",
     "access_public_short": "Åpen romoversikt",
     "settings_users": "Tilgang",
-    "settings_users_caption": "Forespørsler godkjennes i Møterom.",
-    "settings_users_body": "Nye brukere sender forespørsel under Brukere. Godkjenn for å gi portaltilgang, eller avslå. Digilist-medlemmer av bygget har også tilgang.",
-    "settings_users_open_inbox": "Åpne forespørsler",
-    "settings_rules": "Administreres i Digilist",
-    "settings_rules_caption": "Priser, åpningstider og medarbeidere.",
-    "settings_rules_body": "Åpningstider, pauser mellom bookinger, priser og medarbeidertilgang styres i Digilist. Det samme oppsettet gjelder her.",
+    "settings_users_caption": "Medlemskap leses fra Digilist. Forespørsler følges her.",
+    "settings_users_body": "Nye brukere sender forespørsel under Brukere. I live-modus fullføres en forespørsel bare når Digilist allerede har et aktivt medlem med den e-posten. Avslag fjerner ikke et Digilist-medlemskap.",
+    "settings_users_open_inbox": "Åpne brukere",
+    "settings_rules": "Fortsatt i Digilist",
+    "settings_rules_caption": "Åpningstider og priser på oppføringen.",
+    "settings_rules_body": "Åpningstider, pauser mellom bookinger og priser redigeres fortsatt i Digilist. Møterom har ingen betalingsinnstillinger. Byggets medlemmer vises under Brukere.",
     "users": {
-      "caption": "Godkjenn forespørsler for å gi tilgang til portalen. Uten godkjenning får brukeren ikke inn.",
+      "caption": "Tilgang styres av aktivt medlemskap i byggets Digilist-leietaker. Gi eller fjern medlemskap der. Innboksen følger bare forespørsler; avslag fjerner ikke et eksisterende medlemskap.",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -456,14 +457,17 @@
         "status": "Status",
         "actions": "Handlinger"
       },
-      "mark_approved": "Godkjenn",
+      "mark_approved": "Kontroller medlemskap",
       "mark_rejected": "Avslå",
       "mark_pending": "Tilbakestill",
       "toasts": {
-        "marked_approved": "Tilgang er godkjent. Brukeren kan logge inn på nytt.",
+        "marked_approved": "Aktivt medlemskap er kontrollert i Digilist. Forespørselen er ferdigbehandlet.",
         "marked_rejected": "Forespørselen er avslått.",
-        "marked_pending": "Forespørselen er satt tilbake til venter."
-      }
+        "marked_pending": "Forespørselen er satt tilbake til venter.",
+        "marked_approved_demo": "Demoforespørselen er ferdigbehandlet."
+      },
+      "caption_demo": "Demoforespørsler lagres lokalt og endrer ingen medlemskap i Digilist.",
+      "mark_approved_demo": "Merk som behandlet"
     },
     "prelaunch_title": "Før kundelansering",
     "prelaunch_body": "Bekreft navnene på Eidefossen-rommene, kapasitet per oppsett, rombilder og bookingregler. Demoen sender ikke e-post og krever ingen betaling.",
@@ -558,7 +562,18 @@
       "value_col": "Verdi",
       "today_tab": "I dag",
       "insights_tab": "Innsikt"
-    }
+    },
+    "members": {
+      "title": "Byggets medlemmer",
+      "caption": "Gjeldende medlemskap i byggets Digilist-leietaker. Inviterte brukere får tilgang først etter at invitasjonen er akseptert. Roller vises slik de er lagret i Digilist.",
+      "refresh": "Oppdater medlemmer",
+      "role": "Digilist-rolle",
+      "active": "Aktiv",
+      "invited": "Invitert",
+      "empty": "Ingen aktive medlemmer eller invitasjoner ble returnert."
+    },
+    "room_image_url": "Bildeadresse",
+    "room_image_url_hint": "Bruk en godkjent HTTPS-adresse. La feltet stå tomt for å bruke illustrasjonsbildet fra katalogen. Velg riktig bildetype."
   },
   "validation": {
     "name_required": "Skriv inn navn.",
