@@ -2451,7 +2451,7 @@ a.login-option:hover {
   color: var(--ds-color-neutral-text-subtle);
   text-decoration: none;
   border-radius: 8px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 .admin-sidebar nav > a.active {
@@ -4184,7 +4184,6 @@ a.login-option:hover {
   }
   .admin-sidebar nav > a {
     padding: 10px;
-    font-size: 0.7rem;
     gap: 7px;
   }
   .admin-sidebar nav svg {
