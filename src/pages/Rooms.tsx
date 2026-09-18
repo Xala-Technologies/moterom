@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Grid2X2, List, Map as MapIcon } from "lucide-react";
+import { CalendarDays, Map as MapIcon } from "lucide-react";
 import { useApi } from "../api";
 import { Button, Empty, ErrorState, Loading, Modal } from "../components/ui";
 import { RoomCard } from "../components/RoomCard";
@@ -23,7 +23,6 @@ export function readSearch(params: URLSearchParams): Search {
 export function Rooms() {
   const { config } = useApp();
   const { t } = useT();
-  const [view, setView] = useState<"grid" | "list">("grid");
   const [floorplan, setFloorplan] = useState(false);
   const pageDate = today();
   const [cardDates, setCardDates] = useState<Record<string, string>>({});
@@ -90,38 +89,17 @@ export function Rooms() {
             })}
           </span>
         </div>
-        <div
-          className="view-switch"
-          role="group"
-          aria-label={t("a11y.view_mode")}
-        >
-          <button
-            aria-label={t("a11y.grid_view")}
-            aria-pressed={view === "grid"}
-            onClick={() => setView("grid")}
-          >
-            <Grid2X2 size={19} />
-          </button>
-          <button
-            aria-label={t("a11y.list_view")}
-            aria-pressed={view === "list"}
-            onClick={() => setView("list")}
-          >
-            <List size={20} />
-          </button>
-        </div>
       </div>
       {rooms.error ? (
         <ErrorState error={rooms.error} retry={rooms.reload} />
       ) : rooms.loading ? (
         <Loading label={t("rooms.loading_rooms")} />
       ) : roomList.length ? (
-        <div className={`rooms-grid ${view === "list" ? "rooms-list" : ""}`}>
+        <div className="rooms-grid">
           {roomList.map((room) => (
             <RoomCard
               key={room.id}
               room={room}
-              list={view === "list"}
               scheduleDate={cardDates[room.id] ?? pageDate}
               onScheduleDateChange={(date) =>
                 setCardDates((prev) => ({ ...prev, [room.id]: date }))

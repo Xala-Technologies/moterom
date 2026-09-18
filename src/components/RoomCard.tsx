@@ -15,7 +15,6 @@ export function RoomCard({
   room,
   availability,
   query = "",
-  list = false,
   selected = false,
   action,
   scheduleDate,
@@ -28,7 +27,6 @@ export function RoomCard({
   room: Room;
   availability?: Availability;
   query?: string;
-  list?: boolean;
   selected?: boolean;
   action?: { to: string; label: string; ariaLabel: string };
   scheduleDate?: string;
@@ -46,7 +44,6 @@ export function RoomCard({
   const ariaLabel =
     action?.ariaLabel ?? t("rooms.book_room_aria", { name: room.name });
   const showSchedule =
-    !list &&
     scheduleDate !== undefined &&
     onScheduleDateChange &&
     onSelectSlot &&
@@ -54,7 +51,7 @@ export function RoomCard({
 
   return (
     <article
-      className={`room-card ${list ? "room-row" : ""}${selected ? " is-selected" : ""}${showSchedule ? " has-schedule" : ""}`}
+      className={`room-card${selected ? " is-selected" : ""}${showSchedule ? " has-schedule" : ""}`}
     >
       <div className="room-media">
         <RoomPhoto room={room} />
