@@ -336,7 +336,21 @@
     "empty_thread": "Ingen meldinger i denne samtalen ennå. Skriv den første.",
     "empty_admin_title": "Ingen samtaler",
     "empty_admin_body": "Når en kunde sender en melding fra en booking, vises den her.",
-    "customer_fallback": "Kunde"
+    "customer_fallback": "Kunde",
+    "list_aria": "Samtaler",
+    "list_count": "Samtaler ({{count}})",
+    "search_label": "Søk i samtaler",
+    "search_placeholder": "Søk etter kunde, rom eller emne",
+    "filter_aria": "Filtrer samtaler",
+    "filter_all": "Alle",
+    "filter_unread": "Uleste",
+    "unread": "{{count}} ulest",
+    "empty_unread_title": "Ingen uleste samtaler",
+    "empty_unread_body": "Alle henvendelser er lest. Velg Alle for å se hele listen.",
+    "empty_search_title": "Ingen treff",
+    "empty_search_body": "Prøv et annet søk, eller vis alle samtaler.",
+    "select_conversation": "Velg en samtale i listen for å lese og svare.",
+    "back_to_list": "Tilbake til listen"
   },
   "admin": {
     "document": {
@@ -461,7 +475,7 @@
     "settings_rules_caption": "Åpningstider og priser på oppføringen.",
     "settings_rules_body": "Åpningstider, pauser mellom bookinger og priser redigeres fortsatt i Digilist. Møterom har ingen betalingsinnstillinger. Byggets medlemmer vises under Brukere.",
     "users": {
-      "caption": "Tilgang styres av aktivt medlemskap i byggets Digilist-leietaker. Kontroller medlemskap aktiverer personen som booker i Digilist. Avslag fjerner ikke et eksisterende medlemskap.",
+      "caption": "Innboksen er forespørsler om tilgang. Byggets medlemmer vises i listen over. Kontroller medlemskap aktiverer personen som booker i Digilist. Avslag fjerner ikke et eksisterende medlemskap.",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -589,12 +603,14 @@
     },
     "members": {
       "title": "Byggets medlemmer",
-      "caption": "Gjeldende medlemskap i byggets Digilist-leietaker. Inviterte brukere får tilgang først etter at invitasjonen er akseptert. Roller vises slik de er lagret i Digilist.",
+      "caption": "Personer som allerede har tilgang til bygget. Intern testdata vises ikke. Forespørsler om ny tilgang ligger i innboksen under.",
       "refresh": "Oppdater medlemmer",
-      "role": "Digilist-rolle",
+      "role": "Rolle",
+      "role_administrator": "Administrator",
+      "role_member": "Medlem",
       "active": "Aktiv",
       "invited": "Invitert",
-      "empty": "Ingen aktive medlemmer eller invitasjoner ble returnert."
+      "empty": "Ingen medlemmer å vise."
     },
     "room_image_url": "Bildeadresse",
     "room_image_url_hint": "Bruk en godkjent HTTPS-adresse. La feltet stå tomt for å bruke illustrasjonsbildet fra katalogen. Velg riktig bildetype."

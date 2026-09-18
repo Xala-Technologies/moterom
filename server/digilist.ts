@@ -34,6 +34,7 @@ import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
 import { collectPaged, INSIGHTS_PAGE_SIZE } from "./insights";
 import { assertSameBooking, bookingFingerprint } from "./bookingRetry";
+import { presentBuildingMembers } from "../shared/members";
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row =>
   value && typeof value === "object" ? (value as Row) : {};
@@ -755,11 +756,13 @@ export class Digilist {
           actorId: user.id,
         }),
       );
-    return result.map((member) => ({
-      ...member,
-      name: member.name || member.email || "",
-      email: member.email || "",
-    }));
+    return presentBuildingMembers(
+      result.map((member) => ({
+        ...member,
+        name: member.name || member.email || "",
+        email: member.email || "",
+      })),
+    );
   }
   async ensureActiveBooker(email: string, name: string, user: User) {
     this.assertAdmin(user);
