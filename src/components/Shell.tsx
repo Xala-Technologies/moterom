@@ -3,11 +3,18 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Building2,
   CalendarDays,
+  ChartColumn,
+  ClipboardList,
   LayoutDashboard,
+  Languages,
   LogOut,
+  Menu,
   MessageCircle,
   Moon,
+  Settings,
   Sun,
+  UsersRound,
+  X,
 } from "lucide-react";
 import { Button } from "./ui";
 import { BrandMark } from "./BrandMark";
@@ -23,6 +30,7 @@ export function Shell() {
   const login =
     location.pathname === "/login" || location.pathname === "/auth/callback";
   const building = config?.buildingName || t("common.app_name");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(() => {
     try {
       return localStorage.getItem("moterom-theme") === "dark";
@@ -70,6 +78,60 @@ export function Shell() {
       .querySelector<HTMLElement>("#main-content")
       ?.focus({ preventScroll: true });
   }, [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMenuOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const menu = document.getElementById("app-header-menu");
+    const button = document.getElementById("header-menu-button");
+    const items = () =>
+      [
+        ...(menu?.querySelectorAll<HTMLElement>(
+          "a[href], button:not([disabled])",
+        ) ?? []),
+      ].filter((el) => el.getClientRects().length > 0);
+    items()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        button?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const list = items();
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menu?.contains(target) || button?.contains(target)) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [menuOpen]);
   const logout = async () => {
     try {
       await post("/auth/logout");
@@ -86,6 +148,46 @@ export function Shell() {
   const customer = Boolean(user && !user.isAdmin && !login && !admin);
   const customerNav = customer && dashboardPath;
   const dashboardClass = () => (dashboardPath ? "active" : undefined);
+  const adminSections: {
+    to: string;
+    end?: boolean;
+    label: string;
+    icon: typeof LayoutDashboard;
+  }[] = [
+    {
+      to: "/admin",
+      end: true,
+      label: t("admin.nav.overview"),
+      icon: LayoutDashboard,
+    },
+    {
+      to: "/admin/innsikt",
+      label: t("admin.nav.insights"),
+      icon: ChartColumn,
+    },
+    {
+      to: "/admin/calendar",
+      label: t("admin.nav.calendar"),
+      icon: CalendarDays,
+    },
+    {
+      to: "/admin/bookings",
+      label: t("admin.nav.bookings"),
+      icon: ClipboardList,
+    },
+    {
+      to: "/admin/messages",
+      label: t("admin.nav.messages"),
+      icon: MessageCircle,
+    },
+    { to: "/admin/rooms", label: t("admin.nav.rooms"), icon: Building2 },
+    { to: "/admin/users", label: t("admin.nav.users"), icon: UsersRound },
+    {
+      to: "/admin/settings",
+      label: t("admin.nav.settings"),
+      icon: Settings,
+    },
+  ];
   const customerLinks = [
     {
       to: "/mine-bookinger",
@@ -128,78 +230,128 @@ export function Shell() {
           <NavLink to="/" className="brand" aria-label={t("a11y.brand_home")}>
             <BrandMark />
           </NavLink>
-          {user && (
-            <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
-              {user.isAdmin ? (
-                <>
-                  <NavLink to="/" end>
-                    {t("common.find_rooms")}
-                  </NavLink>
-                  <NavLink to="/admin">{t("common.administration")}</NavLink>
-                </>
-              ) : (
+          <Button
+            id="header-menu-button"
+            variant="tertiary"
+            icon
+            className="header-menu-button"
+            aria-expanded={menuOpen}
+            aria-controls="app-header-menu"
+            aria-label={menuOpen ? t("a11y.close_menu") : t("a11y.open_menu")}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </Button>
+          <div
+            id="app-header-menu"
+            className="header-menu"
+            data-open={menuOpen ? "true" : undefined}
+          >
+            {user && (
+              <nav aria-label={t("a11y.main_nav")} className="desktop-nav">
+                {user.isAdmin ? (
+                  <>
+                    <NavLink to="/" end>
+                      <Building2 aria-hidden size={19} />
+                      {t("common.find_rooms")}
+                    </NavLink>
+                    <NavLink className="header-admin-entry" to="/admin">
+                      {t("common.administration")}
+                    </NavLink>
+                    <div
+                      className="header-admin-links"
+                      role="group"
+                      aria-labelledby="header-admin-label"
+                    >
+                      <p className="header-menu-label" id="header-admin-label">
+                        {t("common.administration")}
+                      </p>
+                      {adminSections.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <NavLink key={item.to} to={item.to} end={item.end}>
+                            <Icon aria-hidden size={19} />
+                            {item.label}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <NavLink
+                      to="/mine-bookinger"
+                      className={dashboardClass}
+                      aria-current={dashboardPath ? "page" : undefined}
+                    >
+                      <LayoutDashboard aria-hidden size={19} />
+                      {t("dashboard.area")}
+                    </NavLink>
+                    <NavLink to="/" end>
+                      <Building2 aria-hidden size={19} />
+                      {t("common.find_rooms")}
+                    </NavLink>
+                  </>
+                )}
+              </nav>
+            )}
+            <div className="header-actions">
+              <Button
+                variant="tertiary"
+                className="language-switch header-tool"
+                data-testid="language-switcher"
+                aria-label={t("a11y.language_switch", { label: nativeLabel })}
+                onClick={cycleLocale}
+              >
+                <Languages aria-hidden className="menu-only-icon" size={19} />
+                <span className="language-switch-code">{label}</span>
+                <span className="header-action-text">{nativeLabel}</span>
+              </Button>
+              <Button
+                variant="tertiary"
+                className="header-icon-button header-tool"
+                aria-label={
+                  dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")
+                }
+                onClick={() => setDark(!dark)}
+              >
+                {dark ? <Sun size={20} /> : <Moon size={20} />}
+                <span className="header-action-text">
+                  {dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")}
+                </span>
+              </Button>
+              {user ? (
                 <>
                   <NavLink
-                    to="/mine-bookinger"
-                    className={dashboardClass}
-                    aria-current={dashboardPath ? "page" : undefined}
+                    to={user.isAdmin ? "/admin" : "/mine-bookinger"}
+                    className="user-name user-name-link"
+                    title={user.name}
                   >
-                    {t("dashboard.area")}
+                    {user.name}
                   </NavLink>
-                  <NavLink to="/" end>
-                    {t("common.find_rooms")}
-                  </NavLink>
+                  <Button
+                    variant="tertiary"
+                    className="header-icon-button"
+                    aria-label={t("a11y.log_out")}
+                    onClick={logout}
+                  >
+                    <LogOut size={20} />
+                    <span className="header-action-text">
+                      {t("a11y.log_out")}
+                    </span>
+                  </Button>
                 </>
-              )}
-            </nav>
-          )}
-          <div className="header-actions">
-            <Button
-              variant="tertiary"
-              className="language-switch"
-              data-testid="language-switcher"
-              aria-label={t("a11y.language_switch", { label: nativeLabel })}
-              onClick={cycleLocale}
-            >
-              {label}
-            </Button>
-            <Button
-              variant="tertiary"
-              icon
-              aria-label={
-                dark ? t("a11y.use_light_theme") : t("a11y.use_dark_theme")
-              }
-              onClick={() => setDark(!dark)}
-            >
-              {dark ? <Sun size={20} /> : <Moon size={20} />}
-            </Button>
-            {user ? (
-              <>
+              ) : config?.access === "members" ? null : (
                 <NavLink
-                  to={user.isAdmin ? "/admin" : "/mine-bookinger"}
-                  className="user-name user-name-link"
+                  className="ds-button"
+                  data-variant="secondary"
+                  data-size="sm"
+                  to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
                 >
-                  {user.name}
+                  {t("auth.log_in")}
                 </NavLink>
-                <Button
-                  variant="tertiary"
-                  icon
-                  aria-label={t("a11y.log_out")}
-                  onClick={logout}
-                >
-                  <LogOut size={20} />
-                </Button>
-              </>
-            ) : config?.access === "members" ? null : (
-              <NavLink
-                className="ds-button"
-                data-variant="secondary"
-                data-size="sm"
-                to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`}
-              >
-                {t("auth.log_in")}
-              </NavLink>
-            )}
+              )}
+            </div>
           </div>
         </header>
       )}
