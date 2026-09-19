@@ -77,6 +77,8 @@ export function RoomCardSchedule({
     panel?.scrollIntoView({ block: "nearest", inline: "nearest" });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         setOpen(false);
         triggerRef.current?.focus();
         return;
@@ -100,10 +102,11 @@ export function RoomCardSchedule({
       if (rootRef.current?.contains(target)) return;
       setOpen(false);
     };
-    document.addEventListener("keydown", onKey);
+    // Capture so the schedule root's stopPropagation cannot swallow Escape or Tab.
+    document.addEventListener("keydown", onKey, true);
     document.addEventListener("pointerdown", onPointer);
     return () => {
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("pointerdown", onPointer);
     };
   }, [open, panelId]);
