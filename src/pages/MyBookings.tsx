@@ -25,9 +25,13 @@ import {
   Button,
   Empty,
   ErrorState,
+  Field,
+  Input,
+  Label,
   Loading,
   Modal,
   SearchFields,
+  Select,
   Status,
   validateSearch,
 } from "../components/ui";
@@ -35,8 +39,19 @@ import { bookHref } from "../components/RoomCard";
 import { RoomPhoto } from "../components/RoomPhoto";
 import { MessageThread } from "../components/MessageThread";
 import type { Booking, Room, Search } from "../../shared/types";
-import { addDays, searchParams, toSearch, today } from "../../shared/time";
-import { useFormatters, useT } from "../i18n";
+import {
+  compareHistory,
+  compareUpcoming,
+  isOpenBooking,
+} from "../../shared/bookingOrder";
+import {
+  addDays,
+  osloDateFromMs,
+  searchParams,
+  toSearch,
+  today,
+} from "../../shared/time";
+import { useFormatters, useI18nLocale, useT } from "../i18n";
 
 function roomFallback(booking: Booking): Room {
   return {
@@ -53,10 +68,11 @@ function roomFallback(booking: Booking): Room {
   };
 }
 
-function isActiveBooking(b: Booking) {
-  return (
-    b.endTime >= Date.now() && !["cancelled", "rejected"].includes(b.status)
-  );
+function matchesStatus(booking: Booking, status: string) {
+  if (status === "all") return true;
+  if (status === "confirmed")
+    return ["confirmed", "approved", "reserved"].includes(booking.status);
+  return booking.status === status;
 }
 
 /** Digilist-style personal bookings dashboard (minside pattern) for this building. */
@@ -64,27 +80,49 @@ export function MyBookings() {
   const { user, loading } = useApp();
   const { t } = useT();
   const { displayDate, shortTime, money } = useFormatters();
+  const { locale } = useI18nLocale();
   const [tab, setTab] = useState<"upcoming" | "history">("upcoming");
+  const [query, setQuery] = useState("");
+  const [roomId, setRoomId] = useState("all");
+  const [status, setStatus] = useState("all");
   const result = useApi<Booking[]>(user ? "/bookings" : null);
   if (loading) return <Loading />;
   if (!user) return <Navigate replace to="/login?returnTo=/mine-bookinger" />;
   const all = result.data || [];
-  const upcomingCount = all.filter(isActiveBooking).length;
+  const upcomingCount = all.filter((booking) => isOpenBooking(booking)).length;
   const pendingCount = all.filter((b) => b.status === "pending").length;
   const confirmedCount = all.filter(
-    (b) =>
-      ["confirmed", "approved", "reserved"].includes(b.status) &&
-      isActiveBooking(b),
+    (b) => matchesStatus(b, "confirmed") && isOpenBooking(b),
   ).length;
-  const bookings = all
+  const rooms = [
+    ...new Map(all.map((b) => [b.roomId, b.roomName])).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1], locale));
+  const needle = query.trim().toLowerCase();
+  const filtersActive = Boolean(needle) || roomId !== "all" || status !== "all";
+  const tabBookings = all.filter((b) =>
+    tab === "upcoming" ? isOpenBooking(b) : !isOpenBooking(b),
+  );
+  const bookings = tabBookings
+    .filter((b) => roomId === "all" || b.roomId === roomId)
+    .filter((b) => matchesStatus(b, status))
     .filter((b) =>
-      tab === "upcoming" ? isActiveBooking(b) : !isActiveBooking(b),
+      !needle
+        ? true
+        : `${b.roomName} ${b.title} ${b.reference}`
+            .toLowerCase()
+            .includes(needle),
     )
-    .sort((a, b) =>
-      tab === "upcoming"
-        ? a.startTime - b.startTime
-        : b.startTime - a.startTime,
-    );
+    .sort(tab === "upcoming" ? compareUpcoming : compareHistory);
+  const groups = bookings.reduce<{ date: string; items: Booking[] }[]>(
+    (list, booking) => {
+      const date = osloDateFromMs(booking.startTime);
+      const current = list.at(-1);
+      if (current?.date === date) current.items.push(booking);
+      else list.push({ date, items: [booking] });
+      return list;
+    },
+    [],
+  );
   return (
     <div className="container">
       <div className="page-heading">
@@ -146,94 +184,153 @@ export function MyBookings() {
           {t("dashboard.tab_history")}
         </button>
       </div>
+      <div className="booking-toolbar">
+        <Field>
+          <Label>{t("dashboard.search_label")}</Label>
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </Field>
+        <Field>
+          <Label>{t("dashboard.filter_room")}</Label>
+          <Select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+            <Select.Option value="all">
+              {t("dashboard.all_rooms")}
+            </Select.Option>
+            {rooms.map(([id, name]) => (
+              <Select.Option key={id} value={id}>
+                {name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Field>
+        <Field>
+          <Label>{t("dashboard.filter_status")}</Label>
+          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <Select.Option value="all">
+              {t("dashboard.all_statuses")}
+            </Select.Option>
+            <Select.Option value="pending">
+              {t("common.status.pending")}
+            </Select.Option>
+            <Select.Option value="confirmed">
+              {t("common.status.confirmed")}
+            </Select.Option>
+            <Select.Option value="cancelled">
+              {t("common.status.cancelled")}
+            </Select.Option>
+            <Select.Option value="rejected">
+              {t("common.status.rejected")}
+            </Select.Option>
+          </Select>
+        </Field>
+      </div>
       {result.loading ? (
         <Loading />
       ) : result.error ? (
         <ErrorState error={result.error} retry={result.reload} />
       ) : bookings.length ? (
         <div className="booking-list">
-          {bookings.map((b, i) => (
-            <article
-              className={`booking-row ${i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
-              key={b.id}
-            >
-              <div className="booking-date">
-                <span>
-                  {new Intl.DateTimeFormat(undefined, {
-                    timeZone: "Europe/Oslo",
-                    month: "short",
-                  }).format(b.startTime)}
-                </span>
-                <strong>
-                  {new Intl.DateTimeFormat(undefined, {
-                    timeZone: "Europe/Oslo",
-                    day: "numeric",
-                  }).format(b.startTime)}
-                </strong>
-              </div>
-              <div className="booking-main">
-                <Status status={b.status} />
-                <h2>
-                  <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
-                </h2>
-                <p>{b.title || b.reference}</p>
-              </div>
-              <div className="booking-time">
-                <strong>{displayDate(b.startTime)}</strong>
-                <span>
-                  {shortTime(b.startTime)}–{shortTime(b.endTime)}
-                </span>
-                {typeof b.people === "number" && b.people > 0 ? (
-                  <span>
-                    {t("booking.participants")}: {b.people}
-                  </span>
-                ) : null}
-              </div>
-              <div className="booking-actions">
-                <Link
-                  className="ds-button"
-                  data-variant="secondary"
-                  data-size="sm"
-                  to={`/booking/${b.id}`}
+          {groups.map((group, groupIndex) => (
+            <section className="booking-day" key={group.date}>
+              <h2 className="booking-day-heading">
+                {groupIndex === 0 && tab === "upcoming"
+                  ? t("dashboard.next_day", {
+                      date: displayDate(group.items[0].startTime, true),
+                    })
+                  : displayDate(group.items[0].startTime, true)}
+              </h2>
+              {group.items.map((b, i) => (
+                <article
+                  className={`booking-row ${groupIndex === 0 && i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
+                  key={b.id}
                 >
-                  {t("dashboard.view_booking")}
-                  <ArrowRight size={16} />
-                </Link>
-                <Link
-                  className="ds-button"
-                  data-variant="tertiary"
-                  data-size="sm"
-                  to={`/booking/${b.id}#meldinger`}
-                >
-                  {t("messages.send")}
-                  <MessageCircle size={16} />
-                </Link>
-                {typeof b.totalPrice === "number" ? (
-                  <span className="caption">
-                    {money(b.totalPrice, b.currency)}
-                  </span>
-                ) : null}
-              </div>
-            </article>
+                  <div className="booking-date">
+                    <span>
+                      {new Intl.DateTimeFormat(undefined, {
+                        timeZone: "Europe/Oslo",
+                        month: "short",
+                      }).format(b.startTime)}
+                    </span>
+                    <strong>
+                      {new Intl.DateTimeFormat(undefined, {
+                        timeZone: "Europe/Oslo",
+                        day: "numeric",
+                      }).format(b.startTime)}
+                    </strong>
+                  </div>
+                  <div className="booking-main">
+                    <Status status={b.status} />
+                    <h3>
+                      <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
+                    </h3>
+                    <p>{b.title || b.reference}</p>
+                  </div>
+                  <div className="booking-time">
+                    <strong>
+                      {shortTime(b.startTime)}–{shortTime(b.endTime)}
+                    </strong>
+                    {typeof b.people === "number" && b.people > 0 ? (
+                      <span>
+                        {t("booking.participants")}: {b.people}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="booking-actions">
+                    <Link
+                      className="ds-button"
+                      data-variant="secondary"
+                      data-size="sm"
+                      to={`/booking/${b.id}`}
+                    >
+                      {t("dashboard.view_booking")}
+                      <ArrowRight size={16} />
+                    </Link>
+                    <Link
+                      className="ds-button"
+                      data-variant="tertiary"
+                      data-size="sm"
+                      to={`/booking/${b.id}#meldinger`}
+                    >
+                      {t("messages.send")}
+                      <MessageCircle size={16} />
+                    </Link>
+                    {typeof b.totalPrice === "number" && b.totalPrice > 0 ? (
+                      <span className="caption">
+                        {money(b.totalPrice, b.currency)}
+                      </span>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </section>
           ))}
         </div>
       ) : (
         <Empty
           icon={<CalendarDays size={36} />}
           title={
-            tab === "upcoming"
-              ? t("dashboard.empty_upcoming_title")
-              : t("dashboard.empty_history_title")
+            filtersActive
+              ? t("dashboard.empty_filtered_title")
+              : tab === "upcoming"
+                ? t("dashboard.empty_upcoming_title")
+                : t("dashboard.empty_history_title")
           }
         >
           <p>
-            {tab === "upcoming"
-              ? t("dashboard.empty_upcoming_body")
-              : t("dashboard.empty_history_body")}
+            {filtersActive
+              ? t("dashboard.empty_filtered_body")
+              : tab === "upcoming"
+                ? t("dashboard.empty_upcoming_body")
+                : t("dashboard.empty_history_body")}
           </p>
-          <Link className="ds-button" to="/">
-            {t("common.find_rooms")}
-          </Link>
+          {!filtersActive && (
+            <Link className="ds-button" to="/">
+              {t("common.find_rooms")}
+            </Link>
+          )}
         </Empty>
       )}
     </div>
