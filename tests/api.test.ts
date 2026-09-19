@@ -355,6 +355,59 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       })
       .expect(200);
   });
+  it("lets an administrator cancel a booking once and rejects a missing block", async () => {
+    const search = {
+      roomId,
+      date: addDays(today(), 21),
+      start: "15:00",
+      end: "16:00",
+      people: 1,
+    };
+    const quote = (
+      await customer
+        .post("/api/quote")
+        .set("Origin", origin)
+        .send(search)
+        .expect(200)
+    ).body;
+    const booked = (
+      await customer
+        .post("/api/bookings")
+        .set("Origin", origin)
+        .set("Idempotency-Key", randomUUID())
+        .send({
+          ...search,
+          title: "Avbestilling",
+          notes: "",
+          quoteToken: quote.token,
+          ...contact,
+        })
+        .expect(201)
+    ).body;
+    expect(booked.status).toBe("confirmed");
+    expect(
+      (
+        await administrator
+          .post(`/api/bookings/${booked.id}/cancel`)
+          .set("Origin", origin)
+          .send({})
+          .expect(200)
+      ).body.status,
+    ).toBe("cancelled");
+    await administrator
+      .post(`/api/bookings/${booked.id}/cancel`)
+      .set("Origin", origin)
+      .send({})
+      .expect(409);
+    await customer
+      .delete("/api/admin/blocks/does-not-exist")
+      .set("Origin", origin)
+      .expect(403);
+    await administrator
+      .delete("/api/admin/blocks/does-not-exist")
+      .set("Origin", origin)
+      .expect(404);
+  });
   it("keeps admin insights behind administrator access", async () => {
     await customer.get("/api/admin/insights").expect(403);
     const insights = await administrator.get("/api/admin/insights").expect(200);

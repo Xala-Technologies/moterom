@@ -76,6 +76,7 @@ describe("persistent demo booking rules", () => {
     const block = store.createBlock(input.roomId, input, "Vedlikehold", admin);
     expect(() => store.create(input, customer, "one")).toThrow();
     store.removeBlock(block.id, admin);
+    expect(() => store.removeBlock(block.id, admin)).toThrow();
     const first = store.create(input, customer, "two");
     const edited = store.requestEdit(
       first.id,

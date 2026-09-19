@@ -258,6 +258,16 @@ export class DemoStore {
         "Bookingen venter ikke på godkjenning.",
         "booking_not_pending",
       );
+    if (
+      action === "cancel" &&
+      (b.cancellationAllowed === false ||
+        ["cancelled", "rejected", "completed"].includes(b.status))
+    )
+      throw new AppError(
+        409,
+        "Denne bookingen kan ikke avbestilles.",
+        "booking_not_cancellable",
+      );
     b.status =
       action === "approve"
         ? "confirmed"
@@ -400,6 +410,15 @@ export class DemoStore {
   }
   removeBlock(id: string, user: User) {
     this.assertAdmin(user);
+    const existing = this.db
+      .prepare("SELECT id FROM blocks WHERE id = ?")
+      .get(id);
+    if (!existing)
+      throw new AppError(
+        404,
+        "Blokkeringen ble ikke funnet.",
+        "block_not_found",
+      );
     this.db.prepare("DELETE FROM blocks WHERE id = ?").run(id);
     this.audit(user, "block.removed", id);
   }

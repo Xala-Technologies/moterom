@@ -127,3 +127,9 @@ Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo`
 Merged [#26](https://github.com/Xala-Technologies/moterom/pull/26) into `dev` and [#27](https://github.com/Xala-Technologies/moterom/pull/27) into `main`. Rebuilt the Hostinger container from `main` `aade799`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged.
 
 Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo` 404 with Origin. Container healthy. Public JS has no `Listevisning`; public CSS has no `.rooms-list`. Not claimed: signed-in Finn rom after this rebuild (needs OTP).
+
+## Admin completeness — 19 September 2026 (local demo)
+
+`fix/admin-completeness` from `origin/dev`. Chromium in Cursor against `http://localhost:4180` (`DATA_MODE=demo`). Port 4173 was already in use by another checkout, so this pass did not use it.
+
+Demo admin: Oversikt stats and empty day, block create/delete surviving refresh, Innsikt query restore and legacy `/admin?visning=innsikt` redirect, calendar day/7-day and phone agenda, booking approve/cancel, edit-request copy that Digilist still applies the change, messages reply surviving refresh, room `requiresApproval` PATCH surviving refresh (then restored), access-request complete as local inbox only, settings hours/prices/payment left as Digilist or “no payment”. Light and dark, NB and EN, 390×844 with no page overflow on the calendar. Customer `/admin` redirected to `/` and `/api/admin` returned 403. Not claimed: screen reader, Safari/Firefox, live Digilist OTP, or production.

@@ -424,6 +424,7 @@
     "pending_section": "Awaiting approval",
     "approve": "Approve",
     "reject": "Decline",
+    "cancel": "Cancel booking",
     "todays_programme": "Today’s schedule",
     "programme_show_all": "See all ({{count}})",
     "programme_more": "Showing the next {{shown}} of {{total}}. Open the calendar for the full day.",
@@ -441,6 +442,8 @@
     "all_statuses": "All statuses",
     "follow_up": "Follow up",
     "open_booking_aria": "Open booking {{room}}, reference {{reference}}",
+    "edit_request_note": "Change pending in Digilist",
+    "edit_request_digilist": "A change request is recorded. The original room and time stay until Digilist approves the change. This portal cannot approve it.",
     "cols": {
       "resource": "Room",
       "schedule": "Schedule",
@@ -551,6 +554,7 @@
       "blocked": "The time slot is blocked.",
       "approved": "The booking is approved.",
       "rejected": "The request has been declined.",
+      "cancelled": "The booking has been cancelled.",
       "block_removed": "The block has been removed.",
       "room_updated": "The room has been updated."
     },
