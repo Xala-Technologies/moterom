@@ -59,6 +59,7 @@ import type {
   Room,
   Search,
 } from "../../shared/types";
+import { compareAgenda } from "../../shared/bookingOrder";
 import {
   addDays,
   defaultSearch,
@@ -114,6 +115,7 @@ export function Admin() {
     if (delta !== 0) window.scrollBy(0, delta);
   }, [date]);
   const [status, setStatus] = useState("all");
+  const [roomFilter, setRoomFilter] = useState("all");
   const [term, setTerm] = useState("");
   const [event, setEvent] = useState<CalendarEvent>();
   const [editRoom, setEditRoom] = useState<Room>();
@@ -188,11 +190,12 @@ export function Admin() {
     .filter(
       (b) =>
         (status === "all" || b.status === status) &&
-        `${b.roomName} ${b.name} ${b.email} ${b.reference}`
+        (roomFilter === "all" || b.roomId === roomFilter) &&
+        `${b.roomName} ${b.name} ${b.email} ${b.reference} ${b.title}`
           .toLowerCase()
           .includes(term.toLowerCase()),
     )
-    .sort((a, b) => b.startTime - a.startTime);
+    .sort(compareAgenda);
   const run = async (task: () => Promise<unknown>, message: string) => {
     if (busyLock.current) return;
     busyLock.current = true;
@@ -576,6 +579,20 @@ export function Admin() {
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
                   />
+                  <Select
+                    aria-label={t("admin.filter_room")}
+                    value={roomFilter}
+                    onChange={(e) => setRoomFilter(e.target.value)}
+                  >
+                    <Select.Option value="all">
+                      {t("admin.all_rooms")}
+                    </Select.Option>
+                    {rooms.map((room) => (
+                      <Select.Option key={room.id} value={room.id}>
+                        {room.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
                   <Select
                     aria-label={t("a11y.filter_status")}
                     value={status}
