@@ -672,7 +672,30 @@ a.brand {
 .booking-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
+}
+.booking-day {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.booking-day-heading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ds-color-neutral-text-subtle);
+}
+.booking-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: end;
+  margin: 0 0 22px;
+}
+.booking-toolbar > .ds-field {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
 }
 .booking-row {
   display: grid;
@@ -704,11 +727,13 @@ a.brand {
   font-size: 1.75rem;
   line-height: 1.3;
 }
-.booking-main h2 {
+.booking-main h2,
+.booking-main h3 {
   margin: 8px 0 3px;
   font-size: 1.125rem;
 }
-.booking-main h2 a {
+.booking-main h2 a,
+.booking-main h3 a {
   text-decoration: none;
   color: inherit;
 }
@@ -4252,6 +4277,13 @@ a.login-option:hover {
     border-top: 1px solid var(--ds-color-neutral-border-subtle);
   }
   .pill-tabs {
+    width: 100%;
+  }
+  .booking-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .booking-toolbar > .ds-field {
     width: 100%;
   }
   .pill-tabs button {
