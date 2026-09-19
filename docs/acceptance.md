@@ -127,3 +127,13 @@ Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo`
 Merged [#26](https://github.com/Xala-Technologies/moterom/pull/26) into `dev` and [#27](https://github.com/Xala-Technologies/moterom/pull/27) into `main`. Rebuilt the Hostinger container from `main` `aade799`. Existing `.env` kept: `DATA_MODE=live`, DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `ALLOW_DEMO_DEPLOYMENT=false`. Digilist git was not merged.
 
 Anonymous: `/api/config` live / members; `/api/rooms` 401; `POST /api/auth/demo` 404 with Origin. Container healthy. Public JS has no `Listevisning`; public CSS has no `.rooms-list`. Not claimed: signed-in Finn rom after this rebuild (needs OTP).
+
+## Hostinger rebuild — 19 September 2026 (date-popover Escape)
+
+Merged [#38](https://github.com/Xala-Technologies/moterom/pull/38) into `dev` and [#39](https://github.com/Xala-Technologies/moterom/pull/39) into `main` (`8227ddd`). Rebuilt the Hostinger container from that commit. Existing `.env` kept: `DATA_MODE=live`, Digilist DEV Convex, tenant `xx7b7h1xq7tj0c2p581tzffyzn8ej4pd`, `BOOKING_ACCESS=members`, `PAYMENT_MODE` unset, `ALLOW_DEMO_DEPLOYMENT=false`. Container healthy.
+
+Anonymous: `/api/config` live / members / Digilist auth configured; `/api/rooms` and `/api/admin` 401; `POST /api/auth/demo` 404 with Origin. Login page has no demo buttons.
+
+Signed in as `skb@digilist.no` (member and Møterom admin). Finn rom listed seven rooms. Escape on Sauda 2’s date popover closed it, left lørdag 19. september 2026 unchanged, and returned focus to the date button. Booked Sauda 2, mandag 28. september 2026, 10:00–11:00, purpose Teammøte. Digilist confirmed `DGL-20260919-Y1SYVW` (`js70k5fsx50dghdq67r649k0b18ep50p`). The hour reloaded unavailable. Mine bookinger still showed it after navigation. A second quote for the same interval returned 409 `room_not_bookable` (same session, not a two-browser race). Avbestill set status `cancelled` and the hour was available again. `GET /api/admin` as this user returned 200.
+
+Not claimed: a second Digilist user’s 403 on admin APIs, a simultaneous two-session conflict, production Digilist tenant, email, invoice, payment, WCAG, or Digilist durable idempotency / atomic no-payment. Confirm-dialog Escape was not verified; the browser driver does not send a trusted Escape to a modal dialog.
