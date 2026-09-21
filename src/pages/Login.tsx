@@ -114,13 +114,6 @@ export function Login() {
     setCode("");
   };
 
-  const startBankId = async () => {
-    const r = await post<{ url: string }>("/auth/oauth/bankid", {
-      returnPath: returnTo,
-    });
-    window.location.assign(r.url);
-  };
-
   const demoSignIn = async (role: "customer" | "admin") => {
     await post("/auth/demo", { role });
     await done("/");
@@ -285,24 +278,6 @@ export function Login() {
                           </span>
                           <span className="login-option-desc">
                             {t("auth.sms_login_desc")}
-                          </span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className="login-option"
-                        disabled={busy}
-                        onClick={() => void run(startBankId)}
-                      >
-                        <span className="login-option-icon" aria-hidden="true">
-                          <ShieldCheck size={20} strokeWidth={1.75} />
-                        </span>
-                        <span className="login-option-copy">
-                          <span className="login-option-title">
-                            {t("auth.bankid_title")}
-                          </span>
-                          <span className="login-option-desc">
-                            {t("auth.bankid_desc")}
                           </span>
                         </span>
                       </button>

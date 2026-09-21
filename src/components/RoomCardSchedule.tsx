@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronDown } from "lucide-react";
 import { useApi } from "../api";
 import type { TimeSlot } from "../../shared/types";
 import { Loading, ErrorState, Button } from "./ui";
@@ -35,12 +35,18 @@ export function RoomCardSchedule({
   const { t } = useT();
   const { displayDate } = useFormatters();
   const dateId = `room-date-${roomId}`;
-  const panelId = useId();
+  const datePanelId = useId();
+  const timesPanelId = useId();
+  const timesToggleId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const timesPanelRef = useRef<HTMLDivElement>(null);
+  const slotsGroupRef = useRef<HTMLDivElement>(null);
+  const focusTimes = useRef(false);
   const [open, setOpen] = useState(false);
+  const [timesOpen, setTimesOpen] = useState(false);
   const slots = useApi<TimeSlot[]>(
-    date
+    timesOpen && date
       ? `/availability/slots?date=${encodeURIComponent(date)}&roomId=${encodeURIComponent(roomId)}`
       : null,
   );
@@ -59,9 +65,13 @@ export function RoomCardSchedule({
         slot.state === "available",
     );
   const canBook = Boolean(selected);
+  const chosen =
+    selection && selection.date === date
+      ? `${selection.start}–${selection.end}`
+      : null;
   useEffect(() => {
     if (!open) return;
-    const panel = document.getElementById(panelId);
+    const panel = document.getElementById(datePanelId);
     const items = () =>
       [
         ...(panel?.querySelectorAll<HTMLElement>("button:not([disabled])") ??
@@ -109,7 +119,22 @@ export function RoomCardSchedule({
       document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("pointerdown", onPointer);
     };
-  }, [open, panelId]);
+  }, [open, datePanelId]);
+  useEffect(() => {
+    if (!timesOpen || !focusTimes.current) return;
+    if (date && (slots.loading || (!slots.data && !slots.error))) return;
+    const group = slotsGroupRef.current;
+    const first = group?.querySelector<HTMLButtonElement>(
+      "button:not([disabled])",
+    );
+    const target = first ?? group ?? timesPanelRef.current;
+    target?.focus({ preventScroll: true, focusVisible: true });
+    timesPanelRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+    focusTimes.current = false;
+  }, [timesOpen, date, slots.loading, slots.data, slots.error]);
 
   return (
     <div
@@ -117,129 +142,178 @@ export function RoomCardSchedule({
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <div className="room-schedule-date" ref={rootRef}>
-        <label htmlFor={dateId}>{t("common.date")}</label>
-        <button
-          ref={triggerRef}
-          id={dateId}
-          type="button"
-          className="room-date-trigger"
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-haspopup="dialog"
-          aria-label={
-            date
-              ? `${t("common.date")}: ${displayDate(date, true)}`
-              : t("a11y.pick_date")
-          }
-          onClick={() => setOpen((current) => !current)}
+      <Button
+        type="button"
+        variant="secondary"
+        id={timesToggleId}
+        className="room-times-toggle"
+        aria-expanded={timesOpen}
+        aria-controls={timesPanelId}
+        onClick={() => {
+          setTimesOpen((current) => {
+            if (current) {
+              setOpen(false);
+              return false;
+            }
+            focusTimes.current = true;
+            return true;
+          });
+        }}
+      >
+        {timesOpen ? t("rooms.hide_times") : t("rooms.show_times")}
+        <ChevronDown
+          aria-hidden
+          size={18}
+          className={timesOpen ? "is-open" : undefined}
+        />
+      </Button>
+      {timesOpen ? (
+        <div
+          id={timesPanelId}
+          ref={timesPanelRef}
+          className="room-schedule-panel"
+          role="region"
+          tabIndex={-1}
+          aria-labelledby={timesToggleId}
         >
-          <span>{date ? displayDate(date, true) : t("a11y.pick_date")}</span>
-          <CalendarDays aria-hidden size={20} />
-        </button>
-        {open && (
-          <div
-            id={panelId}
-            className="room-date-popover"
-            role="dialog"
-            aria-label={t("a11y.pick_date")}
-          >
-            <MonthCalendar
-              value={date}
-              onChange={(next) => {
-                onDateChange(next);
-                onSelect(null);
-                setOpen(false);
-                triggerRef.current?.focus();
-              }}
-            />
-          </div>
-        )}
-      </div>
-      {!date ? (
-        <p className="muted" role="status">
-          {t("rooms.pick_date_for_slots")}
-        </p>
-      ) : slots.loading ? (
-        <Loading label={t("booking.checking_slots")} />
-      ) : slots.error ? (
-        <ErrorState error={slots.error} retry={slots.reload} />
-      ) : (
-        <>
-          <div
-            className="room-schedule-slots"
-            role="group"
-            aria-label={t("a11y.available_times")}
-          >
-            {(slots.data || []).map((slot) => {
-              const label = `${slot.start}–${slot.end}`;
-              const pressed =
-                Boolean(selection) &&
-                selection!.date === date &&
-                selection!.start === slot.start &&
-                selection!.end === slot.end;
-              return (
-                <button
-                  type="button"
-                  key={slot.start}
-                  className={
-                    slot.state === "available"
-                      ? pressed
-                        ? "is-selected"
-                        : "is-available"
-                      : slot.state === "error"
-                        ? "is-unknown"
-                        : "is-unavailable"
-                  }
-                  aria-pressed={pressed}
-                  aria-label={
-                    slot.state === "available"
-                      ? pressed
-                        ? t("a11y.slot_selected", { label })
-                        : label
-                      : slot.state === "error"
-                        ? t("a11y.slot_unknown", { label })
-                        : t("a11y.slot_unavailable", { label })
-                  }
-                  disabled={slot.state !== "available"}
-                  onClick={() => {
-                    if (
-                      pressed ||
-                      (selection?.date === date &&
-                        selection.start === slot.start &&
-                        selection.end === slot.end)
-                    ) {
-                      onSelect(null);
-                      return;
-                    }
-                    onSelect({ date, start: slot.start, end: slot.end });
+          <div className="room-schedule-date" ref={rootRef}>
+            <label htmlFor={dateId}>{t("common.date")}</label>
+            <button
+              ref={triggerRef}
+              id={dateId}
+              type="button"
+              className="room-date-trigger"
+              aria-expanded={open}
+              aria-controls={datePanelId}
+              aria-haspopup="dialog"
+              aria-label={
+                date
+                  ? `${t("common.date")}: ${displayDate(date, true)}`
+                  : t("a11y.pick_date")
+              }
+              onClick={() => setOpen((current) => !current)}
+            >
+              <span>
+                {date ? displayDate(date, true) : t("a11y.pick_date")}
+              </span>
+              <CalendarDays aria-hidden size={20} />
+            </button>
+            {open && (
+              <div
+                id={datePanelId}
+                className="room-date-popover"
+                role="dialog"
+                aria-label={t("a11y.pick_date")}
+              >
+                <MonthCalendar
+                  value={date}
+                  onChange={(next) => {
+                    onDateChange(next);
+                    onSelect(null);
+                    setOpen(false);
+                    triggerRef.current?.focus();
                   }}
-                >
-                  {label}
-                </button>
-              );
-            })}
+                />
+              </div>
+            )}
           </div>
-          {slots.data?.every((slot) => slot.state !== "available") && (
+          {!date ? (
             <p className="muted" role="status">
-              {t("booking.no_slots")}
+              {t("rooms.pick_date_for_slots")}
             </p>
+          ) : slots.loading ? (
+            <Loading label={t("booking.checking_slots")} />
+          ) : slots.error ? (
+            <ErrorState error={slots.error} retry={slots.reload} />
+          ) : (
+            <>
+              <div
+                ref={slotsGroupRef}
+                className="room-schedule-slots"
+                role="group"
+                tabIndex={-1}
+                aria-label={t("a11y.available_times")}
+              >
+                {(slots.data || []).map((slot) => {
+                  const label = `${slot.start}–${slot.end}`;
+                  const pressed =
+                    Boolean(selection) &&
+                    selection!.date === date &&
+                    selection!.start === slot.start &&
+                    selection!.end === slot.end;
+                  return (
+                    <button
+                      type="button"
+                      key={slot.start}
+                      className={
+                        slot.state === "available"
+                          ? pressed
+                            ? "is-selected"
+                            : "is-available"
+                          : slot.state === "error"
+                            ? "is-unknown"
+                            : "is-unavailable"
+                      }
+                      aria-pressed={pressed}
+                      aria-label={
+                        slot.state === "available"
+                          ? pressed
+                            ? t("a11y.slot_selected", { label })
+                            : label
+                          : slot.state === "error"
+                            ? t("a11y.slot_unknown", { label })
+                            : t("a11y.slot_unavailable", { label })
+                      }
+                      disabled={slot.state !== "available"}
+                      onClick={() => {
+                        if (
+                          pressed ||
+                          (selection?.date === date &&
+                            selection.start === slot.start &&
+                            selection.end === slot.end)
+                        ) {
+                          onSelect(null);
+                          return;
+                        }
+                        onSelect({ date, start: slot.start, end: slot.end });
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {slots.data?.every((slot) => slot.state !== "available") && (
+                <p className="muted" role="status">
+                  {t("booking.no_slots")}
+                </p>
+              )}
+            </>
           )}
-        </>
-      )}
-      <div className="room-schedule-actions">
-        <Link className="room-more-options" to={moreHref}>
-          {t("rooms.more_options")}
-        </Link>
-        <Button
-          type="button"
-          data-size="sm"
-          disabled={!canBook}
-          onClick={onBook}
-        >
-          {t("rooms.book_selected")}
-        </Button>
-      </div>
+          <div className="room-schedule-actions">
+            <Link className="room-more-options" to={moreHref}>
+              {t("rooms.more_options")}
+            </Link>
+            <Button
+              type="button"
+              data-size="sm"
+              disabled={!canBook}
+              onClick={onBook}
+            >
+              {t("rooms.book_selected")}
+            </Button>
+          </div>
+        </div>
+      ) : chosen ? (
+        <div className="room-schedule-actions">
+          <p className="room-schedule-selected" role="status">
+            {t("rooms.selected_time", { label: chosen })}
+          </p>
+          <Button type="button" data-size="sm" onClick={onBook}>
+            {t("rooms.book_selected")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

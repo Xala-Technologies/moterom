@@ -119,7 +119,7 @@ export interface AccessRequest {
   updatedAt: number;
   name: string;
   email: string;
-  message: string;
+  company: string;
   userId?: string;
   status: AccessRequestStatus;
 }
@@ -137,6 +137,20 @@ export interface InsightsBooking {
   startTime: number;
   endTime: number;
   status: string;
+  /** Used only to match an access-request company. Stripped before aggregation. */
+  email?: string;
+  company?: string;
+}
+export interface InsightsCompanyRoom {
+  roomId: string;
+  bookingCount: number;
+  reservedHours: number;
+}
+export interface InsightsCompanyRow {
+  company: string;
+  bookingCount: number;
+  reservedHours: number;
+  rooms: InsightsCompanyRoom[];
 }
 export interface InsightsBlock {
   id: string;
@@ -197,6 +211,7 @@ export interface InsightsEnvelope {
   generatedAt: number;
   definitions: { id: string; label: string }[];
   rooms: InsightsRoomRow[];
+  companies: InsightsCompanyRow[];
   trend: InsightsTrendPoint[];
   trendGrain: "week" | "month";
   totals: { bookingCount: number; reservedHours: number };
@@ -209,15 +224,34 @@ export interface InsightsRoomReport extends InsightsEnvelope {
   upcomingBlocks: InsightsBlock[];
   limitations: string[];
 }
+export type ConversationKind = "booking" | "support";
+export interface ConversationContext {
+  roomId: string;
+  roomName: string;
+  image?: string;
+  imageKind?: "illustrative" | "actual";
+  capacity?: number;
+  capacityLabel?: string;
+  capacityLabelEn?: string;
+  bookingId: string;
+  reference?: string;
+  startTime?: number;
+  endTime?: number;
+  status?: string;
+}
 export interface ConversationSummary {
   id: string;
+  kind: ConversationKind;
   bookingId?: string;
+  roomId?: string;
   roomName: string;
   subject: string;
   preview: string;
   updatedAt: number;
   unread: number;
   customerName: string;
+  customerId?: string;
+  context?: ConversationContext;
 }
 export interface Message {
   id: string;
@@ -231,4 +265,12 @@ export interface Message {
 export interface ConversationThread {
   conversation: ConversationSummary | null;
   messages: Message[];
+}
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: number;
+  createdBy: string;
+  active: boolean;
 }

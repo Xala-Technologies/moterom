@@ -213,7 +213,10 @@ export function NewBooking() {
         "Idempotency-Key": request.current.key,
       });
       await refresh();
-      nav(`/booking/${booking.id}?ny=1`, { replace: true });
+      nav(
+        `/booking/${booking.id}?ny=1${params.get("fra") === "admin" ? "&fra=admin" : ""}`,
+        { replace: true },
+      );
     } catch (err) {
       setError(err as Error);
       if (err instanceof ApiError && err.code === "quote_expired") {

@@ -7,6 +7,7 @@ import {
   osloDayRange,
 } from "../shared/time";
 import {
+  assignCompany,
   buildInsights,
   collectPaged,
   formatAbsoluteChange,
@@ -210,6 +211,96 @@ describe("insights aggregation", () => {
     expect(() =>
       parseInsightsQuery({ periode: "7d", rom: "ghost" }, [roomA.id]),
     ).toThrow(AppError);
+  });
+
+  it("ranks companies by reserved hours and ignores an unknown company", () => {
+    const periodDates = { from: "2027-01-15", to: "2027-01-16" };
+    const range = osloDayRange(periodDates.from, periodDates.to);
+    const period = {
+      ...periodDates,
+      fromMs: range.startTime,
+      toMs: range.endTime,
+    };
+    const bookings = [
+      booking({
+        id: "alfa",
+        company: "Alfa",
+        email: "secret@example.invalid",
+        ...interval({ date: "2027-01-15", start: "10:00", end: "12:00" }),
+      }),
+      booking({
+        id: "beta",
+        roomId: roomB.id,
+        company: "Beta",
+        ...interval({ date: "2027-01-15", start: "10:00", end: "11:00" }),
+      }),
+      booking({
+        id: "unnamed",
+        company: "",
+        ...interval({ date: "2027-01-15", start: "13:00", end: "13:30" }),
+      }),
+      booking({
+        id: "pending",
+        company: "Alfa",
+        status: "pending",
+        ...interval({ date: "2027-01-15", start: "08:00", end: "18:00" }),
+      }),
+    ];
+    const data = buildInsights({
+      mode: "demo",
+      rooms: [roomA, roomB],
+      coverage: "complete",
+      period,
+      bookings,
+      company: "Finnes ikke",
+    });
+    expect(data.companies.map((row) => row.company)).toEqual([
+      "Alfa",
+      "Beta",
+      "",
+    ]);
+    expect(data.companies[0]?.rooms.map((room) => room.roomId)).toEqual([
+      roomA.id,
+    ]);
+    expect(data.companies[0]?.reservedHours).toBe(2);
+    expect(data.totals.bookingCount).toBe(3);
+    expect(JSON.stringify(data)).not.toContain("secret@example.invalid");
+
+    const narrowed = buildInsights({
+      mode: "demo",
+      rooms: [roomA, roomB],
+      coverage: "complete",
+      period,
+      bookings,
+      company: "Alfa",
+    });
+    expect(narrowed.companies).toHaveLength(3);
+    expect(narrowed.totals).toEqual({ bookingCount: 1, reservedHours: 2 });
+    expect(
+      narrowed.rooms.find((room) => room.roomId === roomB.id)?.bookingCount,
+    ).toBe(0);
+  });
+
+  it("matches a company from email and does not keep the address", () => {
+    const stamped = assignCompany(
+      [
+        booking({
+          id: "matched",
+          startTime: 1,
+          endTime: 2,
+          email: "Ola@Example.invalid",
+        }),
+        booking({
+          id: "missing",
+          startTime: 1,
+          endTime: 2,
+          email: "missing@example.invalid",
+        }),
+      ],
+      new Map([["ola@example.invalid", "Alfa"]]),
+    );
+    expect(stamped.map((item) => item.company)).toEqual(["Alfa", ""]);
+    expect(stamped.every((item) => !("email" in item))).toBe(true);
   });
 });
 

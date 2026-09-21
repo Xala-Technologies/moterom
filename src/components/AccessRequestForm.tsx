@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { Textarea } from "@digdir/designsystemet-react";
 import { Button, ErrorState, Field, Input, Label } from "./ui";
 import { post } from "../api";
 import { useApp } from "../context";
@@ -23,7 +22,7 @@ export function AccessRequestForm({
   const contactEmail = config?.contactEmail?.trim() || "";
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
-  const [message, setMessage] = useState("");
+  const [company, setCompany] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
   const [submitted, setSubmitted] = useState(false);
@@ -33,7 +32,7 @@ export function AccessRequestForm({
     setBusy(true);
     setError(undefined);
     try {
-      await post<AccessRequest>("/access-requests", { name, email, message });
+      await post<AccessRequest>("/access-requests", { name, email, company });
       setSubmitted(true);
       onDone?.();
     } catch (err) {
@@ -95,20 +94,20 @@ export function AccessRequestForm({
         />
       </Field>
       <Field>
-        <Label>{t("auth.access_request_message")}</Label>
-        <Textarea
-          aria-label={t("auth.access_request_message")}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
+        <Label>{t("auth.access_request_company")}</Label>
+        <Input
+          aria-label={t("auth.access_request_company")}
+          autoComplete="organization"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
           required
-          maxLength={1000}
-          rows={4}
+          maxLength={120}
         />
       </Field>
       <Button
         className="full-width"
         type="submit"
-        disabled={busy || !name.trim() || !email.trim() || !message.trim()}
+        disabled={busy || !name.trim() || !email.trim() || !company.trim()}
       >
         {busy ? t("auth.access_request_sending") : t("auth.request_access")}
       </Button>

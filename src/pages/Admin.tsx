@@ -14,29 +14,53 @@ import {
 } from "react-router-dom";
 import {
   ArrowUpRight,
+  Ban,
   Building2,
   CalendarDays,
   ChartColumn,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CircleX,
   ClipboardList,
   Clock3,
+  DoorOpen,
   Download,
   LayoutDashboard,
+  ListFilter,
   LockKeyhole,
   MessageCircle,
   Plus,
+  Search as SearchIcon,
   Settings,
   ShieldCheck,
   UsersRound,
   X,
 } from "lucide-react";
-import { Textarea } from "@digdir/designsystemet-react";
 import { useApp } from "../context";
 import { api, post, useApi } from "../api";
 import { RoomPhoto } from "../components/RoomPhoto";
 import { AdminBookingList } from "../components/admin/AdminBookingList";
+import {
+  bookingStatusParam,
+  bookingsOverlappingDay,
+  calendarHref,
+  isActiveBooking,
+  eventsOnDay,
+  happeningNowRoomIds,
+  matchesBookingQuery,
+  matchesBookingStatus,
+  matchesRoomFilter,
+  newBookingHref,
+  OVERVIEW_PENDING_LIMIT,
+  parseOsloDate,
+  pendingBookings,
+  programmeWindow,
+} from "../components/admin/adminOverview";
+import { FilterSelect } from "../components/admin/FilterSelect";
+import { BlockTimeForm } from "../components/admin/BlockTimeForm";
+import { RoomEditForm } from "../components/admin/RoomEditForm";
 import {
   Button,
   Empty,
@@ -46,8 +70,6 @@ import {
   Label,
   Loading,
   Modal,
-  SearchFields,
-  Select,
   Status,
   validateSearch,
 } from "../components/ui";
@@ -60,14 +82,7 @@ import type {
   Search,
 } from "../../shared/types";
 import { compareAgenda } from "../../shared/bookingOrder";
-import {
-  addDays,
-  defaultSearch,
-  interval,
-  overlaps,
-  today,
-  toSearch,
-} from "../../shared/time";
+import { addDays, defaultSearch, today, toSearch } from "../../shared/time";
 import { AdminInsights } from "./AdminInsights";
 import { AdminAccessRequests } from "../components/admin/AdminAccessRequests";
 import { AdminMembers } from "../components/admin/AdminMembers";
@@ -90,21 +105,30 @@ export function Admin() {
   const { locale } = useI18nLocale();
   const { displayDate, shortTime } = useFormatters();
   const location = useLocation();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const section = location.pathname.split("/")[2] || "today";
   const result = useApi<AdminData>(user?.isAdmin ? "/admin" : null);
   const accessResult = useApi<AccessRequest[]>(
     user?.isAdmin ? "/admin/access-requests" : null,
   );
-  const [date, setDate] = useState(today());
+  const todayDate = today();
+  const date = parseOsloDate(params.get("dato")) ?? todayDate;
   const [view, setView] = useState<"day" | "week">("day");
   const dateControlsRef = useRef<HTMLDivElement>(null);
   const dateControlsViewportTop = useRef<number | null>(null);
+  const patchParams = (next: Record<string, string | null>) => {
+    const copy = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(next)) {
+      if (value === null || value === "") copy.delete(key);
+      else copy.set(key, value);
+    }
+    setParams(copy, { replace: true });
+  };
   const changeDate = (next: string) => {
-    if (next === date) return;
+    if (!parseOsloDate(next) || next === date) return;
     dateControlsViewportTop.current =
       dateControlsRef.current?.getBoundingClientRect().top ?? null;
-    setDate(next);
+    patchParams({ dato: next === todayDate ? null : next });
   };
   useLayoutEffect(() => {
     const top = dateControlsViewportTop.current;
@@ -114,17 +138,10 @@ export function Admin() {
     const delta = el.getBoundingClientRect().top - top;
     if (delta !== 0) window.scrollBy(0, delta);
   }, [date]);
-  const [status, setStatus] = useState("all");
-  const [roomFilter, setRoomFilter] = useState("all");
-  const [term, setTerm] = useState("");
+  const statusFilter = bookingStatusParam(params.get("status"));
+  const term = params.get("q") ?? "";
   const [event, setEvent] = useState<CalendarEvent>();
   const [editRoom, setEditRoom] = useState<Room>();
-  const [imageFile, setImageFile] = useState<{
-    filename: string;
-    contentType: "image/webp" | "image/jpeg" | "image/png";
-    data: string;
-  }>();
-  const [imagePreview, setImagePreview] = useState<string>();
   const [blockForm, setBlockForm] = useState(false);
   const [blockRoom, setBlockRoom] = useState("");
   const [blockSearch, setBlockSearch] = useState<Search>(defaultSearch());
@@ -152,15 +169,21 @@ export function Admin() {
   const bookings = result.data?.bookings || [];
   const rooms = result.data?.rooms || [];
   const blocks = result.data?.blocks || [];
-  const activeBookings = bookings.filter(
-    (b) => !["cancelled", "rejected"].includes(b.status),
-  );
-  const span = {
-    startTime: interval({ date, start: "00:00", end: "23:59" }).startTime,
-    endTime: interval({ date: addDays(date, 1), start: "00:00", end: "00:01" })
-      .startTime,
-  };
-  const daily = activeBookings.filter((b) => overlaps(b, span));
+  const roomParam = params.get("rom");
+  const roomFilter =
+    !roomParam || roomParam === "all"
+      ? "all"
+      : rooms.length > 0 && !rooms.some((room) => room.id === roomParam)
+        ? "all"
+        : roomParam;
+  const activeBookings = bookings.filter((b) => isActiveBooking(b.status));
+  const daily = bookingsOverlappingDay(activeBookings, date);
+  const pending = pendingBookings(bookings);
+  const pendingPreview = pending.slice(0, OVERVIEW_PENDING_LIMIT);
+  const pendingAccess = (accessResult.data || []).filter(
+    (request) => request.status === "pending",
+  ).length;
+  const now = Date.now();
   const events: CalendarEvent[] = [
     ...activeBookings.map((b) => ({
       ...b,
@@ -175,25 +198,17 @@ export function Admin() {
       block: b,
     })),
   ];
-  const OVERVIEW_PROGRAMME_LIMIT = 5;
-  const dayProgramme = events
-    .filter((e) => overlaps(e, span))
-    .sort((a, b) => a.startTime - b.startTime);
-  const upcomingProgramme = dayProgramme.filter((e) => e.endTime > Date.now());
-  const programmeSource =
-    date === today() && upcomingProgramme.length > 0
-      ? upcomingProgramme
-      : dayProgramme;
-  const programmePreview = programmeSource.slice(0, OVERVIEW_PROGRAMME_LIMIT);
-  const programmeHasMore = dayProgramme.length > programmePreview.length;
+  const happeningNow = happeningNowRoomIds(events, now).length;
+  const programme = programmeWindow(eventsOnDay(events, date), {
+    viewingToday: date === todayDate,
+    now,
+  });
   const filteredBookings = bookings
     .filter(
       (b) =>
-        (status === "all" || b.status === status) &&
-        (roomFilter === "all" || b.roomId === roomFilter) &&
-        `${b.roomName} ${b.name} ${b.email} ${b.reference} ${b.title}`
-          .toLowerCase()
-          .includes(term.toLowerCase()),
+        matchesBookingStatus(b.status, statusFilter) &&
+        matchesRoomFilter(b.roomId, roomFilter) &&
+        matchesBookingQuery(b, term),
     )
     .sort(compareAgenda);
   const run = async (task: () => Promise<unknown>, message: string) => {
@@ -206,8 +221,6 @@ export function Admin() {
       notify(message);
       setEvent(undefined);
       setEditRoom(undefined);
-      setImageFile(undefined);
-      setImagePreview(undefined);
       setBlockForm(false);
       result.reload();
     } catch (e) {
@@ -261,6 +274,9 @@ export function Admin() {
     ],
   };
   const heading = headings[section] || headings.today!;
+  const calendarView =
+    section === "calendar" && view === "week" ? "week" : "day";
+  const openCalendar = calendarHref(date, todayDate);
   const calendar = (
     <>
       <div className="calendar-toolbar">
@@ -269,22 +285,28 @@ export function Admin() {
             variant="secondary"
             icon
             aria-label={
-              view === "week" ? t("a11y.previous_week") : t("a11y.previous_day")
+              calendarView === "week"
+                ? t("a11y.previous_week")
+                : t("a11y.previous_day")
             }
-            onClick={() => changeDate(addDays(date, view === "week" ? -7 : -1))}
+            onClick={() =>
+              changeDate(addDays(date, calendarView === "week" ? -7 : -1))
+            }
           >
             <ChevronLeft size={18} />
           </Button>
-          <Button variant="secondary" onClick={() => changeDate(today())}>
+          <Button variant="secondary" onClick={() => changeDate(todayDate)}>
             {t("admin.today")}
           </Button>
           <Button
             variant="secondary"
             icon
             aria-label={
-              view === "week" ? t("a11y.next_week") : t("a11y.next_day")
+              calendarView === "week" ? t("a11y.next_week") : t("a11y.next_day")
             }
-            onClick={() => changeDate(addDays(date, view === "week" ? 7 : 1))}
+            onClick={() =>
+              changeDate(addDays(date, calendarView === "week" ? 7 : 1))
+            }
           >
             <ChevronRight size={18} />
           </Button>
@@ -297,27 +319,32 @@ export function Admin() {
             }}
           />
         </div>
-        <div
-          className="view-switch"
-          role="group"
-          aria-label={t("a11y.calendar_view")}
-        >
-          <button aria-pressed={view === "day"} onClick={() => setView("day")}>
-            {t("admin.day")}
-          </button>
-          <button
-            aria-pressed={view === "week"}
-            onClick={() => setView("week")}
+        {section === "calendar" && (
+          <div
+            className="view-switch"
+            role="group"
+            aria-label={t("a11y.calendar_view")}
           >
-            {t("admin.seven_days")}
-          </button>
-        </div>
+            <button
+              aria-pressed={calendarView === "day"}
+              onClick={() => setView("day")}
+            >
+              {t("admin.day")}
+            </button>
+            <button
+              aria-pressed={calendarView === "week"}
+              onClick={() => setView("week")}
+            >
+              {t("admin.seven_days")}
+            </button>
+          </div>
+        )}
       </div>
       <RoomCalendar
         date={date}
         rooms={rooms}
         events={events}
-        days={view === "week" ? 7 : 1}
+        days={calendarView === "week" ? 7 : 1}
         onSelect={openEvent}
       />
       <div className="calendar-legend">
@@ -398,7 +425,9 @@ export function Admin() {
             <h1>{heading[0]}</h1>
             <p className="muted">{heading[1]}</p>
           </div>
-          {(section === "bookings" || section === "today") && (
+          {(section === "bookings" ||
+            section === "today" ||
+            section === "calendar") && (
             <div className="admin-heading-actions">
               <Button
                 variant="secondary"
@@ -406,13 +435,22 @@ export function Admin() {
                 onClick={() => {
                   setError(undefined);
                   setBlockForm(true);
-                  setBlockSearch(defaultSearch());
+                  setBlockSearch({
+                    date: date >= todayDate ? date : todayDate,
+                    start: "09:00",
+                    end: "10:00",
+                    people: 1,
+                  });
                 }}
               >
                 <LockKeyhole size={17} />
                 {t("admin.block_time")}
               </Button>
-              <Link className="ds-button" data-size="sm" to="/ny-booking">
+              <Link
+                className="ds-button"
+                data-size="sm"
+                to={newBookingHref(date)}
+              >
                 <Plus size={18} />
                 {t("admin.new_booking")}
               </Link>
@@ -433,49 +471,68 @@ export function Admin() {
               <>
                 <div className="admin-stats">
                   <Stat
+                    to={openCalendar}
                     icon={<CalendarDays size={20} />}
                     value={daily.length}
                     label={
-                      date === today()
+                      date === todayDate
                         ? t("admin.stats.bookings_today")
                         : t("admin.stats.bookings_on_date", {
                             date: displayDate(date),
                           })
                     }
+                    hint={t("admin.stats.open_calendar")}
                   />
                   <Stat
+                    to={calendarHref(todayDate, todayDate)}
                     icon={<Building2 size={20} />}
-                    value={
-                      new Set(
-                        events
-                          .filter(
-                            (e) =>
-                              e.startTime <= Date.now() &&
-                              e.endTime > Date.now(),
-                          )
-                          .map((e) => e.roomId),
-                      ).size
-                    }
+                    value={happeningNow}
                     label={t("admin.stats.happening_now")}
+                    hint={t("admin.stats.open_now")}
+                    muted={date !== todayDate}
+                    note={
+                      date !== todayDate
+                        ? t("admin.stats.happening_now_note")
+                        : undefined
+                    }
                   />
                   <Stat
+                    to="/admin/bookings?status=pending"
                     icon={<Clock3 size={20} />}
-                    value={
-                      bookings.filter((b) => b.status === "pending").length
-                    }
+                    value={pending.length}
                     label={t("admin.stats.pending_approval")}
+                    hint={t("admin.stats.open_pending")}
                   />
                 </div>
-                {bookings.some((b) => b.status === "pending") && (
+                {pendingAccess > 0 && (
+                  <Link className="admin-access-notice" to="/admin/users">
+                    {t(
+                      pendingAccess === 1
+                        ? "admin.access_notice_one"
+                        : "admin.access_notice_other",
+                      { count: pendingAccess },
+                    )}
+                  </Link>
+                )}
+                {pending.length > 0 && (
                   <>
                     <div className="section-heading">
                       <h2>{t("admin.pending_section")}</h2>
+                      {pending.length > pendingPreview.length && (
+                        <NavLink
+                          className="text-link"
+                          to="/admin/bookings?status=pending"
+                        >
+                          {t("admin.pending_show_all", {
+                            count: pending.length,
+                          })}
+                          <ArrowUpRight size={16} />
+                        </NavLink>
+                      )}
                     </div>
                     <div className="admin-booking-list">
                       <AdminBookingList
-                        bookings={bookings
-                          .filter((b) => b.status === "pending")
-                          .sort((a, b) => a.startTime - b.startTime)}
+                        bookings={pendingPreview}
                         rooms={rooms}
                         busy={busy}
                         onOpen={(b) =>
@@ -507,18 +564,18 @@ export function Admin() {
                 )}
                 <div className="section-heading">
                   <h2>{t("admin.todays_programme")}</h2>
-                  {programmeHasMore && (
-                    <NavLink className="text-link" to="/admin/calendar">
+                  {programme.hasMore && (
+                    <NavLink className="text-link" to={openCalendar}>
                       {t("admin.programme_show_all", {
-                        count: dayProgramme.length,
+                        count: programme.source.length,
                       })}
                       <ArrowUpRight size={16} />
                     </NavLink>
                   )}
                 </div>
-                {programmePreview.length ? (
+                {programme.preview.length ? (
                   <div className="admin-booking-list">
-                    {programmePreview.map((e) => (
+                    {programme.preview.map((e) => (
                       <button
                         className="admin-booking-row"
                         key={`${e.kind}-${e.id}`}
@@ -529,6 +586,11 @@ export function Admin() {
                             {rooms.find((r) => r.id === e.roomId)?.name}
                           </strong>
                           <span>{e.title}</span>
+                          {e.booking?.editRequested && (
+                            <span className="caption">
+                              {t("admin.edit_requested")}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <span>
@@ -550,17 +612,17 @@ export function Admin() {
                     <p>{t("admin.empty_day_body")}</p>
                   </Empty>
                 )}
-                {programmeHasMore && (
+                {programme.hasMore && (
                   <p className="caption admin-programme-more">
                     {t("admin.programme_more", {
-                      shown: programmePreview.length,
-                      total: dayProgramme.length,
+                      shown: programme.preview.length,
+                      total: programme.source.length,
                     })}
                   </p>
                 )}
                 <div className="section-heading">
                   <h2>{t("admin.room_calendar")}</h2>
-                  <NavLink className="text-link" to="/admin/calendar">
+                  <NavLink className="text-link" to={openCalendar}>
                     {t("admin.open_calendar")}
                     <ArrowUpRight size={16} />
                   </NavLink>
@@ -572,48 +634,71 @@ export function Admin() {
             {section === "bookings" && (
               <>
                 <div className="admin-list-toolbar">
-                  <Input
-                    type="search"
-                    aria-label={t("a11y.search_bookings")}
-                    placeholder={t("admin.search_placeholder")}
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                  />
-                  <Select
-                    aria-label={t("admin.filter_room")}
+                  <div className="admin-list-search">
+                    <SearchIcon size={18} aria-hidden="true" />
+                    <Input
+                      type="search"
+                      aria-label={t("a11y.search_bookings")}
+                      placeholder={t("admin.search_placeholder")}
+                      value={term}
+                      onChange={(e) =>
+                        patchParams({ q: e.target.value || null })
+                      }
+                    />
+                  </div>
+                  <FilterSelect
+                    label={t("admin.filter_room")}
                     value={roomFilter}
-                    onChange={(e) => setRoomFilter(e.target.value)}
-                  >
-                    <Select.Option value="all">
-                      {t("admin.all_rooms")}
-                    </Select.Option>
-                    {rooms.map((room) => (
-                      <Select.Option key={room.id} value={room.id}>
-                        {room.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                  <Select
-                    aria-label={t("a11y.filter_status")}
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                  >
-                    <Select.Option value="all">
-                      {t("admin.all_statuses")}
-                    </Select.Option>
-                    <Select.Option value="confirmed">
-                      {t("common.status.confirmed")}
-                    </Select.Option>
-                    <Select.Option value="pending">
-                      {t("common.status.pending")}
-                    </Select.Option>
-                    <Select.Option value="cancelled">
-                      {t("common.status.cancelled")}
-                    </Select.Option>
-                    <Select.Option value="rejected">
-                      {t("common.status.rejected")}
-                    </Select.Option>
-                  </Select>
+                    onChange={(value) =>
+                      patchParams({ rom: value === "all" ? null : value })
+                    }
+                    options={[
+                      {
+                        value: "all",
+                        label: t("admin.all_rooms"),
+                        icon: <Building2 size={18} />,
+                      },
+                      ...rooms.map((room) => ({
+                        value: room.id,
+                        label: room.name,
+                        icon: <DoorOpen size={18} />,
+                      })),
+                    ]}
+                  />
+                  <FilterSelect
+                    label={t("a11y.filter_status")}
+                    value={statusFilter}
+                    onChange={(value) =>
+                      patchParams({ status: value === "all" ? null : value })
+                    }
+                    options={[
+                      {
+                        value: "all",
+                        label: t("admin.all_statuses"),
+                        icon: <ListFilter size={18} />,
+                      },
+                      {
+                        value: "confirmed",
+                        label: t("common.status.confirmed"),
+                        icon: <CheckCircle2 size={18} />,
+                      },
+                      {
+                        value: "pending",
+                        label: t("common.status.pending"),
+                        icon: <Clock3 size={18} />,
+                      },
+                      {
+                        value: "cancelled",
+                        label: t("common.status.cancelled"),
+                        icon: <Ban size={18} />,
+                      },
+                      {
+                        value: "rejected",
+                        label: t("common.status.rejected"),
+                        icon: <CircleX size={18} />,
+                      },
+                    ]}
+                  />
                 </div>
                 <div className="admin-booking-list">
                   {filteredBookings.length ? (
@@ -662,7 +747,7 @@ export function Admin() {
                       <div className="admin-room-media">
                         <RoomPhoto room={room} />
                       </div>
-                      <div>
+                      <div className="admin-room-copy">
                         <h2>{room.name}</h2>
                         <p>
                           <UsersRound size={16} />
@@ -676,10 +761,7 @@ export function Admin() {
                       </div>
                       <Button
                         variant="secondary"
-                        data-size="sm"
                         onClick={() => {
-                          setImageFile(undefined);
-                          setImagePreview(undefined);
                           setEditRoom({ ...room });
                           setError(undefined);
                         }}
@@ -849,6 +931,11 @@ export function Admin() {
           {event.booking && (
             <>
               <Status status={event.status} />
+              {event.booking.editRequested && (
+                <p className="info-message" role="status">
+                  {t("booking.edit_pending_info")}
+                </p>
+              )}
               <p>
                 {event.booking.name}
                 <br />
@@ -930,252 +1017,27 @@ export function Admin() {
           title={t("admin.edit_room_title", { name: editRoom.name })}
           wide
           close={() => {
-            if (!busy) {
-              setEditRoom(undefined);
-              setImageFile(undefined);
-              setImagePreview(undefined);
-            }
+            if (!busy) setEditRoom(undefined);
           }}
         >
-          <form
-            className="stack room-edit-form"
-            onSubmit={(e) => {
-              e.preventDefault();
+          <RoomEditForm
+            key={editRoom.id}
+            room={editRoom}
+            mode={config?.mode}
+            busy={busy}
+            error={error}
+            onChange={(next) => setEditRoom(next)}
+            onSubmit={(payload) => {
               void run(
                 () =>
                   api(`/admin/rooms/${editRoom.id}`, {
                     method: "PATCH",
-                    body: JSON.stringify({
-                      name: editRoom.name,
-                      capacity: editRoom.capacity,
-                      description: editRoom.description,
-                      descriptionEn: editRoom.descriptionEn,
-                      capacityLabel: editRoom.capacityLabel,
-                      capacityLabelEn: editRoom.capacityLabelEn,
-                      requiresApproval: editRoom.requiresApproval,
-                      imageKind: editRoom.imageKind || "illustrative",
-                      image: editRoom.image?.startsWith("/rooms/")
-                        ? undefined
-                        : editRoom.image,
-                      amenities: editRoom.amenities,
-                      arrivalInfo: editRoom.arrivalInfo || "",
-                      ...(imageFile ? { imageFile } : {}),
-                    }),
+                    body: JSON.stringify(payload),
                   }),
                 t("admin.toasts.room_updated"),
               );
             }}
-          >
-            <div className="room-edit-photo">
-              <span className="eyebrow">{t("admin.room_image")}</span>
-              <RoomPhoto
-                room={{
-                  ...editRoom,
-                  image: imagePreview || editRoom.image,
-                }}
-              />
-            </div>
-            {config?.mode === "live" ? (
-              <Field>
-                <Label htmlFor="room-image-url">
-                  {t("admin.room_image_url")}
-                </Label>
-                <Input
-                  id="room-image-url"
-                  type="url"
-                  value={
-                    editRoom.image?.startsWith("/rooms/")
-                      ? ""
-                      : editRoom.image || ""
-                  }
-                  placeholder="https://"
-                  onChange={(e) =>
-                    setEditRoom({ ...editRoom, image: e.target.value })
-                  }
-                />
-                <p className="caption">{t("admin.room_image_url_hint")}</p>
-              </Field>
-            ) : (
-              <Field>
-                <Label>{t("admin.room_image_upload")}</Label>
-                <Input
-                  aria-label={t("admin.room_image_upload")}
-                  type="file"
-                  accept="image/webp,image/jpeg,image/png"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const type = file.type as
-                      "image/webp" | "image/jpeg" | "image/png";
-                    if (
-                      !["image/webp", "image/jpeg", "image/png"].includes(type)
-                    )
-                      return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      const result = String(reader.result || "");
-                      const data = result.includes(",")
-                        ? result.slice(result.indexOf(",") + 1)
-                        : result;
-                      const preview = URL.createObjectURL(file);
-                      setImagePreview(preview);
-                      setImageFile({
-                        filename: file.name,
-                        contentType: type,
-                        data,
-                      });
-                      setEditRoom({
-                        ...editRoom,
-                        imageKind: editRoom.imageKind || "illustrative",
-                      });
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                />
-                <p className="caption">{t("admin.room_image_upload_hint")}</p>
-              </Field>
-            )}
-            <Field>
-              <Label>{t("admin.room_image_kind")}</Label>
-              <Select
-                aria-label={t("admin.room_image_kind")}
-                value={editRoom.imageKind || "illustrative"}
-                onChange={(e) =>
-                  setEditRoom({
-                    ...editRoom,
-                    imageKind: e.target.value as "illustrative" | "actual",
-                  })
-                }
-              >
-                <Select.Option value="illustrative">
-                  {t("admin.room_image_illustrative")}
-                </Select.Option>
-                <Select.Option value="actual">
-                  {t("admin.room_image_actual")}
-                </Select.Option>
-              </Select>
-            </Field>
-            <Field>
-              <Label>{t("admin.room_name")}</Label>
-              <Input
-                aria-label={t("admin.room_name")}
-                value={editRoom.name}
-                required
-                maxLength={100}
-                onChange={(e) =>
-                  setEditRoom({ ...editRoom, name: e.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.confirmed_capacity")}</Label>
-              <Input
-                aria-label={t("admin.confirmed_capacity")}
-                type="number"
-                min={1}
-                max={500}
-                value={editRoom.capacity}
-                required
-                onChange={(e) =>
-                  setEditRoom({ ...editRoom, capacity: Number(e.target.value) })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.capacity_label")}</Label>
-              <Input
-                aria-label={t("admin.capacity_label")}
-                value={editRoom.capacityLabel}
-                maxLength={100}
-                onChange={(e) =>
-                  setEditRoom({ ...editRoom, capacityLabel: e.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.capacity_label_en")}</Label>
-              <Input
-                aria-label={t("admin.capacity_label_en")}
-                value={editRoom.capacityLabelEn}
-                maxLength={100}
-                onChange={(e) =>
-                  setEditRoom({ ...editRoom, capacityLabelEn: e.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.description")}</Label>
-              <Textarea
-                aria-label={t("admin.description")}
-                value={editRoom.description}
-                maxLength={3000}
-                onChange={(e) =>
-                  setEditRoom({ ...editRoom, description: e.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.description_en")}</Label>
-              <Textarea
-                aria-label={t("admin.description_en")}
-                value={editRoom.descriptionEn}
-                maxLength={3000}
-                onChange={(e) =>
-                  setEditRoom({ ...editRoom, descriptionEn: e.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.room_amenities")}</Label>
-              <Textarea
-                aria-label={t("admin.room_amenities")}
-                value={editRoom.amenities.join("\n")}
-                maxLength={1600}
-                onChange={(e) =>
-                  setEditRoom({
-                    ...editRoom,
-                    amenities: e.target.value
-                      .split("\n")
-                      .map((line) => line.trim())
-                      .filter(Boolean)
-                      .slice(0, 20),
-                  })
-                }
-              />
-              <p className="caption">{t("admin.room_amenities_hint")}</p>
-            </Field>
-            <Field>
-              <Label>{t("admin.room_arrival_info")}</Label>
-              <Textarea
-                aria-label={t("admin.room_arrival_info")}
-                value={editRoom.arrivalInfo || ""}
-                maxLength={1000}
-                onChange={(e) =>
-                  setEditRoom({
-                    ...editRoom,
-                    arrivalInfo: e.target.value || undefined,
-                  })
-                }
-              />
-            </Field>
-            <label className="consent">
-              <input
-                type="checkbox"
-                checked={editRoom.requiresApproval}
-                onChange={(e) =>
-                  setEditRoom({
-                    ...editRoom,
-                    requiresApproval: e.target.checked,
-                  })
-                }
-              />
-              {t("admin.bookings_need_approval")}
-            </label>
-            {error && <ErrorState error={error} />}
-            <Button type="submit" disabled={busy}>
-              {busy ? t("common.saving") : t("admin.save_changes")}
-            </Button>
-          </form>
+          />
         </Modal>
       )}
       {blockForm && (
@@ -1186,37 +1048,16 @@ export function Admin() {
           }}
         >
           <p className="muted">{t("admin.block_modal_intro")}</p>
-          <form className="stack" onSubmit={createBlock}>
-            <Field>
-              <Label>{t("common.room")}</Label>
-              <Select
-                aria-label={t("common.room")}
-                value={blockRoom || rooms[0]?.id || ""}
-                onChange={(e) => setBlockRoom(e.target.value)}
-              >
-                {rooms.map((r) => (
-                  <Select.Option key={r.id} value={r.id}>
-                    {r.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Field>
-            <SearchFields
-              compact
+          <form className="stack block-form" onSubmit={createBlock}>
+            <BlockTimeForm
+              rooms={rooms}
+              roomId={blockRoom || rooms[0]?.id || ""}
+              onRoom={setBlockRoom}
               value={blockSearch}
               onChange={setBlockSearch}
+              title={blockTitle}
+              onTitle={setBlockTitle}
             />
-            <Field>
-              <Label>{t("admin.reason")}</Label>
-              <Input
-                aria-label={t("admin.reason")}
-                value={blockTitle}
-                maxLength={120}
-                required
-                placeholder={t("admin.reason_placeholder")}
-                onChange={(e) => setBlockTitle(e.target.value)}
-              />
-            </Field>
             {error && <ErrorState error={error} />}
             <Button type="submit" disabled={busy}>
               {busy ? t("admin.blocking") : t("admin.block_submit")}
@@ -1228,22 +1069,34 @@ export function Admin() {
   );
 }
 function Stat({
+  to,
   icon,
   value,
   label,
+  hint,
+  muted,
+  note,
 }: {
+  to: string;
   icon: ReactNode;
   value: number;
   label: string;
+  hint: string;
+  muted?: boolean;
+  note?: string;
 }) {
   return (
-    <div className="stat">
+    <Link className={`stat${muted ? " is-other-day" : ""}`} to={to}>
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
+        {note ? <span className="stat-note">{note}</span> : null}
       </div>
-      <span className="stat-icon">{icon}</span>
-    </div>
+      <span className="stat-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="visually-hidden">{hint}</span>
+    </Link>
   );
 }
 function RoomCalendar({

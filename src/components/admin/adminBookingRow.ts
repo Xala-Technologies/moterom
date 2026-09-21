@@ -45,6 +45,7 @@ export type AdminBookingRow = {
   paymentStatusLabel: string | null;
   paymentTone: AdminPaymentTone;
   openAriaLabel: string;
+  editRequestedLabel: string | null;
   actions: AdminBookingAction[];
 };
 
@@ -155,6 +156,9 @@ export function toAdminBookingRow(
       room: booking.roomName,
       reference: booking.reference,
     }),
+    editRequestedLabel: booking.editRequested
+      ? t("admin.edit_requested")
+      : null,
     actions,
   };
 }

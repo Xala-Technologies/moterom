@@ -13,11 +13,12 @@ describe("access request store", () => {
     const created = store.create({
       name: "Ola Nordmann",
       email: "ola@example.invalid",
-      message: "Trenger tilgang til møterom",
+      company: "Testfirma AS",
       userId: "user-1",
     });
     expect(created.status).toBe("pending");
     expect(created.email).toBe("ola@example.invalid");
+    expect(created.company).toBe("Testfirma AS");
     expect(store.list()).toHaveLength(1);
     expect(store.hasApproved("ola@example.invalid")).toBe(false);
 
@@ -32,7 +33,7 @@ describe("access request store", () => {
     const created = store.create({
       name: "Ola",
       email: "ola@example.invalid",
-      message: "Hei",
+      company: "Hei",
     });
     store.updateStatus(created.id, "approved");
     store.updateStatus(created.id, "rejected");
@@ -43,18 +44,48 @@ describe("access request store", () => {
     const first = store.create({
       name: "Ola",
       email: "ola@example.invalid",
-      message: "Første",
+      company: "Første",
     });
     const second = store.create({
       name: "Ola Nordmann",
       email: "OLA@example.invalid",
-      message: "Andre",
+      company: "Andre",
     });
     expect(second.id).toBe(first.id);
+    expect(second.company).toBe("Andre");
     expect(store.list()).toHaveLength(1);
   });
 
   it("throws when updating a missing request", () => {
     expect(() => store.updateStatus("missing", "rejected")).toThrow(AppError);
+  });
+
+  it("removes a request and clears approval", () => {
+    const created = store.create({
+      name: "Ola",
+      email: "ola@example.invalid",
+      company: "Hei",
+    });
+    store.updateStatus(created.id, "approved");
+    store.remove(created.id);
+    expect(store.list()).toHaveLength(0);
+    expect(store.hasApproved("ola@example.invalid")).toBe(false);
+    expect(() => store.remove(created.id)).toThrow(AppError);
+  });
+
+  it("maps an email to the latest non-empty company", () => {
+    const first = store.create({
+      name: "Ola",
+      email: "ola@example.invalid",
+      company: "Første",
+    });
+    store.updateStatus(first.id, "approved");
+    store.create({
+      name: "Ola",
+      email: "OLA@example.invalid",
+      company: "Andre",
+    });
+    expect(store.companyByEmail().get("ola@example.invalid")).toBe("Andre");
+    expect(store.companyByEmail().has("missing@example.invalid")).toBe(false);
   });
 });

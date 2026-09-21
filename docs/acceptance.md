@@ -137,3 +137,18 @@ Anonymous: `/api/config` live / members / Digilist auth configured; `/api/rooms`
 Signed in as `skb@digilist.no` (member and Møterom admin). Finn rom listed seven rooms. Escape on Sauda 2’s date popover closed it, left lørdag 19. september 2026 unchanged, and returned focus to the date button. Booked Sauda 2, mandag 28. september 2026, 10:00–11:00, purpose Teammøte. Digilist confirmed `DGL-20260919-Y1SYVW` (`js70k5fsx50dghdq67r649k0b18ep50p`). The hour reloaded unavailable. Mine bookinger still showed it after navigation. A second quote for the same interval returned 409 `room_not_bookable` (same session, not a two-browser race). Avbestill set status `cancelled` and the hour was available again. `GET /api/admin` as this user returned 200.
 
 Not claimed: a second Digilist user’s 403 on admin APIs, a simultaneous two-session conflict, production Digilist tenant, email, invoice, payment, WCAG, or Digilist durable idempotency / atomic no-payment. Confirm-dialog Escape was not verified; the browser driver does not send a trusted Escape to a modal dialog.
+
+## Admin overview drill-down
+
+`/admin` is the daily desk. These checks are local-demo behaviour, not a live Digilist claim:
+
+- **Bookinger i dag** opens `/admin/calendar` for the selected Oslo date. A non-today date is `?dato=` and survives refresh.
+- **Pågår nå** always means rooms occupied at the current time, including blocks. On another date the card says so and still opens today’s calendar.
+- **Venter på godkjenning** opens `/admin/bookings?status=pending`. The confirmed filter also includes Digilist `approved`. Search, room and status stay in the URL.
+- The pending list shows at most five bookings, with approve/reject in place and **Se alle** to the filtered list.
+- **Dagens program** “Se alle” counts only the list being shown (still-open meetings when any remain today), not meetings already hidden because they ended.
+- A pending membership request is a separate notice linking to `/admin/users`. It is not mixed into booking approval.
+- **Blokker tid** and **Ny booking** are on overview, calendar and bookings. **Ny booking** uses `fra=admin`; the confirmation offers **Tilbake til oversikt**.
+- Overview calendar is day-only. `/admin/calendar` keeps Dag / 7 dager.
+
+Verified 20 September 2026 in local demo (`http://localhost:4173`, Chromium in Cursor): KPI links, `dato` and `status=pending` survived refresh, a calendar block appeared in Dagens program, **Ny booking** with `fra=admin` returned via **Tilbake til oversikt**, and approving a pending booking cleared the queue. A temporary membership request showed the separate notice and was deleted afterwards. Dark theme stayed readable. Viewport 360 had no horizontal page scroll; heading actions sat above the bottom nav. `npm run check` and `npm run format:check` passed. Not claimed: live Digilist, VoiceOver, Safari, or Firefox.
