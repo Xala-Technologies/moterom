@@ -18,22 +18,22 @@ Møterom Admin UI  →  same-origin Express BFF  →  Digilist REST / Convex
 
 - The browser never talks to Convex.
 - Identity, tenant membership, rooms, availability, bookings, and conflicts stay in Digilist.
-- Møterom-only data is the access-request inbox (existing SQLite) and `config/rooms.json`.
+- Møterom-only data is the access-request inbox (existing SQLite), support conversations and building announcements (`.data/messaging_local.sqlite` by default), and `config/rooms.json`. Sent support messages and announcements are persisted there; deleting that file deletes that history. Booking message history in live mode stays in Digilist. Paths under `/tmp` (common on Vercel demo) are ephemeral and must not be used for live durable data.
 - No payments, invoices, checkout, or payment settings.
 
 ## What to rebuild vs exclude
 
-| Screen       | In Møterom                                               | Digilist analogue        | Exclude                                        |
-| ------------ | -------------------------------------------------------- | ------------------------ | ---------------------------------------------- |
-| Overview     | `/admin` stats, programme, embedded day calendar         | `/` `DashboardPage`      | Onboarding, Bli utleier, revenue               |
-| Calendar     | `/admin/calendar` day/7-day (month later)                | `/tenant/calendar`       | Wallet chrome, platform-global calendar        |
-| Bookings     | `/admin/bookings` list, approve/reject                   | `/tenant/bookings`       | Payment filters, invoices, refunds             |
-| Rooms        | `/admin/rooms` content for seven portal rooms            | `/tenant/listings`       | Create listing, marketplace, pricing           |
-| Members      | `/admin/users` one row per person; fixture emails hidden | `/tenant/team`           | Role change and `inviteMember` magic links     |
-| Messages     | `/admin/messages` plus customer booking thread           | `/tenant/messages`       | Internal notes, templates, assignment          |
-| Access inbox | `/admin/users` local requests                            | none                     | Mapping requests to `inviteMember` magic links |
-| Insights     | `/admin/innsikt` occupancy aggregates                    | `/tenant/innsikt`        | Revenue, CRM                                   |
-| Settings     | Building + members-only flag                             | `/account` minus billing | Payouts, subscription, Stripe, embed           |
+| Screen       | In Møterom                                                                                       | Digilist analogue        | Exclude                                        |
+| ------------ | ------------------------------------------------------------------------------------------------ | ------------------------ | ---------------------------------------------- |
+| Overview     | `/admin` stats, programme, embedded day calendar                                                 | `/` `DashboardPage`      | Onboarding, Bli utleier, revenue               |
+| Calendar     | `/admin/calendar` day/7-day (month later)                                                        | `/tenant/calendar`       | Wallet chrome, platform-global calendar        |
+| Bookings     | `/admin/bookings` list, approve/reject                                                           | `/tenant/bookings`       | Payment filters, invoices, refunds             |
+| Rooms        | `/admin/rooms` content for seven portal rooms                                                    | `/tenant/listings`       | Create listing, marketplace, pricing           |
+| Members      | `/admin/users` one row per person; fixture emails hidden                                         | `/tenant/team`           | Role change and `inviteMember` magic links     |
+| Messages     | `/admin/messages` plus customer booking thread and general support; building announcements popup | `/tenant/messages`       | Internal notes, templates, assignment          |
+| Access inbox | `/admin/users` local requests                                                                    | none                     | Mapping requests to `inviteMember` magic links |
+| Insights     | `/admin/innsikt` occupancy aggregates                                                            | `/tenant/innsikt`        | Revenue, CRM                                   |
+| Settings     | Building + members-only flag                                                                     | `/account` minus billing | Payouts, subscription, Stripe, embed           |
 
 ## Future Digilist work (separate repo, GitNexus required)
 

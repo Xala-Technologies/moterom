@@ -6,9 +6,11 @@ import { useFormatters, useT } from "../i18n";
 export function MonthCalendar({
   value,
   onChange,
+  hint,
 }: {
   value: string;
   onChange: (date: string) => void;
+  hint?: string;
 }) {
   const { t } = useT();
   const { bcp47 } = useFormatters();
@@ -93,7 +95,7 @@ export function MonthCalendar({
           );
         })}
       </div>
-      <p className="caption">{t("rooms.calendar_availability_hint")}</p>
+      <p className="caption">{hint ?? t("rooms.calendar_availability_hint")}</p>
     </div>
   );
 }

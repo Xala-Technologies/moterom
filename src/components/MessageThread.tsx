@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Textarea } from "@digdir/designsystemet-react";
 import { Send } from "lucide-react";
 import { api, post } from "../api";
@@ -25,7 +25,9 @@ export function MessageThread({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const log = useRef<HTMLDivElement>(null);
+  const composeId = useId();
   useEffect(() => {
+    setDraft("");
     if (!endpoint) {
       setThread(undefined);
       setLoading(false);
@@ -109,9 +111,9 @@ export function MessageThread({
       {error && <ErrorState error={error} />}
       <form className="message-composer" onSubmit={send}>
         <Field>
-          <Label>{t("messages.compose_label")}</Label>
+          <Label htmlFor={composeId}>{t("messages.compose_label")}</Label>
           <Textarea
-            aria-label={t("messages.compose_label")}
+            id={composeId}
             rows={3}
             maxLength={4000}
             value={draft}

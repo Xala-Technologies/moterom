@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, MessageCircle } from "lucide-react";
+import { ChevronLeft, Megaphone, MessageCircle, Search } from "lucide-react";
 import { useApi } from "../../api";
-import { Button, Empty, ErrorState, Field, Input, Label, Loading } from "../ui";
+import { useApp } from "../../context";
+import { Button, Empty, ErrorState, Input, Loading, Modal } from "../ui";
 import { MessageThread } from "../MessageThread";
+import { MessageContextCard } from "../MessageContextCard";
+import { AnnouncementForm, publishAnnouncement } from "./AnnouncementForm";
 import type { ConversationSummary } from "../../../shared/types";
 import { useFormatters, useT } from "../../i18n";
 
@@ -13,10 +16,15 @@ function initials(name: string): string {
   return `${parts[0]!.slice(0, 1)}${parts[parts.length - 1]!.slice(0, 1)}`.toUpperCase();
 }
 
+function rowMeta(row: ConversationSummary, supportLabel: string): string {
+  if (row.kind === "support") return supportLabel;
+  return row.roomName || row.subject;
+}
+
 function matchesQuery(row: ConversationSummary, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [row.customerName, row.roomName, row.subject, row.preview]
+  return [row.customerName, row.roomName, row.subject, row.preview, row.kind]
     .join(" ")
     .toLowerCase()
     .includes(q);
@@ -24,12 +32,16 @@ function matchesQuery(row: ConversationSummary, query: string): boolean {
 
 export function AdminMessages() {
   const { t } = useT();
+  const { notify } = useApp();
   const { displayDate, shortTime } = useFormatters();
   const result = useApi<ConversationSummary[]>("/admin/messages");
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [phoneThreadOpen, setPhoneThreadOpen] = useState(false);
+  const [announceOpen, setAnnounceOpen] = useState(false);
+  const [announceBusy, setAnnounceBusy] = useState(false);
+  const [announceError, setAnnounceError] = useState<Error>();
   const [narrow, setNarrow] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -44,6 +56,21 @@ export function AdminMessages() {
     return () => media.removeEventListener("change", update);
   }, []);
 
+  useEffect(() => {
+    if (!result.data) return;
+    setSelected((current) => {
+      const stillThere =
+        current && result.data!.some((row) => row.id === current);
+      if (stillThere) return current;
+      if (narrow) return undefined;
+      const first = result.data!.find((row) => {
+        if (unreadOnly && row.unread <= 0) return false;
+        return matchesQuery(row, query);
+      });
+      return first?.id;
+    });
+  }, [narrow, query, result.data, unreadOnly]);
+
   if (result.loading) return <Loading />;
   if (result.error)
     return <ErrorState error={result.error} retry={result.reload} />;
@@ -54,18 +81,20 @@ export function AdminMessages() {
     if (unreadOnly && row.unread <= 0) return false;
     return matchesQuery(row, query);
   });
-  const visible = new Set(filtered.map((row) => row.id));
-  const selectedVisible =
-    selected && visible.has(selected) ? selected : undefined;
-  const active = selectedVisible
-    ? selectedVisible
-    : narrow
-      ? phoneThreadOpen && selected && rows.some((row) => row.id === selected)
-        ? selected
+  const selectedKnown =
+    selected && rows.some((row) => row.id === selected) ? selected : undefined;
+  const active = selectedKnown
+    ? narrow
+      ? phoneThreadOpen
+        ? selectedKnown
         : undefined
+      : selectedKnown
+    : narrow
+      ? undefined
       : filtered[0]?.id;
   const activeRow = rows.find((row) => row.id === active);
   const showThread = Boolean(active) && (!narrow || phoneThreadOpen);
+  const supportLabel = t("messages.kind_support");
 
   const openRow = (id: string) => {
     setSelected(id);
@@ -99,148 +128,196 @@ export function AdminMessages() {
     ) : null;
 
   return (
-    <div
-      className="admin-messages"
-      data-narrow={narrow ? "true" : "false"}
-      data-phone-pane={phoneThreadOpen ? "thread" : "list"}
-    >
-      <section
-        className="admin-messages-list"
-        aria-label={t("messages.list_aria")}
+    <>
+      <div
+        className="admin-messages"
+        data-narrow={narrow ? "true" : "false"}
+        data-phone-pane={phoneThreadOpen ? "thread" : "list"}
       >
-        <div className="admin-messages-toolbar">
-          <div className="admin-messages-toolbar-top">
-            <h2>{t("messages.list_count", { count: rows.length })}</h2>
-            <div
-              className="view-switch"
-              role="group"
-              aria-label={t("messages.filter_aria")}
-            >
-              <button
-                type="button"
-                aria-pressed={!unreadOnly}
-                onClick={() => setUnreadOnly(false)}
-              >
-                {t("admin.users.filter_with_count", {
-                  label: t("messages.filter_all"),
-                  count: rows.length,
-                })}
-              </button>
-              <button
-                type="button"
-                aria-pressed={unreadOnly}
-                onClick={() => setUnreadOnly(true)}
-              >
-                {t("admin.users.filter_with_count", {
-                  label: t("messages.filter_unread"),
-                  count: unreadCount,
-                })}
-              </button>
-            </div>
-          </div>
-          <Field>
-            <Label>{t("messages.search_label")}</Label>
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("messages.search_placeholder")}
-              autoComplete="off"
-            />
-          </Field>
-        </div>
-        {emptyList ? (
-          emptyList
-        ) : (
-          <ul>
-            {filtered.map((row) => {
-              const name = row.customerName || t("messages.customer_fallback");
-              return (
-                <li key={row.id}>
+        <section
+          className="admin-messages-list"
+          aria-label={t("messages.list_aria")}
+        >
+          <div className="admin-messages-toolbar">
+            <div className="admin-messages-toolbar-top">
+              <h2>{t("messages.list_count", { count: rows.length })}</h2>
+              <div className="admin-messages-toolbar-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  data-size="sm"
+                  onClick={() => {
+                    setAnnounceError(undefined);
+                    setAnnounceOpen(true);
+                  }}
+                >
+                  <Megaphone size={16} />
+                  {t("messages.announcement_new")}
+                </Button>
+                <div
+                  className="view-switch"
+                  role="group"
+                  aria-label={t("messages.filter_aria")}
+                >
                   <button
                     type="button"
-                    className={
-                      row.id === active
-                        ? "admin-messages-row active"
-                        : "admin-messages-row"
-                    }
-                    aria-current={row.id === active ? "true" : undefined}
-                    onClick={() => openRow(row.id)}
+                    aria-pressed={!unreadOnly}
+                    onClick={() => setUnreadOnly(false)}
                   >
-                    <span className="admin-users-avatar" aria-hidden="true">
-                      {initials(name)}
-                    </span>
-                    <span className="admin-messages-row-body">
-                      <span className="admin-messages-row-top">
-                        <strong>{name}</strong>
-                        <time dateTime={new Date(row.updatedAt).toISOString()}>
-                          {displayDate(row.updatedAt)}{" "}
-                          {shortTime(row.updatedAt)}
-                        </time>
-                      </span>
-                      <span className="admin-messages-row-meta">
-                        {row.roomName}
-                      </span>
-                      {row.preview ? (
-                        <span className="admin-messages-row-preview">
-                          {row.preview}
-                        </span>
-                      ) : null}
-                      {row.unread > 0 ? (
-                        <span className="admin-messages-row-unread">
-                          {t("messages.unread", { count: row.unread })}
-                        </span>
-                      ) : null}
-                    </span>
+                    {t("admin.users.filter_with_count", {
+                      label: t("messages.filter_all"),
+                      count: rows.length,
+                    })}
                   </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-      <section
-        className="admin-messages-thread"
-        aria-label={t("messages.thread_aria")}
-      >
-        {showThread && activeRow ? (
-          <>
-            <header className="admin-messages-thread-header">
-              {narrow ? (
-                <Button
-                  variant="tertiary"
-                  data-size="sm"
-                  type="button"
-                  className="admin-messages-back"
-                  onClick={() => setPhoneThreadOpen(false)}
-                >
-                  <ChevronLeft size={18} />
-                  {t("messages.back_to_list")}
-                </Button>
-              ) : null}
-              <h2>{activeRow.subject || t("messages.heading")}</h2>
-              <p>
-                {activeRow.customerName || t("messages.customer_fallback")}
-                {activeRow.roomName ? ` · ${activeRow.roomName}` : ""}
-              </p>
-              <p className="muted">
-                {displayDate(activeRow.updatedAt)}{" "}
-                {shortTime(activeRow.updatedAt)}
-              </p>
-            </header>
-            <MessageThread
-              fill
-              endpoint={`/admin/messages/${activeRow.id}`}
-              emptyHint={t("messages.empty_thread")}
-              onSent={result.reload}
-            />
-          </>
-        ) : (
-          <div className="admin-messages-thread-empty">
-            <p className="muted">{t("messages.select_conversation")}</p>
+                  <button
+                    type="button"
+                    aria-pressed={unreadOnly}
+                    onClick={() => setUnreadOnly(true)}
+                  >
+                    {t("admin.users.filter_with_count", {
+                      label: t("messages.filter_unread"),
+                      count: unreadCount,
+                    })}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="admin-list-search">
+              <Search size={18} aria-hidden="true" />
+              <Input
+                type="search"
+                aria-label={t("messages.search_label")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("messages.search_placeholder")}
+                autoComplete="off"
+              />
+            </div>
           </div>
-        )}
-      </section>
-    </div>
+          {emptyList ? (
+            emptyList
+          ) : (
+            <ul>
+              {filtered.map((row) => {
+                const name =
+                  row.customerName || t("messages.customer_fallback");
+                return (
+                  <li key={row.id}>
+                    <button
+                      type="button"
+                      className={
+                        row.id === active
+                          ? "admin-messages-row active"
+                          : "admin-messages-row"
+                      }
+                      aria-current={row.id === active ? "true" : undefined}
+                      onClick={() => openRow(row.id)}
+                    >
+                      <span className="admin-users-avatar" aria-hidden="true">
+                        {initials(name)}
+                      </span>
+                      <span className="admin-messages-row-body">
+                        <span className="admin-messages-row-top">
+                          <strong>{name}</strong>
+                          <time
+                            dateTime={new Date(row.updatedAt).toISOString()}
+                          >
+                            {displayDate(row.updatedAt)}{" "}
+                            {shortTime(row.updatedAt)}
+                          </time>
+                        </span>
+                        <span className="admin-messages-row-meta">
+                          {rowMeta(row, supportLabel)}
+                        </span>
+                        {row.preview ? (
+                          <span className="admin-messages-row-preview">
+                            {row.preview}
+                          </span>
+                        ) : null}
+                        {row.unread > 0 ? (
+                          <span className="admin-messages-row-unread">
+                            {t("messages.unread", { count: row.unread })}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+        <section
+          className="admin-messages-thread"
+          aria-label={t("messages.thread_aria")}
+        >
+          {showThread && activeRow ? (
+            <>
+              <header className="admin-messages-thread-header">
+                {narrow ? (
+                  <Button
+                    variant="tertiary"
+                    data-size="sm"
+                    type="button"
+                    className="admin-messages-back"
+                    onClick={() => setPhoneThreadOpen(false)}
+                  >
+                    <ChevronLeft size={18} />
+                    {t("messages.back_to_list")}
+                  </Button>
+                ) : null}
+                <h2>
+                  {activeRow.customerName || t("messages.customer_fallback")}
+                </h2>
+                <p className="muted">
+                  {displayDate(activeRow.updatedAt)}{" "}
+                  {shortTime(activeRow.updatedAt)}
+                </p>
+                <MessageContextCard conversation={activeRow} admin />
+              </header>
+              <MessageThread
+                fill
+                endpoint={`/admin/messages/${activeRow.id}`}
+                emptyHint={t("messages.empty_thread")}
+                onSent={result.reload}
+              />
+            </>
+          ) : (
+            <div className="admin-messages-thread-empty">
+              <p className="muted">{t("messages.select_conversation")}</p>
+            </div>
+          )}
+        </section>
+      </div>
+      {announceOpen ? (
+        <Modal
+          title={t("messages.announcement_new")}
+          close={() => {
+            if (!announceBusy) setAnnounceOpen(false);
+          }}
+        >
+          <AnnouncementForm
+            busy={announceBusy}
+            error={announceError}
+            onCancel={() => {
+              if (!announceBusy) setAnnounceOpen(false);
+            }}
+            onSubmit={async (payload) => {
+              setAnnounceBusy(true);
+              setAnnounceError(undefined);
+              try {
+                await publishAnnouncement(payload);
+                setAnnounceOpen(false);
+                notify(t("messages.announcement_published"));
+              } catch (err) {
+                setAnnounceError(err as Error);
+              } finally {
+                setAnnounceBusy(false);
+              }
+            }}
+          />
+        </Modal>
+      ) : null}
+    </>
   );
 }

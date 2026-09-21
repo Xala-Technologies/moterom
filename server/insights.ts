@@ -3,6 +3,7 @@ import type {
   InsightsBlock,
   InsightsBooking,
   InsightsBucket,
+  InsightsCompanyRow,
   InsightsCoverage,
   InsightsEnvelope,
   InsightsPeriod,
@@ -159,6 +160,19 @@ export async function collectPaged<T extends { id: string; startTime: number }>(
   return { items, truncated: true as const };
 }
 
+export function assignCompany(
+  bookings: InsightsBooking[],
+  companyByEmail: ReadonlyMap<string, string>,
+): InsightsBooking[] {
+  return bookings.map(({ email, ...booking }) => {
+    const key = (email || "").trim().toLowerCase();
+    return {
+      ...booking,
+      company: key ? companyByEmail.get(key) || "" : "",
+    };
+  });
+}
+
 export function buildInsights(input: {
   mode: "demo" | "live";
   rooms: Room[];
@@ -168,6 +182,7 @@ export function buildInsights(input: {
   comparePeriod?: InsightsPeriod;
   compareBookings?: InsightsBooking[];
   compareCoverage?: InsightsCoverage;
+  company?: string;
   now?: number;
   generatedAt?: number;
   locale?: Locale;
@@ -177,10 +192,18 @@ export function buildInsights(input: {
   const generatedAt = input.generatedAt ?? now;
   const scoped = input.rooms;
   const roomIds = new Set(scoped.map((room) => room.id));
-  const bookings = input.bookings.filter((b) => roomIds.has(b.roomId));
-  const compareBookings = (input.compareBookings || []).filter((b) =>
+  const inRooms = input.bookings.filter((b) => roomIds.has(b.roomId));
+  const compareInRooms = (input.compareBookings || []).filter((b) =>
     roomIds.has(b.roomId),
   );
+  const companies = companyRows(inRooms, scoped, input.period, locale);
+  const selected = matchedCompany(input.company, companies);
+  const bookings = selected
+    ? inRooms.filter((b) => (b.company || "").trim() === selected)
+    : inRooms;
+  const compareBookings = selected
+    ? compareInRooms.filter((b) => (b.company || "").trim() === selected)
+    : compareInRooms;
   const rooms = scoped.map((room) =>
     roomRow(
       room,
@@ -226,6 +249,7 @@ export function buildInsights(input: {
       },
     ],
     rooms,
+    companies,
     trend: trend.points,
     trendGrain: trend.grain,
     totals,
@@ -380,13 +404,84 @@ function roomRow(
   };
 }
 
-function roomMetrics(
-  roomId: string,
-  bookings: InsightsBooking[],
-  period: InsightsPeriod,
+function matchedCompany(
+  company: string | undefined,
+  rows: InsightsCompanyRow[],
 ) {
+  const wanted = (company || "").trim();
+  if (!wanted || !rows.some((row) => row.company === wanted)) return "";
+  return wanted;
+}
+
+function companyRows(
+  bookings: InsightsBooking[],
+  rooms: Room[],
+  period: InsightsPeriod,
+  locale: Locale,
+): InsightsCompanyRow[] {
+  const groups = new Map<string, InsightsBooking[]>();
+  for (const booking of reservationBookings(bookings)) {
+    const company = (booking.company || "").trim();
+    const group = groups.get(company) ?? [];
+    group.push(booking);
+    groups.set(company, group);
+  }
+  const collator = new Intl.Collator(toBcp47(locale));
+  return [...groups.entries()]
+    .map(([company, items]) => {
+      const current = periodMetrics(items, period);
+      const breakdown = rooms
+        .map((room) => {
+          const metrics = periodMetrics(
+            items.filter((item) => item.roomId === room.id),
+            period,
+          );
+          return {
+            roomId: room.id,
+            bookingCount: metrics.count,
+            reservedHours: metrics.hours,
+          };
+        })
+        .filter((room) => room.bookingCount > 0 || room.reservedHours > 0)
+        .sort((a, b) => compareMetrics(a, b, collator));
+      return {
+        company,
+        bookingCount: current.count,
+        reservedHours: current.hours,
+        rooms: breakdown,
+      };
+    })
+    .filter((row) => row.bookingCount > 0 || row.reservedHours > 0)
+    .sort((a, b) => compareMetrics(a, b, collator));
+}
+
+function compareMetrics(
+  a: {
+    company?: string;
+    roomId?: string;
+    reservedHours: number;
+    bookingCount: number;
+  },
+  b: {
+    company?: string;
+    roomId?: string;
+    reservedHours: number;
+    bookingCount: number;
+  },
+  collator: Intl.Collator,
+) {
+  if (b.reservedHours !== a.reservedHours)
+    return b.reservedHours - a.reservedHours;
+  if (b.bookingCount !== a.bookingCount) return b.bookingCount - a.bookingCount;
+  return collator.compare(
+    a.company || a.roomId || "",
+    b.company || b.roomId || "",
+  );
+}
+
+function periodMetrics(bookings: InsightsBooking[], period: InsightsPeriod) {
   const window = { startTime: period.fromMs, endTime: period.toMs };
-  const held = reservationBookings(bookings).filter((b) => b.roomId === roomId);
+  const held = reservationBookings(bookings);
   const count = held.filter(
     (b) => b.startTime >= period.fromMs && b.startTime < period.toMs,
   ).length;
@@ -397,6 +492,17 @@ function roomMetrics(
     }, 0),
   );
   return { count, hours };
+}
+
+function roomMetrics(
+  roomId: string,
+  bookings: InsightsBooking[],
+  period: InsightsPeriod,
+) {
+  return periodMetrics(
+    bookings.filter((booking) => booking.roomId === roomId),
+    period,
+  );
 }
 
 function totalsFromRooms(rooms: InsightsRoomRow[]) {

@@ -18,6 +18,7 @@ import {
 } from "./config";
 import { DemoStore } from "./demo";
 import { AccessRequestStore } from "./accessRequests";
+import { MessagingLocalStore, isSupportConversationId } from "./messagingLocal";
 import {
   Digilist,
   rest,
@@ -39,15 +40,19 @@ import {
   AppError,
   accessRequestCreateSchema,
   accessRequestStatusSchema,
+  announcementCreateSchema,
   bookingSchema,
   messageCreateSchema,
   roomSchema,
   searchSchema,
+  supportOpenSchema,
 } from "../shared/validation";
 import { interval, suggestedSlots } from "../shared/time";
 import { translateMessage } from "../shared/i18n/messages";
 import { requestLocale } from "./locale";
 import type {
+  ConversationSummary,
+  ConversationThread,
   InsightsCoverage,
   Room,
   Search,
@@ -57,6 +62,7 @@ import type {
 import {
   buildInsights,
   buildRoomReport,
+  assignCompany,
   INSIGHTS_LOOKBACK_MS,
   INSIGHTS_UPCOMING_DAYS,
   parseInsightsQuery,
@@ -70,10 +76,50 @@ const demo =
 const accessRequests = new AccessRequestStore(
   process.env.ACCESS_REQUESTS_DB_PATH || ".data/access_requests.sqlite",
 );
+const messagingLocal = new MessagingLocalStore(
+  process.env.MESSAGING_LOCAL_DB_PATH || ".data/messaging_local.sqlite",
+);
 interface Context {
   session?: Session;
   user?: User;
   provider: DemoStore | Digilist;
+}
+async function mergedInbox(ctx: Context): Promise<ConversationSummary[]> {
+  const booking = await ctx.provider.inbox(ctx.user!);
+  const support = messagingLocal.inbox(ctx.user!);
+  return [...booking, ...support].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+function conversationFrom(
+  ctx: Context,
+  id: string,
+  user: User,
+): Promise<ConversationThread> | ConversationThread {
+  if (isSupportConversationId(id)) {
+    return messagingLocal.conversationThread(id, user);
+  }
+  return ctx.provider.conversationThread(id, user);
+}
+function sendConversationFrom(
+  ctx: Context,
+  id: string,
+  content: string,
+  user: User,
+  clientMessageId?: string,
+): Promise<ConversationThread> | ConversationThread {
+  if (isSupportConversationId(id)) {
+    return messagingLocal.sendConversationMessage(
+      id,
+      content,
+      user,
+      clientMessageId,
+    );
+  }
+  return ctx.provider.sendConversationMessage(
+    id,
+    content,
+    user,
+    clientMessageId,
+  );
 }
 export const app = express();
 app.disable("x-powered-by");
@@ -297,15 +343,22 @@ async function insightsResponse(
     compareBookings = previous.bookings;
     compareCoverage = previous.truncated ? "truncated" : "complete";
   }
+  const companies = accessRequests.companyByEmail();
+  const stamped = assignCompany(current.bookings, companies);
+  const stampedCompare = compareBookings
+    ? assignCompany(compareBookings, companies)
+    : undefined;
+  const firma = typeof query.firma === "string" ? query.firma.trim() : "";
   const envelope = buildInsights({
     mode: config.mode,
     rooms: roomId ? scoped.filter((r) => r.id === roomId) : scoped,
-    bookings: current.bookings,
+    bookings: stamped,
     coverage: current.truncated ? "truncated" : "complete",
     period: parsed.period,
     comparePeriod,
-    compareBookings,
+    compareBookings: stampedCompare,
     compareCoverage,
+    company: firma || undefined,
     locale,
   });
   if (!roomId) return envelope;
@@ -732,13 +785,20 @@ app.post("/api/bookings/:id/messages", async (req, res) => {
 });
 app.get("/api/messages", async (req, res) => {
   const ctx = await context(req, res, true);
-  res.json(await ctx.provider.inbox(ctx.user!));
+  res.json(await mergedInbox(ctx));
+});
+app.post("/api/messages/support", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const body = supportOpenSchema.parse(req.body ?? {});
+  res
+    .status(body.content ? 201 : 200)
+    .json(
+      messagingLocal.openSupport(ctx.user!, body.content, body.clientMessageId),
+    );
 });
 app.get("/api/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true);
-  res.json(
-    await ctx.provider.conversationThread(String(req.params.id), ctx.user!),
-  );
+  res.json(await conversationFrom(ctx, String(req.params.id), ctx.user!));
 });
 app.post("/api/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true);
@@ -746,13 +806,24 @@ app.post("/api/messages/:id", async (req, res) => {
   res
     .status(201)
     .json(
-      await ctx.provider.sendConversationMessage(
+      await sendConversationFrom(
+        ctx,
         String(req.params.id),
         body.content,
         ctx.user!,
         body.clientMessageId,
       ),
     );
+});
+app.get("/api/announcements/active", async (req, res) => {
+  const ctx = await context(req, res, true);
+  res.json(messagingLocal.activeForUser(ctx.user!));
+});
+app.post("/api/announcements/:id/dismiss", async (req, res) => {
+  const ctx = await context(req, res, true);
+  res.json(
+    messagingLocal.dismissAnnouncement(String(req.params.id), ctx.user!),
+  );
 });
 app.post("/api/bookings/:id/:action", async (req, res) => {
   const op = z
@@ -853,6 +924,11 @@ app.patch("/api/admin/access-requests/:id", async (req, res) => {
   }
   res.json(accessRequests.updateStatus(String(req.params.id), status));
 });
+app.delete("/api/admin/access-requests/:id", async (req, res) => {
+  await context(req, res, true, true);
+  accessRequests.remove(String(req.params.id));
+  res.json({ success: true });
+});
 app.get("/api/admin/members", async (req, res) => {
   const ctx = await context(req, res, true, true);
   res.json(
@@ -863,13 +939,11 @@ app.get("/api/admin/members", async (req, res) => {
 });
 app.get("/api/admin/messages", async (req, res) => {
   const ctx = await context(req, res, true, true);
-  res.json(await ctx.provider.inbox(ctx.user!));
+  res.json(await mergedInbox(ctx));
 });
 app.get("/api/admin/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true, true);
-  res.json(
-    await ctx.provider.conversationThread(String(req.params.id), ctx.user!),
-  );
+  res.json(await conversationFrom(ctx, String(req.params.id), ctx.user!));
 });
 app.post("/api/admin/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true, true);
@@ -877,13 +951,27 @@ app.post("/api/admin/messages/:id", async (req, res) => {
   res
     .status(201)
     .json(
-      await ctx.provider.sendConversationMessage(
+      await sendConversationFrom(
+        ctx,
         String(req.params.id),
         body.content,
         ctx.user!,
         body.clientMessageId,
       ),
     );
+});
+app.get("/api/admin/announcements", async (req, res) => {
+  await context(req, res, true, true);
+  res.json(messagingLocal.listAnnouncements());
+});
+app.post("/api/admin/announcements", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  const body = announcementCreateSchema.parse(req.body);
+  res.status(201).json(messagingLocal.createAnnouncement(body, ctx.user!));
+});
+app.post("/api/admin/announcements/:id/deactivate", async (req, res) => {
+  await context(req, res, true, true);
+  res.json(messagingLocal.deactivateAnnouncement(String(req.params.id)));
 });
 app.get("/api/admin", async (req, res) => {
   const ctx = await context(req, res, true, true);
