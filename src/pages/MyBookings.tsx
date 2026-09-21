@@ -290,7 +290,6 @@ export function MyBookings() {
                     </Link>
                     <Link
                       className="ds-button"
-                      data-variant="tertiary"
                       data-size="sm"
                       to={`/booking/${b.id}#meldinger`}
                     >
@@ -409,9 +408,14 @@ export function BookingDetail() {
   };
   return (
     <div className="container booking-detail-container">
-      <Link className="back-link" to="/">
+      <Link
+        className="back-link"
+        to={params.get("fra") === "admin" ? "/admin" : "/"}
+      >
         <ArrowLeft size={17} />
-        {t("common.find_rooms")}
+        {params.get("fra") === "admin"
+          ? t("admin.back_to_overview")
+          : t("common.find_rooms")}
       </Link>
       {params.has("ny") && (
         <div className="confirmation-banner" role="status">

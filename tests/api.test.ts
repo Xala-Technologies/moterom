@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { addDays, today } from "../shared/time";
 process.env.DATA_MODE = "demo";
 process.env.DEMO_DB_PATH = ":memory:";
+process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
+process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
 process.env.FLOORPLAN_PATH = "/nonexistent-moterom-test-floorplan.png";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
@@ -362,6 +364,8 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     expect(insights.body.coverage).toBe("complete");
     expect(insights.body.rooms.length).toBeGreaterThan(0);
     expect(insights.body.rooms[0]).not.toHaveProperty("email");
+    expect(Array.isArray(insights.body.companies)).toBe(true);
+    expect(JSON.stringify(insights.body)).not.toMatch(/@/);
     await administrator
       .get("/api/admin/insights")
       .query({ rom: "does-not-exist" })
@@ -405,5 +409,82 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       thread.body.messages.map((m: { content: string }) => m.content),
     ).toEqual(["Trenger adgangskort", "Kort ligger i resepsjonen"]);
     await customer.get("/api/admin/messages").expect(403);
+  });
+  it("opens a general support thread and blocks cross-customer access", async () => {
+    const opened = await customer
+      .post("/api/messages/support")
+      .set("Origin", origin)
+      .send({
+        content: "Nettsiden laster sakte",
+        clientMessageId: randomUUID(),
+      })
+      .expect(201);
+    expect(opened.body.conversation.kind).toBe("support");
+    expect(opened.body.messages).toHaveLength(1);
+    const supportId = opened.body.conversation.id as string;
+    expect(supportId.startsWith("sup_")).toBe(true);
+    const inbox = await administrator.get("/api/admin/messages").expect(200);
+    expect(
+      inbox.body.some(
+        (row: { id: string; kind: string }) =>
+          row.id === supportId && row.kind === "support",
+      ),
+    ).toBe(true);
+    const reply = await administrator
+      .post(`/api/admin/messages/${supportId}`)
+      .set("Origin", origin)
+      .send({ content: "Takk, vi ser på det." })
+      .expect(201);
+    expect(reply.body.messages).toHaveLength(2);
+    await request(app).get(`/api/messages/${supportId}`).expect(401);
+    expect(opened.body.conversation.customerId).toBe("demo-customer");
+    const again = await customer
+      .post("/api/messages/support")
+      .set("Origin", origin)
+      .send({})
+      .expect(200);
+    expect(again.body.conversation.id).toBe(supportId);
+  });
+  it("publishes a building announcement for members and skips admins", async () => {
+    await administrator
+      .post("/api/admin/announcements")
+      .set("Origin", origin)
+      .send({
+        title: "Vedlikehold i morgen",
+        body: "Heisen er stengt mellom 09 og 11.",
+      })
+      .expect(201);
+    expect((await administrator.get("/api/announcements/active")).body).toBe(
+      null,
+    );
+    const active = await customer.get("/api/announcements/active").expect(200);
+    expect(active.body.title).toBe("Vedlikehold i morgen");
+    await customer
+      .post(`/api/announcements/${active.body.id}/dismiss`)
+      .set("Origin", origin)
+      .send({})
+      .expect(200);
+    expect((await customer.get("/api/announcements/active")).body).toBe(null);
+  });
+  it("includes room context on booking message threads", async () => {
+    const bookings = (await customer.get("/api/bookings").expect(200)).body as {
+      id: string;
+      userId: string;
+      roomId: string;
+    }[];
+    const mine = bookings.find((b) => b.userId === "demo-customer");
+    expect(mine).toBeTruthy();
+    await customer
+      .post(`/api/bookings/${mine!.id}/messages`)
+      .set("Origin", origin)
+      .send({ content: "Rominfo sjekk", clientMessageId: randomUUID() })
+      .expect(201);
+    const thread = await customer
+      .get(`/api/bookings/${mine!.id}/messages`)
+      .expect(200);
+    expect(thread.body.conversation.kind).toBe("booking");
+    expect(thread.body.conversation.roomId).toBe(mine!.roomId);
+    expect(thread.body.conversation.context?.roomId).toBe(mine!.roomId);
+    expect(thread.body.conversation.context?.bookingId).toBe(mine!.id);
   });
 });

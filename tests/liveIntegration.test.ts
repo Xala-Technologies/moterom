@@ -481,7 +481,7 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
         .send({
           name: "Spoofed",
           email: "other@example.invalid",
-          message: "Please add me",
+          company: "Eksempel AS",
         })
         .expect(201)
     ).body;
@@ -532,7 +532,7 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
         .send({
           name: "Outsider",
           email: outsider.email,
-          message: "Please add me",
+          company: "Eksempel AS",
         })
         .expect(201)
     ).body;

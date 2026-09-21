@@ -14,7 +14,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:4173`. Digilist login (email OTP, SMS OTP, BankID) appears when `DIGILIST_URL` and `DIGILIST_HTTP_URL` are set; the BFF calls Digilist’s auth APIs. Without those URLs, only demo sign-in is offered. In `DATA_MODE=demo`, **Fortsett i demo** and **Prøv som kunde** remain available even when Digilist auth URLs are set. BankID on `localhost` may require Digilist `EXTRA_CORS_ORIGINS` to include `PUBLIC_ORIGIN`. The demo stores fictional reservations in `.data/demo.sqlite`. It sends no email and collects no payment. Remove that disposable database while the server is stopped to reset the demo.
+Open `http://localhost:4173`. Digilist login (email OTP and SMS OTP) appears when `DIGILIST_URL` and `DIGILIST_HTTP_URL` are set; the BFF calls Digilist’s auth APIs. Without those URLs, only demo sign-in is offered. In `DATA_MODE=demo`, **Fortsett i demo** and **Prøv som kunde** remain available even when Digilist auth URLs are set. The demo stores fictional reservations and booking-message history in `.data/demo.sqlite`. Support threads and building announcements use `.data/messaging_local.sqlite` (demo and live). Those files are real SQLite history, not UI mocks; remove them while the server is stopped to reset. On Vercel demo, `/tmp` paths are ephemeral. Live booking messages live in Digilist; live support/announcements still need a **persistent** `MESSAGING_LOCAL_DB_PATH` (never `/tmp` in production). The demo sends no email and collects no payment.
 
 ```sh
 npm run check

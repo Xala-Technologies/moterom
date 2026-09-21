@@ -21,6 +21,7 @@ import { addDays, interval, overlaps, today } from "../shared/time";
 import { AppError } from "../shared/validation";
 import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
+import { enrichBookingConversation } from "./conversationContext";
 export class DemoStore {
   db: DatabaseSync;
   constructor(
@@ -314,6 +315,7 @@ export class DemoStore {
           startTime: b.startTime,
           endTime: b.endTime,
           status: b.status,
+          email: b.email,
         })),
     };
   }
@@ -404,8 +406,24 @@ export class DemoStore {
     this.audit(user, "block.removed", id);
   }
   private conversations(): ConversationSummary[] {
-    return this.all<ConversationSummary>("conversations").sort(
-      (a, b) => b.updatedAt - a.updatedAt,
+    return this.all<ConversationSummary>("conversations")
+      .map((c) => this.withContext(c))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+  private bookingById(id: string): Booking | undefined {
+    return this.all<Booking>("bookings").find((b) => b.id === id);
+  }
+  private withContext(conversation: ConversationSummary): ConversationSummary {
+    const booking = conversation.bookingId
+      ? this.bookingById(conversation.bookingId)
+      : undefined;
+    return enrichBookingConversation(
+      {
+        ...conversation,
+        kind: conversation.kind || "booking",
+      },
+      booking,
+      this.all<Room>("rooms"),
     );
   }
   private messagesFor(conversationId: string): Message[] {
@@ -417,7 +435,10 @@ export class DemoStore {
       .map((row) => JSON.parse(String(row.data)) as Message);
   }
   private thread(conversation: ConversationSummary): ConversationThread {
-    return { conversation, messages: this.messagesFor(conversation.id) };
+    return {
+      conversation: this.withContext(conversation),
+      messages: this.messagesFor(conversation.id),
+    };
   }
   private conversationForBooking(
     booking: Booking,
@@ -430,7 +451,9 @@ export class DemoStore {
     if (!create) return null;
     const conversation: ConversationSummary = {
       id: randomUUID(),
+      kind: "booking",
       bookingId: booking.id,
+      roomId: booking.roomId,
       roomName: booking.roomName,
       subject: booking.roomName,
       preview: "",
@@ -439,7 +462,7 @@ export class DemoStore {
       customerName: booking.name,
     };
     this.save("conversations", conversation);
-    return conversation;
+    return this.withContext(conversation);
   }
   inbox(user: User): ConversationSummary[] {
     if (user.isAdmin) return this.conversations();
@@ -452,7 +475,7 @@ export class DemoStore {
     const booking = this.booking(bookingId, user);
     const conversation = this.conversationForBooking(booking, false);
     return {
-      conversation,
+      conversation: conversation ? this.withContext(conversation) : null,
       messages: conversation ? this.messagesFor(conversation.id) : [],
     };
   }

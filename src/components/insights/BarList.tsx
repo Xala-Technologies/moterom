@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export type ChartItem = {
   key: string;
   label: string;
@@ -40,13 +38,5 @@ export function BarList({
       </div>
       <figcaption>{caption}</figcaption>
     </figure>
-  );
-}
-
-export function CoverageBanner({ children }: { children: ReactNode }) {
-  return (
-    <p className="insights-coverage" role="status">
-      {children}
-    </p>
   );
 }

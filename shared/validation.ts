@@ -50,7 +50,7 @@ export type RoomPatch = z.infer<typeof roomSchema>;
 export const accessRequestCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   email: z.email().max(254),
-  message: z.string().trim().min(1).max(1000),
+  company: z.string().trim().min(1).max(120),
 });
 export const accessRequestStatusSchema = z.enum([
   "pending",
@@ -60,6 +60,14 @@ export const accessRequestStatusSchema = z.enum([
 export const messageCreateSchema = z.object({
   content: z.string().trim().min(1).max(4000),
   clientMessageId: z.string().uuid().optional(),
+});
+export const supportOpenSchema = z.object({
+  content: z.string().trim().min(1).max(4000).optional(),
+  clientMessageId: z.string().uuid().optional(),
+});
+export const announcementCreateSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  body: z.string().trim().min(1).max(4000),
 });
 export class AppError extends Error {
   constructor(

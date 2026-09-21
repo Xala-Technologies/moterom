@@ -30,6 +30,7 @@ import type {
 } from "../shared/types";
 import { interval } from "../shared/time";
 import { AppError } from "../shared/validation";
+import { enrichBookingConversation } from "./conversationContext";
 import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
 import { collectPaged, INSIGHTS_PAGE_SIZE } from "./insights";
@@ -696,6 +697,7 @@ export class Digilist {
         const endTime = Number(raw.endTime);
         if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return [];
         if (endTime <= opts.fetchFrom || startTime >= opts.fetchTo) return [];
+        const guest = row(raw.guestInfo);
         return [
           {
             id: str(raw._id, str(raw.id)),
@@ -703,6 +705,7 @@ export class Digilist {
             startTime,
             endTime,
             status: str(raw.status, "pending"),
+            email: str(raw.userEmail, str(guest.email)),
           },
         ];
       }),
@@ -936,9 +939,11 @@ export class Digilist {
     );
     const id = str(raw._id, str(raw.id));
     if (!id) return null;
-    return {
+    const base: ConversationSummary = {
       id: str(raw._id, str(raw.id)),
+      kind: "booking",
       bookingId,
+      roomId: room?.id,
       roomName,
       subject: str(raw.displaySubject, str(raw.subject, roomName || "Melding")),
       preview: str(raw.lastMessagePreview, str(raw.preview)),
@@ -948,6 +953,35 @@ export class Digilist {
       unread: Number(raw.unreadCount ?? raw.unread ?? 0),
       customerName: str(raw.userName),
     };
+    if (room) {
+      base.context = {
+        roomId: room.id,
+        roomName: room.name,
+        image: room.image,
+        imageKind: room.imageKind,
+        capacity: room.capacity,
+        capacityLabel: room.capacityLabel,
+        capacityLabelEn: room.capacityLabelEn,
+        bookingId: bookingId || "",
+      };
+    }
+    return base;
+  }
+  private async enrichConversation(
+    conversation: ConversationSummary | null,
+    user: User,
+  ): Promise<ConversationSummary | null> {
+    if (!conversation?.bookingId) return conversation;
+    try {
+      const booking = await this.booking(conversation.bookingId, user);
+      return enrichBookingConversation(
+        conversation,
+        booking,
+        await this.rooms(),
+      );
+    } catch {
+      return conversation;
+    }
   }
   private mapMessage(raw: Row, conversationId: string): Message {
     return {
@@ -1028,7 +1062,10 @@ export class Digilist {
         /* unread is optional */
       }
       return {
-        conversation: this.mapConversation(raw, await this.rooms()),
+        conversation: await this.enrichConversation(
+          this.mapConversation(raw, await this.rooms()),
+          user,
+        ),
         messages: await this.loadMessages(id, user),
       };
     } catch (error) {
@@ -1077,7 +1114,10 @@ export class Digilist {
         /* unread is optional */
       }
       return {
-        conversation: this.mapConversation(raw, await this.rooms()),
+        conversation: await this.enrichConversation(
+          this.mapConversation(raw, await this.rooms()),
+          user,
+        ),
         messages: await this.loadMessages(id, user),
       };
     } catch (error) {

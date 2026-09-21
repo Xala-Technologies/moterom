@@ -1,8 +1,17 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Building2, CalendarDays } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  Calendar,
+  CalendarClock,
+  CalendarDays,
+  CalendarRange,
+  DoorOpen,
+} from "lucide-react";
 import { useApp } from "../context";
 import { useApi } from "../api";
+import { FilterSelect } from "../components/admin/FilterSelect";
 import {
   Empty,
   ErrorState,
@@ -10,9 +19,8 @@ import {
   Input,
   Label,
   Loading,
-  Select,
 } from "../components/ui";
-import { BarList, CoverageBanner } from "../components/insights/BarList";
+import { BarList } from "../components/insights/BarList";
 import { TrendChart } from "../components/insights/TrendChart";
 import type {
   InsightsEnvelope,
@@ -28,7 +36,6 @@ type SortKey =
 export function AdminInsights({ rooms }: { rooms: Room[] }) {
   const { config } = useApp();
   const { t } = useT();
-  const { displayDate, shortTime } = useFormatters();
   const [params, setParams] = useSearchParams();
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "reservedHours",
@@ -59,109 +66,141 @@ export function AdminInsights({ rooms }: { rooms: Room[] }) {
 
   return (
     <div className="insights-page">
-      <CoverageBanner>
-        {data.mode === "demo" ? t("admin.insights.demo_prefix") : ""}
-        {t("admin.insights.coverage_banner", {
-          from: displayDate(data.period.fromMs, true),
-          to: displayDate(data.period.toMs - 1, true),
-          time: shortTime(data.generatedAt),
-        })}
-        {data.coverage === "truncated"
-          ? t("admin.insights.coverage_truncated")
-          : t("admin.insights.coverage_complete")}
-      </CoverageBanner>
-      <form className="insights-filters" onSubmit={(e) => e.preventDefault()}>
-        <Field>
-          <Label>{t("admin.insights.period")}</Label>
-          <Select
-            aria-label={t("a11y.period")}
-            value={params.get("periode") || "30d"}
-            onChange={(e) => {
-              const periode = e.target.value;
-              patch({
-                periode,
-                fra:
-                  periode === "custom"
-                    ? params.get("fra") || data.period.from
-                    : null,
-                til:
-                  periode === "custom"
-                    ? params.get("til") || lastInclusive
-                    : null,
-              });
-            }}
-          >
-            <Select.Option value="7d">
-              {t("admin.insights.last_7_days")}
-            </Select.Option>
-            <Select.Option value="30d">
-              {t("admin.insights.last_30_days")}
-            </Select.Option>
-            <Select.Option value="90d">
-              {t("admin.insights.last_90_days")}
-            </Select.Option>
-            <Select.Option value="custom">
-              {t("admin.insights.custom")}
-            </Select.Option>
-          </Select>
-        </Field>
-        {(params.get("periode") || "30d") === "custom" && (
-          <>
-            <Field>
-              <Label>{t("admin.insights.from")}</Label>
-              <Input
-                aria-label={t("a11y.from_date")}
-                type="date"
-                value={params.get("fra") || data.period.from}
-                onChange={(e) =>
-                  patch({ periode: "custom", fra: e.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <Label>{t("admin.insights.to")}</Label>
-              <Input
-                aria-label={t("a11y.to_date")}
-                type="date"
-                value={params.get("til") || lastInclusive}
-                onChange={(e) =>
-                  patch({ periode: "custom", til: e.target.value })
-                }
-              />
-            </Field>
-          </>
-        )}
-        <Field>
-          <Label>{t("common.room")}</Label>
-          <Select
-            aria-label={t("common.room")}
-            value={params.get("rom") || ""}
-            onChange={(e) => patch({ rom: e.target.value || null })}
-          >
-            <Select.Option value="">
-              {t("admin.insights.all_rooms")}
-            </Select.Option>
-            {rooms.map((room) => (
-              <Select.Option key={room.id} value={room.id}>
-                {room.name}
-              </Select.Option>
-            ))}
-          </Select>
-        </Field>
-        <label className="consent insights-compare">
-          <input
-            type="checkbox"
-            checked={params.get("sammenlign") === "1"}
-            onChange={(e) =>
-              patch({ sammenlign: e.target.checked ? "1" : null })
-            }
-          />
-          {t("admin.insights.compare_previous")}
-        </label>
-      </form>
+      <section className="insights-card">
+        <form className="insights-filters" onSubmit={(e) => e.preventDefault()}>
+          <Field>
+            <Label>{t("admin.insights.period")}</Label>
+            <FilterSelect
+              label={t("a11y.period")}
+              value={params.get("periode") || "30d"}
+              onChange={(periode) =>
+                patch({
+                  periode,
+                  fra:
+                    periode === "custom"
+                      ? params.get("fra") || data.period.from
+                      : null,
+                  til:
+                    periode === "custom"
+                      ? params.get("til") || lastInclusive
+                      : null,
+                })
+              }
+              options={[
+                {
+                  value: "7d",
+                  label: t("admin.insights.last_7_days"),
+                  icon: <CalendarDays size={18} />,
+                },
+                {
+                  value: "30d",
+                  label: t("admin.insights.last_30_days"),
+                  icon: <CalendarRange size={18} />,
+                },
+                {
+                  value: "90d",
+                  label: t("admin.insights.last_90_days"),
+                  icon: <Calendar size={18} />,
+                },
+                {
+                  value: "custom",
+                  label: t("admin.insights.custom"),
+                  icon: <CalendarClock size={18} />,
+                },
+              ]}
+            />
+          </Field>
+          {(params.get("periode") || "30d") === "custom" && (
+            <>
+              <Field>
+                <Label>{t("admin.insights.from")}</Label>
+                <Input
+                  aria-label={t("a11y.from_date")}
+                  type="date"
+                  value={params.get("fra") || data.period.from}
+                  onChange={(e) =>
+                    patch({ periode: "custom", fra: e.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                <Label>{t("admin.insights.to")}</Label>
+                <Input
+                  aria-label={t("a11y.to_date")}
+                  type="date"
+                  value={params.get("til") || lastInclusive}
+                  onChange={(e) =>
+                    patch({ periode: "custom", til: e.target.value })
+                  }
+                />
+              </Field>
+            </>
+          )}
+          <Field>
+            <Label>{t("common.room")}</Label>
+            <FilterSelect
+              label={t("common.room")}
+              value={params.get("rom") || ""}
+              onChange={(rom) => patch({ rom: rom || null })}
+              options={[
+                {
+                  value: "",
+                  label: t("admin.insights.all_rooms"),
+                  icon: <Building2 size={18} />,
+                },
+                ...rooms.map((room) => ({
+                  value: room.id,
+                  label: room.name,
+                  icon: <DoorOpen size={18} />,
+                })),
+              ]}
+            />
+          </Field>
+          <Field>
+            <Label>{t("admin.insights.company")}</Label>
+            <FilterSelect
+              label={t("admin.insights.company")}
+              value={
+                data.companies.some(
+                  (row) => row.company === params.get("firma"),
+                )
+                  ? params.get("firma") || ""
+                  : ""
+              }
+              onChange={(firma) => patch({ firma: firma || null })}
+              options={[
+                {
+                  value: "",
+                  label: t("admin.insights.all_companies"),
+                  icon: <Building2 size={18} />,
+                },
+                ...data.companies
+                  .filter((row) => row.company)
+                  .map((row) => ({
+                    value: row.company,
+                    label: row.company,
+                    icon: <Briefcase size={18} />,
+                  })),
+              ]}
+            />
+          </Field>
+          <label className="consent insights-compare">
+            <input
+              type="checkbox"
+              checked={params.get("sammenlign") === "1"}
+              onChange={(e) =>
+                patch({ sammenlign: e.target.checked ? "1" : null })
+              }
+            />
+            {t("admin.insights.compare_previous")}
+          </label>
+        </form>
+      </section>
       <InsightsOverview
         data={data}
         rooms={scopedRooms}
+        catalog={rooms}
+        firma={params.get("firma") || ""}
         measure={measure}
         onMeasure={(value) =>
           patch({ mal: value === "antall" ? "antall" : null })
@@ -177,9 +216,72 @@ export function AdminInsights({ rooms }: { rooms: Room[] }) {
   );
 }
 
+function CompanyChart({
+  data,
+  rooms,
+  firma,
+  formatHours,
+  formatCount,
+}: {
+  data: InsightsEnvelope;
+  rooms: Room[];
+  firma: string;
+  formatHours: (value: number) => string;
+  formatCount: (value: number) => string;
+}) {
+  const { t } = useT();
+  const selected = data.companies.find(
+    (row) => row.company && row.company === firma,
+  );
+  const items = selected
+    ? selected.rooms.map((room) => ({
+        key: room.roomId,
+        label:
+          rooms.find((item) => item.id === room.roomId)?.name || room.roomId,
+        value: room.reservedHours,
+        note: t("admin.insights.company_booking_note", {
+          count: formatCount(room.bookingCount),
+        }),
+      }))
+    : data.companies.map((row) => ({
+        key: row.company || "unknown",
+        label: row.company || t("admin.insights.company_unknown"),
+        value: row.reservedHours,
+        note: t("admin.insights.company_booking_note", {
+          count: formatCount(row.bookingCount),
+        }),
+      }));
+  return (
+    <section className="insights-card insights-companies">
+      <div className="section-heading">
+        <h2>{t("admin.insights.company")}</h2>
+      </div>
+      {data.companies.length ? (
+        <BarList
+          caption={
+            selected
+              ? t("admin.insights.company_rooms_caption", {
+                  company: selected.company,
+                })
+              : t("admin.insights.company_hours_caption")
+          }
+          format={formatHours}
+          items={items}
+        />
+      ) : (
+        <Empty title={t("admin.insights.empty_trend_title")}>
+          <p>{t("admin.insights.empty_trend_body")}</p>
+        </Empty>
+      )}
+    </section>
+  );
+}
+
 function InsightsOverview({
   data,
   rooms,
+  catalog,
+  firma,
   measure,
   onMeasure,
   sort,
@@ -187,6 +289,8 @@ function InsightsOverview({
 }: {
   data: InsightsEnvelope;
   rooms: InsightsRoomRow[];
+  catalog: Room[];
+  firma: string;
   measure: "timer" | "antall";
   onMeasure: (value: "timer" | "antall") => void;
   sort: { key: SortKey; dir: "asc" | "desc" };
@@ -236,108 +340,123 @@ function InsightsOverview({
           </div>
         )}
       </div>
-      <div className="section-heading">
-        <h2>{t("admin.insights.trend")}</h2>
-      </div>
-      {data.trend.length ? (
-        <TrendChart
-          points={data.trend}
-          grain={data.trendGrain}
-          measure={measure}
-          onMeasure={onMeasure}
-          compare={Boolean(data.comparePeriod)}
+      <div className="insights-rankings">
+        <CompanyChart
+          data={data}
+          rooms={catalog}
+          firma={firma}
+          formatHours={formatHours}
+          formatCount={formatCount}
         />
-      ) : (
-        <Empty title={t("admin.insights.empty_trend_title")}>
-          <p>{t("admin.insights.empty_trend_body")}</p>
-        </Empty>
-      )}
-      <div className="section-heading">
-        <h2>{t("admin.insights.rooms_compared")}</h2>
+        <section className="insights-card">
+          <div className="section-heading">
+            <h2>{t("admin.insights.rooms_compared")}</h2>
+          </div>
+          <BarList
+            caption={t("admin.insights.hours_per_room_caption")}
+            format={formatHours}
+            items={rooms.map((room) => ({
+              key: room.roomId,
+              label: room.name,
+              value: room.reservedHours,
+            }))}
+          />
+        </section>
       </div>
-      <BarList
-        caption={t("admin.insights.hours_per_room_caption")}
-        format={formatHours}
-        items={rooms.map((room) => ({
-          key: room.roomId,
-          label: room.name,
-          value: room.reservedHours,
-        }))}
-      />
-      <div className="section-heading">
-        <h2>{t("admin.insights.rooms_table")}</h2>
-      </div>
-      <div className="insights-table-wrap">
-        <table className="insights-table">
-          <thead>
-            <tr>
-              <SortHeader
-                label={t("admin.insights.rooms_table")}
-                column="name"
-                sort={sort}
-                onSort={onSort}
-              />
-              <SortHeader
-                label={t("admin.insights.capacity")}
-                column="capacity"
-                sort={sort}
-                onSort={onSort}
-              />
-              <SortHeader
-                label={t("admin.insights.reservations")}
-                column="bookingCount"
-                sort={sort}
-                onSort={onSort}
-              />
-              <SortHeader
-                label={t("admin.insights.hours")}
-                column="reservedHours"
-                sort={sort}
-                onSort={onSort}
-              />
-              <SortHeader
-                label={t("admin.insights.avg_duration")}
-                column="average"
-                sort={sort}
-                onSort={onSort}
-              />
-              {data.comparePeriod && (
-                <th scope="col">{t("admin.insights.hours_change_col")}</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((room) => {
-              const copy = roomCopy(room, locale);
-              return (
-                <tr key={room.roomId}>
-                  <th scope="row">{room.name}</th>
-                  <td>{copy.capacityLabel}</td>
-                  <td>{formatCount(room.bookingCount)}</td>
-                  <td>{formatHours(room.reservedHours)}</td>
-                  <td>
-                    {room.averageDurationHours === null
-                      ? t("admin.insights.no_reservations")
-                      : t("admin.insights.hours_unit_suffix", {
-                          value: formatHours(room.averageDurationHours),
-                        })}
-                  </td>
-                  {data.comparePeriod && (
+      <section className="insights-card">
+        <div className="section-heading">
+          <h2>{t("admin.insights.trend")}</h2>
+        </div>
+        {data.trend.length ? (
+          <TrendChart
+            points={data.trend}
+            grain={data.trendGrain}
+            measure={measure}
+            onMeasure={onMeasure}
+            compare={Boolean(data.comparePeriod)}
+          />
+        ) : (
+          <Empty title={t("admin.insights.empty_trend_title")}>
+            <p>{t("admin.insights.empty_trend_body")}</p>
+          </Empty>
+        )}
+      </section>
+      <section className="insights-card">
+        <div className="section-heading">
+          <h2>{t("admin.insights.rooms_table")}</h2>
+        </div>
+        <div className="insights-table-wrap">
+          <table className="insights-table">
+            <thead>
+              <tr>
+                <SortHeader
+                  label={t("admin.insights.rooms_table")}
+                  column="name"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  label={t("admin.insights.capacity")}
+                  column="capacity"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  label={t("admin.insights.reservations")}
+                  column="bookingCount"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  label={t("admin.insights.hours")}
+                  column="reservedHours"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  label={t("admin.insights.avg_duration")}
+                  column="average"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                {data.comparePeriod && (
+                  <th scope="col">{t("admin.insights.hours_change_col")}</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((room) => {
+                const copy = roomCopy(room, locale);
+                return (
+                  <tr key={room.roomId}>
+                    <th scope="row">{room.name}</th>
+                    <td>{copy.capacityLabel}</td>
+                    <td>{formatCount(room.bookingCount)}</td>
+                    <td>{formatHours(room.reservedHours)}</td>
                     <td>
-                      {changeLabel(
-                        room.reservedHours,
-                        room.previousReservedHours,
-                        formatHours,
-                        t,
-                      )}
+                      {room.averageDurationHours === null
+                        ? t("admin.insights.no_reservations")
+                        : t("admin.insights.hours_unit_suffix", {
+                            value: formatHours(room.averageDurationHours),
+                          })}
                     </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    {data.comparePeriod && (
+                      <td>
+                        {changeLabel(
+                          room.reservedHours,
+                          room.previousReservedHours,
+                          formatHours,
+                          t,
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </>
   );
 }
@@ -418,6 +537,7 @@ function insightsQuery(params: URLSearchParams) {
     if (params.get("til")) query.set("til", params.get("til")!);
   }
   if (params.get("rom")) query.set("rom", params.get("rom")!);
+  if (params.get("firma")) query.set("firma", params.get("firma")!);
   if (params.get("sammenlign") === "1") query.set("sammenlign", "1");
   return query.toString();
 }

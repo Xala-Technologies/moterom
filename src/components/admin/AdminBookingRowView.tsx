@@ -115,6 +115,9 @@ export function AdminBookingRowView({
         <span className={`admin-bl-badge tone-${row.statusTone}`}>
           {row.statusLabel}
         </span>
+        {row.editRequestedLabel ? (
+          <span className="admin-bl-secondary">{row.editRequestedLabel}</span>
+        ) : null}
       </div>
       <div className="admin-bl-actions" onClick={(e) => e.stopPropagation()}>
         {row.actions.length === 0 ? (
