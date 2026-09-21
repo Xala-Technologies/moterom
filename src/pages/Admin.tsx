@@ -30,6 +30,7 @@ import {
   LayoutDashboard,
   ListFilter,
   LockKeyhole,
+  Megaphone,
   MessageCircle,
   Plus,
   Search as SearchIcon,
@@ -148,6 +149,7 @@ export function Admin() {
   const [blockTitle, setBlockTitle] = useState("");
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
+  const [announceOpen, setAnnounceOpen] = useState(false);
   const busyLock = useRef(false);
   if (loading) return <Loading />;
   if (!user)
@@ -454,6 +456,19 @@ export function Admin() {
                 <Plus size={18} />
                 {t("admin.new_booking")}
               </Link>
+            </div>
+          )}
+          {section === "messages" && (
+            <div className="admin-heading-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                data-size="sm"
+                onClick={() => setAnnounceOpen(true)}
+              >
+                <Megaphone size={17} />
+                {t("messages.announcement_new")}
+              </Button>
             </div>
           )}
         </div>
@@ -779,7 +794,12 @@ export function Admin() {
                 <AdminAccessRequests result={accessResult} />
               </div>
             )}
-            {section === "messages" && <AdminMessages />}
+            {section === "messages" && (
+              <AdminMessages
+                announceOpen={announceOpen}
+                onAnnounceOpenChange={setAnnounceOpen}
+              />
+            )}
             {section === "settings" && (
               <div className="settings-grid">
                 <section className="settings-card">

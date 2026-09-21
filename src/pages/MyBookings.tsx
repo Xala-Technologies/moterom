@@ -16,6 +16,7 @@ import {
   Edit3,
   MessageCircle,
   RotateCcw,
+  Search as SearchIcon,
   UsersRound,
   X,
 } from "lucide-react";
@@ -187,11 +188,14 @@ export function MyBookings() {
       <div className="booking-toolbar">
         <Field>
           <Label>{t("dashboard.search_label")}</Label>
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="admin-list-search">
+            <SearchIcon size={18} aria-hidden="true" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
         </Field>
         <Field>
           <Label>{t("dashboard.filter_room")}</Label>

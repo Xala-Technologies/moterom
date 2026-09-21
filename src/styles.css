@@ -637,37 +637,81 @@ a.brand {
 .dashboard-stats {
   margin-bottom: 28px;
 }
-.pill-tabs {
+.pill-tabs,
+.view-switch,
+.admin-users-tab-track {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--ds-color-neutral-surface-hover);
-  border-radius: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.pill-tabs {
   margin-bottom: 28px;
 }
-.pill-tabs button {
-  border: 0;
-  border-radius: 7px;
-  padding: 9px 15px;
-  background: transparent;
-  color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
-  display: flex;
-  gap: 10px;
+.pill-tabs button,
+.view-switch button,
+.admin-users-tabs button {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px 0 14px;
+  border: 1px solid var(--ds-color-neutral-border-default);
+  border-radius: var(--digilist-radius-md);
+  background: var(--ds-color-neutral-background-default);
+  box-shadow: var(--ds-shadow-sm);
+  color: var(--ds-color-neutral-text-default);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  font: inherit;
 }
-.pill-tabs button[aria-pressed="true"] {
+.pill-tabs button:hover:not([aria-pressed="true"]),
+.view-switch button:hover:not([aria-pressed="true"]),
+.admin-users-tabs button:hover:not([aria-pressed="true"]) {
+  border-color: var(--ds-color-accent-base-default);
+  background: var(--ds-color-neutral-background-default);
+  color: var(--ds-color-neutral-text-default);
+}
+.pill-tabs button[aria-pressed="true"],
+.view-switch button[aria-pressed="true"],
+.admin-users-tabs button[aria-pressed="true"] {
+  border-color: var(--ds-color-accent-base-default);
   background: var(--ds-color-accent-base-default);
   color: var(--ds-color-accent-base-contrast-default);
+  font-weight: 600;
 }
-.pill-tabs button > span {
-  border-radius: 5px;
-  padding: 1px 5px;
+.pill-tabs button > span,
+.admin-users-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 6px;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: 999px;
+  background: var(--ds-color-neutral-surface-hover);
+  color: var(--ds-color-neutral-text-default);
   font-size: 0.75rem;
-  background: rgba(128, 128, 128, 0.18);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pill-tabs button[aria-pressed="true"] > span,
+.admin-users-tabs button[aria-pressed="true"] .admin-users-tab-count {
+  border-color: transparent;
+  background: color-mix(
+    in srgb,
+    var(--ds-color-accent-base-contrast-default) 22%,
+    transparent
+  );
+  color: inherit;
 }
 .booking-list {
   display: flex;
@@ -816,28 +860,7 @@ a.brand {
   margin-left: 10px;
 }
 .view-switch {
-  display: flex;
-  gap: 3px;
-  padding: 4px;
-  border: 1px solid var(--ds-color-neutral-border-default);
-  border-radius: var(--digilist-radius-md);
-  background: var(--ds-color-neutral-background-default);
-}
-.view-switch button {
-  border: 0;
-  background: transparent;
-  border-radius: 5px;
-  padding: 7px 10px;
-  min-width: var(--ds-touch-target-min, 44px);
-  min-height: var(--ds-touch-target-min, 44px);
-  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.8125rem;
-}
-.view-switch button[aria-pressed="true"] {
-  background: var(--ds-color-accent-background-tinted);
-  color: var(--ds-color-accent-text-subtle);
 }
 .rooms-grid {
   display: grid;
@@ -3874,6 +3897,7 @@ a.stat.is-other-day {
 }
 .admin-list-search > svg {
   position: absolute;
+  z-index: 1;
   left: 14px;
   width: 18px;
   height: 18px;
@@ -3884,6 +3908,10 @@ a.stat.is-other-day {
   width: 100%;
   min-height: 44px;
   padding-left: 40px;
+}
+.ds-field > .admin-list-search {
+  width: 100%;
+  flex: none;
 }
 .filter-select {
   position: relative;
@@ -4383,45 +4411,8 @@ a.stat.is-other-day {
   gap: 8px;
   width: 100%;
 }
-.admin-users-tab-track {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  width: fit-content;
-  max-width: 100%;
-  padding: 4px;
-  border-radius: 10px;
-  background: var(--ds-color-neutral-surface-hover);
-}
 .admin-users-tab-all {
   margin-inline-start: auto;
-}
-.admin-users-tabs button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-.admin-users-tabs button:hover:not([aria-pressed="true"]) {
-  background: var(--ds-color-neutral-background-default);
-  color: var(--ds-color-neutral-text-default);
-}
-.admin-users-tabs button[aria-pressed="true"] {
-  background: var(--ds-color-accent-base-default);
-  color: var(--ds-color-accent-base-contrast-default);
-  font-weight: 600;
-}
-.admin-users-tab-count {
-  font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
 }
 .admin-users-table {
   display: flex;
@@ -4555,10 +4546,10 @@ button.admin-users-menu-trigger {
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid transparent;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
   border-radius: 999px;
-  background: transparent;
-  color: var(--ds-color-neutral-text-subtle);
+  background: var(--ds-color-neutral-surface-hover);
+  color: var(--ds-color-neutral-text-default);
   cursor: pointer;
 }
 button.admin-users-menu-trigger:hover {
@@ -4977,9 +4968,6 @@ button.admin-users-menu-trigger:disabled {
   }
   .pill-tabs button {
     flex: 1;
-    justify-content: center;
-    font-size: 0.8125rem;
-    padding: 9px 12px;
   }
   .search-panel {
     padding: 20px;
