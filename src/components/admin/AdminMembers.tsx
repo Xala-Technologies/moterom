@@ -18,8 +18,10 @@ export function AdminMembers() {
   return (
     <section className="settings-card" aria-labelledby="building-members-title">
       <header className="settings-card-header">
-        <h2 id="building-members-title">{t("admin.members.title")}</h2>
-        <p>{t("admin.members.caption")}</p>
+        <div className="settings-card-heading">
+          <h2 id="building-members-title">{t("admin.members.title")}</h2>
+          <p>{t("admin.members.caption")}</p>
+        </div>
       </header>
       <div className="settings-card-body stack">
         <Button

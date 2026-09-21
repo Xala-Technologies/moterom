@@ -804,11 +804,13 @@ export function Admin() {
               <div className="settings-grid">
                 <section className="settings-card">
                   <header className="settings-card-header">
-                    <h2>{t("admin.settings_building")}</h2>
-                    <p>{t("admin.settings_building_caption")}</p>
+                    <div className="settings-card-heading">
+                      <h2>{t("admin.settings_building")}</h2>
+                      <p>{t("admin.settings_building_caption")}</p>
+                    </div>
                   </header>
                   <div className="settings-card-body">
-                    <dl className="settings-props">
+                    <dl className="settings-rows">
                       <div>
                         <dt>{t("admin.settings_name")}</dt>
                         <dd>{config?.buildingName}</dd>
@@ -844,40 +846,56 @@ export function Admin() {
                 </section>
                 <section className="settings-card">
                   <header className="settings-card-header">
-                    <h2>{t("admin.settings_access")}</h2>
-                    <p>{t("admin.settings_access_caption")}</p>
+                    <div className="settings-card-heading">
+                      <h2>{t("admin.settings_access")}</h2>
+                      <p>{t("admin.settings_access_caption")}</p>
+                      <div className="settings-access">
+                        <span className="settings-access-pill">
+                          {config?.access === "members"
+                            ? t("admin.access_members")
+                            : t("admin.access_public_short")}
+                        </span>
+                        <p className="caption">
+                          {config?.access === "members"
+                            ? t("admin.access_members_hint")
+                            : t("admin.access_public")}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      to="/admin/users"
+                      className="ds-button"
+                      data-variant="secondary"
+                      data-size="sm"
+                    >
+                      {t("admin.settings_users_open_inbox")}
+                    </Link>
                   </header>
-                  <div className="settings-card-body settings-card-action">
-                    <div className="settings-access">
-                      <span className="settings-access-pill">
-                        {config?.access === "members"
-                          ? t("admin.access_members")
-                          : t("admin.access_public_short")}
-                      </span>
-                      <p className="caption">
-                        {config?.access === "members"
-                          ? t("admin.access_members_hint")
-                          : t("admin.access_public")}
-                      </p>
-                    </div>
-                    <div className="settings-card-actions">
-                      <Link
-                        to="/admin/users"
-                        className="ds-button"
-                        data-variant="secondary"
-                      >
-                        {t("admin.settings_users_open_inbox")}
-                      </Link>
-                    </div>
-                  </div>
                 </section>
                 <section className="settings-card settings-card-span">
                   <header className="settings-card-header">
-                    <h2>{t("admin.settings_rules")}</h2>
-                    <p>{t("admin.settings_rules_caption")}</p>
+                    <div className="settings-card-heading">
+                      <h2>{t("admin.settings_rules")}</h2>
+                      <p>{t("admin.settings_rules_caption")}</p>
+                    </div>
+                    <a
+                      href={config?.dashboardUrl}
+                      className="ds-button settings-digilist-btn"
+                      data-variant="secondary"
+                      data-size="sm"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("common.open_digilist")}
+                      <ArrowUpRight size={17} />
+                      <span className="sr-only">
+                        {" "}
+                        {t("common.opens_new_tab")}
+                      </span>
+                    </a>
                   </header>
-                  <div className="settings-card-body settings-card-action">
-                    <dl className="settings-rules">
+                  <div className="settings-card-body">
+                    <dl className="settings-rows">
                       <div>
                         <dt>{t("admin.settings_rule_approval")}</dt>
                         <dd>
@@ -896,20 +914,6 @@ export function Admin() {
                         <dd>{t("admin.settings_rule_payment_value")}</dd>
                       </div>
                     </dl>
-                    <a
-                      href={config?.dashboardUrl}
-                      className="ds-button settings-digilist-btn"
-                      data-variant="secondary"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t("common.open_digilist")}
-                      <ArrowUpRight size={17} />
-                      <span className="sr-only">
-                        {" "}
-                        {t("common.opens_new_tab")}
-                      </span>
-                    </a>
                   </div>
                 </section>
                 {config?.mode === "demo" && (

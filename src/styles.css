@@ -4350,47 +4350,40 @@ a.stat.is-other-day {
 }
 .settings-card {
   border: 1px solid var(--ds-color-neutral-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--digilist-radius-lg, 12px);
   background: var(--ds-color-neutral-background-default);
   overflow: hidden;
 }
 .settings-card-header {
-  padding: 16px 20px;
-  background: var(--ds-color-accent-background-tinted);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  background: var(--ds-color-neutral-background-default);
+}
+.settings-card-header:not(:last-child) {
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+}
+.settings-card-heading {
+  min-width: 0;
 }
 .settings-card-header h2 {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   font-weight: 650;
   letter-spacing: -0.01em;
 }
 .settings-card-header p {
   margin: 4px 0 0;
-  font-size: 0.8125rem;
-  color: var(--ds-color-neutral-text-subtle);
-}
-.settings-card-body {
-  padding: 20px;
-}
-.settings-card-action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-}
-.settings-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-.settings-card-action > p {
-  margin: 0;
   font-size: 0.875rem;
   color: var(--ds-color-neutral-text-subtle);
-  line-height: 1.5;
-  max-width: 52ch;
+}
+.settings-card-header > .ds-button {
+  flex: none;
+}
+.settings-card-body {
+  padding: 16px 20px 20px;
 }
 .admin-users {
   display: flex;
@@ -4434,6 +4427,12 @@ a.stat.is-other-day {
 }
 .admin-users-header-actions {
   text-align: end;
+}
+.admin-users-table:not(.admin-members-table)
+  .admin-users-header
+  > :nth-child(3),
+.admin-users-row:not(.admin-members-row) > .admin-users-message {
+  padding-inline-start: 80px;
 }
 .admin-users-list {
   list-style: none;
@@ -4621,6 +4620,7 @@ button.admin-users-menu-trigger:disabled {
   .admin-users-message {
     grid-area: company;
     align-self: center;
+    padding-inline-start: 0;
   }
   .admin-users-date {
     grid-area: date;
@@ -4664,79 +4664,62 @@ button.admin-users-menu-trigger:disabled {
     grid-area: role;
   }
 }
-.settings-props {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 24px;
-  margin: 0;
-}
-.settings-props > div {
-  min-width: 0;
-}
-.settings-props dt {
-  margin: 0 0 4px;
-  color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-.settings-props dd {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 550;
-  overflow-wrap: anywhere;
-}
-.settings-missing {
-  color: var(--ds-color-neutral-text-subtle);
-  font-weight: 500;
-}
-.settings-rules {
+.settings-rows {
   display: flex;
   flex-direction: column;
   width: 100%;
   margin: 0;
 }
-.settings-rules > div {
+.settings-rows > div {
   display: grid;
   grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);
   gap: 8px 24px;
   align-items: baseline;
-  padding: 12px 0;
+  min-width: 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
 }
-.settings-rules > div:first-child {
+.settings-rows > div:first-child {
   padding-top: 0;
 }
-.settings-rules > div:last-child {
+.settings-rows > div:last-child {
   border-bottom: 0;
   padding-bottom: 0;
 }
-.settings-rules dt {
+.settings-rows dt {
   margin: 0;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
-.settings-rules dd {
+.settings-rows dd {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px 16px;
   margin: 0;
+  min-width: 0;
   font-size: 0.9375rem;
   font-weight: 550;
+  overflow-wrap: anywhere;
 }
-.settings-rules a {
+.settings-rows a {
   font-size: 0.875rem;
   font-weight: 550;
   color: var(--ds-color-accent-text-default);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.settings-missing {
+  color: var(--ds-color-neutral-text-subtle);
+  font-weight: 500;
+}
 .settings-access {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+  margin-top: 14px;
 }
 .settings-access-pill {
   display: inline-flex;
@@ -4751,10 +4734,11 @@ button.admin-users-menu-trigger:disabled {
 .settings-access .caption {
   margin: 0;
   max-width: 48ch;
+  line-height: 1.5;
 }
 .settings-callout {
   padding: 16px 18px;
-  border-radius: 10px;
+  border-radius: var(--digilist-radius-lg, 12px);
   border: 1px solid var(--ds-color-info-border-subtle);
   background: var(--ds-color-info-background-tinted);
   color: var(--ds-color-info-text-default);
@@ -4773,16 +4757,17 @@ button.admin-users-menu-trigger:disabled {
   .settings-grid {
     grid-template-columns: 1fr;
   }
-  .settings-props {
-    grid-template-columns: 1fr;
+  .settings-card-header {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .settings-rules > div {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-  .settings-digilist-btn {
+  .settings-card-header > .ds-button {
     width: 100%;
     justify-content: center;
+  }
+  .settings-rows > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }
 @media (max-width: 1150px) {
