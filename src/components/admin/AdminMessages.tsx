@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ChevronLeft, Megaphone, MessageCircle, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, MessageCircle, Search } from "lucide-react";
 import { useApi } from "../../api";
 import { useApp } from "../../context";
 import { Button, Empty, ErrorState, Input, Loading, Modal } from "../ui";
@@ -30,7 +30,13 @@ function matchesQuery(row: ConversationSummary, query: string): boolean {
     .includes(q);
 }
 
-export function AdminMessages() {
+export function AdminMessages({
+  announceOpen,
+  onAnnounceOpenChange,
+}: {
+  announceOpen: boolean;
+  onAnnounceOpenChange: (open: boolean) => void;
+}) {
   const { t } = useT();
   const { notify } = useApp();
   const { displayDate, shortTime } = useFormatters();
@@ -39,14 +45,23 @@ export function AdminMessages() {
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [phoneThreadOpen, setPhoneThreadOpen] = useState(false);
-  const [announceOpen, setAnnounceOpen] = useState(false);
   const [announceBusy, setAnnounceBusy] = useState(false);
   const [announceError, setAnnounceError] = useState<Error>();
+  const announceWasOpen = useRef(false);
   const [narrow, setNarrow] = useState(
     () =>
       typeof window !== "undefined" &&
       window.matchMedia("(max-width: 767px)").matches,
   );
+
+  useEffect(() => {
+    if (announceOpen && !announceWasOpen.current) setAnnounceError(undefined);
+    announceWasOpen.current = announceOpen;
+  }, [announceOpen]);
+
+  useEffect(() => {
+    return () => onAnnounceOpenChange(false);
+  }, [onAnnounceOpenChange]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -142,18 +157,6 @@ export function AdminMessages() {
             <div className="admin-messages-toolbar-top">
               <h2>{t("messages.list_count", { count: rows.length })}</h2>
               <div className="admin-messages-toolbar-actions">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  data-size="sm"
-                  onClick={() => {
-                    setAnnounceError(undefined);
-                    setAnnounceOpen(true);
-                  }}
-                >
-                  <Megaphone size={16} />
-                  {t("messages.announcement_new")}
-                </Button>
                 <div
                   className="view-switch"
                   role="group"
@@ -293,21 +296,21 @@ export function AdminMessages() {
         <Modal
           title={t("messages.announcement_new")}
           close={() => {
-            if (!announceBusy) setAnnounceOpen(false);
+            if (!announceBusy) onAnnounceOpenChange(false);
           }}
         >
           <AnnouncementForm
             busy={announceBusy}
             error={announceError}
             onCancel={() => {
-              if (!announceBusy) setAnnounceOpen(false);
+              if (!announceBusy) onAnnounceOpenChange(false);
             }}
             onSubmit={async (payload) => {
               setAnnounceBusy(true);
               setAnnounceError(undefined);
               try {
                 await publishAnnouncement(payload);
-                setAnnounceOpen(false);
+                onAnnounceOpenChange(false);
                 notify(t("messages.announcement_published"));
               } catch (err) {
                 setAnnounceError(err as Error);
