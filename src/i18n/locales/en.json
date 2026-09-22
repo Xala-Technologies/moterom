@@ -374,7 +374,15 @@
     "announcement_body_label": "Message",
     "announcement_publish": "Publish announcement",
     "announcement_published": "The announcement has been published.",
-    "announcement_dismiss": "I understand"
+    "announcement_dismiss": "I understand",
+    "delete": "Delete conversation",
+    "delete_title": "Delete conversation",
+    "delete_body_support": "The conversation with {{name}} will be deleted. This cannot be undone.",
+    "delete_body_booking": "The conversation with {{name}} will be deleted. This cannot be undone.",
+    "delete_body_booking_live": "The conversation with {{name}} will be removed from this portal’s inbox. Digilist may still keep booking messages.",
+    "delete_confirm": "Delete conversation",
+    "delete_cancel": "Cancel",
+    "deleted": "The conversation has been deleted."
   },
   "admin": {
     "document": {

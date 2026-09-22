@@ -374,7 +374,15 @@
     "announcement_body_label": "Melding",
     "announcement_publish": "Publiser kunngjøring",
     "announcement_published": "Kunngjøringen er publisert.",
-    "announcement_dismiss": "Jeg forstår"
+    "announcement_dismiss": "Jeg forstår",
+    "delete": "Slett samtale",
+    "delete_title": "Slett samtale",
+    "delete_body_support": "Samtalen med {{name}} slettes. Dette kan ikke angres.",
+    "delete_body_booking": "Samtalen med {{name}} slettes. Dette kan ikke angres.",
+    "delete_body_booking_live": "Samtalen med {{name}} fjernes fra innboksen i denne portalen. Digilist kan fortsatt ha bookingmeldinger.",
+    "delete_confirm": "Slett samtale",
+    "delete_cancel": "Avbryt",
+    "deleted": "Samtalen er slettet."
   },
   "admin": {
     "document": {

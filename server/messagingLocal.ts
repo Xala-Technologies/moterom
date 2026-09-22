@@ -59,6 +59,10 @@ export class MessagingLocalStore {
          user_id TEXT NOT NULL,
          dismissed INTEGER NOT NULL,
          PRIMARY KEY (announcement_id, user_id)
+       );
+       CREATE TABLE IF NOT EXISTS hidden_conversations (
+         id TEXT PRIMARY KEY,
+         hidden INTEGER NOT NULL
        );`,
     );
   }
@@ -229,6 +233,39 @@ export class MessagingLocalStore {
       user,
       clientMessageId,
     );
+  }
+
+  deleteConversation(id: string): { success: true } {
+    const conversation = this.getConversation(id);
+    if (!conversation)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    this.db
+      .prepare(`DELETE FROM support_messages WHERE conversation_id = ?`)
+      .run(id);
+    this.db.prepare(`DELETE FROM support_conversations WHERE id = ?`).run(id);
+    return { success: true };
+  }
+
+  hideConversation(id: string): { success: true } {
+    this.db
+      .prepare(
+        `INSERT INTO hidden_conversations (id, hidden)
+         VALUES (?, ?)
+         ON CONFLICT(id) DO UPDATE SET hidden = excluded.hidden`,
+      )
+      .run(id, Date.now());
+    return { success: true };
+  }
+
+  isHidden(id: string): boolean {
+    const row = this.db
+      .prepare(`SELECT id FROM hidden_conversations WHERE id = ?`)
+      .get(id);
+    return Boolean(row);
   }
 
   private appendMessage(
