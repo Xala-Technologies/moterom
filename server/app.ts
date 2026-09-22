@@ -85,7 +85,9 @@ interface Context {
   provider: DemoStore | Digilist;
 }
 async function mergedInbox(ctx: Context): Promise<ConversationSummary[]> {
-  const booking = await ctx.provider.inbox(ctx.user!);
+  const booking = (await ctx.provider.inbox(ctx.user!)).filter(
+    (row) => !messagingLocal.isHidden(row.id),
+  );
   const support = messagingLocal.inbox(ctx.user!);
   return [...booking, ...support].sort((a, b) => b.updatedAt - a.updatedAt);
 }
@@ -97,6 +99,12 @@ function conversationFrom(
   if (isSupportConversationId(id)) {
     return messagingLocal.conversationThread(id, user);
   }
+  if (messagingLocal.isHidden(id))
+    throw new AppError(
+      404,
+      "Samtalen ble ikke funnet.",
+      "conversation_not_found",
+    );
   return ctx.provider.conversationThread(id, user);
 }
 function sendConversationFrom(
@@ -114,12 +122,33 @@ function sendConversationFrom(
       clientMessageId,
     );
   }
+  if (messagingLocal.isHidden(id))
+    throw new AppError(
+      404,
+      "Samtalen ble ikke funnet.",
+      "conversation_not_found",
+    );
   return ctx.provider.sendConversationMessage(
     id,
     content,
     user,
     clientMessageId,
   );
+}
+function deleteConversationFrom(
+  ctx: Context,
+  id: string,
+  user: User,
+): Promise<{ success: true }> | { success: true } {
+  if (isSupportConversationId(id)) {
+    return messagingLocal.deleteConversation(id);
+  }
+  if (ctx.provider instanceof Digilist) {
+    return ctx.provider.conversationThread(id, user).then(() => {
+      return messagingLocal.hideConversation(id);
+    });
+  }
+  return ctx.provider.deleteConversation(id, user);
 }
 export const app = express();
 app.disable("x-powered-by");
@@ -959,6 +988,10 @@ app.post("/api/admin/messages/:id", async (req, res) => {
         body.clientMessageId,
       ),
     );
+});
+app.delete("/api/admin/messages/:id", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  res.json(await deleteConversationFrom(ctx, String(req.params.id), ctx.user!));
 });
 app.get("/api/admin/announcements", async (req, res) => {
   await context(req, res, true, true);
