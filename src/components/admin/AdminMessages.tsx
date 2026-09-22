@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, MessageCircle, Search } from "lucide-react";
-import { useApi } from "../../api";
+import { ChevronLeft, MessageCircle, Search, Trash2 } from "lucide-react";
+import { api, useApi } from "../../api";
 import { useApp } from "../../context";
 import { Button, Empty, ErrorState, Input, Loading, Modal } from "../ui";
 import { MessageThread } from "../MessageThread";
@@ -38,7 +38,7 @@ export function AdminMessages({
   onAnnounceOpenChange: (open: boolean) => void;
 }) {
   const { t } = useT();
-  const { notify } = useApp();
+  const { notify, config } = useApp();
   const { displayDate, shortTime } = useFormatters();
   const result = useApi<ConversationSummary[]>("/admin/messages");
   const [selected, setSelected] = useState<string>();
@@ -47,6 +47,8 @@ export function AdminMessages({
   const [phoneThreadOpen, setPhoneThreadOpen] = useState(false);
   const [announceBusy, setAnnounceBusy] = useState(false);
   const [announceError, setAnnounceError] = useState<Error>();
+  const [deleteTarget, setDeleteTarget] = useState<ConversationSummary>();
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const announceWasOpen = useRef(false);
   const [narrow, setNarrow] = useState(
     () =>
@@ -114,6 +116,24 @@ export function AdminMessages({
   const openRow = (id: string) => {
     setSelected(id);
     if (narrow) setPhoneThreadOpen(true);
+  };
+
+  const deleteConversation = async (row: ConversationSummary) => {
+    setDeleteBusy(true);
+    try {
+      await api<{ success: true }>(`/admin/messages/${row.id}`, {
+        method: "DELETE",
+      });
+      setDeleteTarget(undefined);
+      setSelected(undefined);
+      setPhoneThreadOpen(false);
+      result.reload();
+      notify(t("messages.deleted"));
+    } catch (err) {
+      notify((err as Error).message);
+    } finally {
+      setDeleteBusy(false);
+    }
   };
 
   const emptyList =
@@ -269,13 +289,28 @@ export function AdminMessages({
                     {t("messages.back_to_list")}
                   </Button>
                 ) : null}
-                <h2>
-                  {activeRow.customerName || t("messages.customer_fallback")}
-                </h2>
-                <p className="muted">
-                  {displayDate(activeRow.updatedAt)}{" "}
-                  {shortTime(activeRow.updatedAt)}
-                </p>
+                <div className="admin-messages-thread-heading">
+                  <div>
+                    <h2>
+                      {activeRow.customerName ||
+                        t("messages.customer_fallback")}
+                    </h2>
+                    <p className="muted">
+                      {displayDate(activeRow.updatedAt)}{" "}
+                      {shortTime(activeRow.updatedAt)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    data-size="sm"
+                    data-color="danger"
+                    onClick={() => setDeleteTarget(activeRow)}
+                  >
+                    <Trash2 size={16} />
+                    {t("messages.delete")}
+                  </Button>
+                </div>
                 <MessageContextCard conversation={activeRow} admin />
               </header>
               <MessageThread
@@ -319,6 +354,46 @@ export function AdminMessages({
               }
             }}
           />
+        </Modal>
+      ) : null}
+      {deleteTarget ? (
+        <Modal
+          title={t("messages.delete_title")}
+          close={() => {
+            if (!deleteBusy) setDeleteTarget(undefined);
+          }}
+        >
+          <p>
+            {t(
+              deleteTarget.kind === "support"
+                ? "messages.delete_body_support"
+                : config?.mode === "live"
+                  ? "messages.delete_body_booking_live"
+                  : "messages.delete_body_booking",
+              {
+                name:
+                  deleteTarget.customerName || t("messages.customer_fallback"),
+              },
+            )}
+          </p>
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              type="button"
+              disabled={deleteBusy}
+              onClick={() => setDeleteTarget(undefined)}
+            >
+              {t("messages.delete_cancel")}
+            </Button>
+            <Button
+              type="button"
+              data-color="danger"
+              disabled={deleteBusy}
+              onClick={() => void deleteConversation(deleteTarget)}
+            >
+              {t("messages.delete_confirm")}
+            </Button>
+          </div>
         </Modal>
       ) : null}
     </>

@@ -445,6 +445,61 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       .expect(200);
     expect(again.body.conversation.id).toBe(supportId);
   });
+  it("lets an administrator delete support and booking conversations", async () => {
+    const opened = await customer
+      .post("/api/messages/support")
+      .set("Origin", origin)
+      .send({
+        content: "Slett denne støttesamtalen",
+        clientMessageId: randomUUID(),
+      })
+      .expect(201);
+    const supportId = opened.body.conversation.id as string;
+    await customer
+      .delete(`/api/admin/messages/${supportId}`)
+      .set("Origin", origin)
+      .expect(403);
+    await administrator
+      .delete(`/api/admin/messages/${supportId}`)
+      .set("Origin", origin)
+      .expect(200);
+    await administrator.get(`/api/admin/messages/${supportId}`).expect(404);
+    const afterSupport = await administrator
+      .get("/api/admin/messages")
+      .expect(200);
+    expect(
+      afterSupport.body.some((row: { id: string }) => row.id === supportId),
+    ).toBe(false);
+
+    const bookings = (await customer.get("/api/bookings").expect(200)).body as {
+      id: string;
+      userId: string;
+    }[];
+    const mine = bookings.find((b) => b.userId === "demo-customer");
+    expect(mine).toBeTruthy();
+    const sent = await customer
+      .post(`/api/bookings/${mine!.id}/messages`)
+      .set("Origin", origin)
+      .send({
+        content: "Slett booking-samtalen",
+        clientMessageId: randomUUID(),
+      })
+      .expect(201);
+    const bookingConversationId = sent.body.conversation.id as string;
+    await administrator
+      .delete(`/api/admin/messages/${bookingConversationId}`)
+      .set("Origin", origin)
+      .expect(200);
+    const inbox = await administrator.get("/api/admin/messages").expect(200);
+    expect(
+      inbox.body.some(
+        (row: { id: string }) => row.id === bookingConversationId,
+      ),
+    ).toBe(false);
+    await administrator
+      .get(`/api/admin/messages/${bookingConversationId}`)
+      .expect(404);
+  });
   it("publishes a building announcement for members and skips admins", async () => {
     await administrator
       .post("/api/admin/announcements")

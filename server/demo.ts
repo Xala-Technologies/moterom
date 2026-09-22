@@ -564,4 +564,19 @@ export class DemoStore {
     this.audit(user, "message.sent", conversation.id);
     return this.thread(conversation);
   }
+
+  deleteConversation(id: string, user: User): { success: true } {
+    this.assertAdmin(user);
+    const conversation = this.conversations().find((c) => c.id === id);
+    if (!conversation)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    this.db.prepare("DELETE FROM messages WHERE conversation_id = ?").run(id);
+    this.db.prepare("DELETE FROM conversations WHERE id = ?").run(id);
+    this.audit(user, "conversation.deleted", id);
+    return { success: true };
+  }
 }

@@ -3144,6 +3144,18 @@ a.login-option:hover {
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
   flex-shrink: 0;
 }
+.admin-messages-thread-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-messages-thread-heading > div {
+  min-width: 0;
+}
+.admin-messages-thread-heading > .ds-button {
+  flex: none;
+}
 .admin-messages-thread-header h2 {
   margin: 0;
   font-size: 1.0625rem;
@@ -5154,6 +5166,13 @@ button.admin-users-menu-trigger:disabled {
   }
   .admin-messages-thread-header {
     padding: 14px 16px;
+  }
+  .admin-messages-thread-heading {
+    flex-wrap: wrap;
+  }
+  .admin-messages-thread-heading > .ds-button {
+    width: 100%;
+    justify-content: center;
   }
   .booking-info-panel {
     padding: 18px 20px;
