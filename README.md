@@ -2,7 +2,7 @@
 
 A bilingual (Norwegian Bokmål default + English) meeting-room portal for one building, using Digilist's visual language and existing booking services. Includes a working local demo and a server-side Digilist integration adapter.
 
-**Status:** review branch with a dedicated SKB development tenant and seven private room slugs documented in the repository. Authenticated staging acceptance and remaining shared-backend contracts are still open; see [the integration review](docs/architecture/moterom-digilist-review-2026-09-18.md). No Digilist deployment or customer data was changed by this review.
+**Status:** review branch with a dedicated SKB development tenant and seven private room slugs documented in the repository. Authenticated staging acceptance and remaining shared-backend contracts are still open; see [the integration review](docs/architecture/moterom-digilist-review-2026-09-18.md). Expansion to other companies uses private Digilist tenants per building — see [multi-tenant private portals](docs/multi-tenant-portals.md). No Digilist deployment or customer data was changed by this review.
 
 ## Run locally
 
