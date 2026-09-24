@@ -44,6 +44,7 @@ import {
   bookingSchema,
   messageCreateSchema,
   roomSchema,
+  roomCreateSchema,
   searchSchema,
   supportOpenSchema,
 } from "../shared/validation";
@@ -1015,7 +1016,7 @@ app.get("/api/admin/insights/rooms/:id", async (req, res) => {
   res.json(
     await insightsResponse(
       ctx,
-      await ctx.provider.rooms(),
+      await ctx.provider.allRooms(),
       queryRecord(req.query),
       {
         roomId: String(req.params.id),
@@ -1029,13 +1030,59 @@ app.get("/api/admin/insights", async (req, res) => {
   res.json(
     await insightsResponse(
       ctx,
-      await ctx.provider.rooms(),
+      await ctx.provider.allRooms(),
       queryRecord(req.query),
       {
         locale: requestLocale(req),
       },
     ),
   );
+});
+app.post("/api/admin/rooms", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  const body = roomCreateSchema.parse(req.body);
+  const { imageFile, ...fields } = body;
+  let image = fields.image?.trim();
+  let imageKind = fields.imageKind;
+  if (imageFile && config.mode !== "demo")
+    throw new AppError(
+      400,
+      "I live-modus må rombilder publiseres i Digilist.",
+      "image_upload_demo_only",
+    );
+  const created = await ctx.provider.createRoom(
+    {
+      ...fields,
+      ...(image !== undefined ? { image } : {}),
+      imageKind,
+    },
+    ctx.user!,
+  );
+  if (imageFile) {
+    image = await saveDemoRoomImage(created.id, imageFile);
+    imageKind = imageKind ?? "illustrative";
+    res.status(201).json(
+      await ctx.provider.updateRoom(
+        created.id,
+        {
+          name: created.name,
+          capacity: created.capacity,
+          description: created.description,
+          descriptionEn: created.descriptionEn,
+          capacityLabel: created.capacityLabel,
+          capacityLabelEn: created.capacityLabelEn,
+          requiresApproval: created.requiresApproval,
+          amenities: created.amenities,
+          arrivalInfo: created.arrivalInfo || "",
+          image,
+          imageKind,
+        },
+        ctx.user!,
+      ),
+    );
+    return;
+  }
+  res.status(201).json(created);
 });
 app.patch("/api/admin/rooms/:id", async (req, res) => {
   const ctx = await context(req, res, true, true);
@@ -1061,6 +1108,17 @@ app.patch("/api/admin/rooms/:id", async (req, res) => {
         ...(image !== undefined ? { image } : {}),
         imageKind,
       },
+      ctx.user!,
+    ),
+  );
+});
+app.post("/api/admin/rooms/:id/portal", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  const body = z.object({ published: z.boolean() }).parse(req.body);
+  res.json(
+    await ctx.provider.setRoomPortalPublished(
+      String(req.params.id),
+      body.published,
       ctx.user!,
     ),
   );

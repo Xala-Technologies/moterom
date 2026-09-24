@@ -429,7 +429,7 @@
       },
       "rooms": {
         "title": "Rom og innhold",
-        "body": "Oppdater opplysninger som kundene ser."
+        "body": "Oppdater rominnhold, publiser eller lagre som utkast, og legg til nye rom."
       },
       "users": {
         "title": "Brukere",
@@ -498,6 +498,26 @@
     "requires_approval": "Krever godkjenning",
     "direct_booking": "Direkte booking",
     "edit": "Rediger",
+    "room_published_status": "Publisert",
+    "room_draft_status": "Utkast",
+    "publish_room": "Publiser",
+    "unpublish_room": "Sett som utkast",
+    "new_room": "Nytt rom",
+    "new_room_title": "Legg til rom",
+    "new_room_intro": "Rommet opprettes som utkast i Digilist. Publiser det når det er klart for booking.",
+    "new_room_submit": "Opprett som utkast",
+    "creating_room": "Oppretter …",
+    "rooms_filter_visibility": "Status",
+    "rooms_filter_all": "Alle ({{count}})",
+    "rooms_filter_published": "Publisert ({{count}})",
+    "rooms_filter_draft": "Utkast ({{count}})",
+    "empty_rooms_title": "Ingen rom i dette filteret",
+    "empty_rooms_body": "Bytt filter, eller legg til et nytt rom.",
+    "unpublish_room_title": "Sett som utkast",
+    "unpublish_room_body": "{{name}} blir et Digilist-utkast. Kundene ser det ikke i Finn rom før du publiserer igjen. Eksisterende bookinger blir stående.",
+    "unpublish_room_confirm": "Sett som utkast",
+    "unpublish_room_cancel": "Avbryt",
+    "unpublishing_room": "Lagrer …",
     "settings_building": "Bygget",
     "settings_building_caption": "Grunnleggende opplysninger for denne portalen.",
     "settings_name": "Navn",
@@ -607,7 +627,10 @@
       "approved": "Bookingen er godkjent.",
       "rejected": "Forespørselen er avslått.",
       "block_removed": "Blokkeringen er fjernet.",
-      "room_updated": "Rommet er oppdatert."
+      "room_updated": "Rommet er oppdatert.",
+      "room_unpublished": "Rommet er satt som utkast.",
+      "room_published": "Rommet er publisert.",
+      "room_created": "Rommet er opprettet som utkast."
     },
     "insights": {
       "demo_prefix": "Demodata. ",

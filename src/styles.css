@@ -3540,9 +3540,9 @@ a.stat.is-other-day {
   align-items: end;
 }
 .insights-filters .ds-field {
-  flex: 1 1 280px;
-  min-width: 240px;
-  max-width: 420px;
+  flex: 1 1 16rem;
+  min-width: min(100%, 12rem);
+  max-width: 26.25rem;
 }
 .insights-filters .ds-select,
 .insights-filters .ds-input,
@@ -4347,6 +4347,15 @@ a.stat.is-other-day {
   border-radius: var(--digilist-radius-lg, 12px);
   background: var(--ds-color-neutral-background-default);
 }
+.admin-room.is-hidden {
+  background: var(
+    --ds-color-neutral-background-subtle,
+    var(--ds-color-neutral-surface-tinted)
+  );
+}
+.admin-room.is-hidden .admin-room-media {
+  opacity: 0.55;
+}
 .admin-room-media {
   width: 180px;
 }
@@ -4358,9 +4367,35 @@ a.stat.is-other-day {
 .admin-room-copy {
   min-width: 0;
 }
+.admin-room-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
 .admin-room h2 {
   margin: 0;
   font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
+}
+.admin-room-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--digilist-radius-sm, 6px);
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: 600;
+  line-height: 1.4;
+}
+.admin-room-badge.tone-success {
+  color: var(--ds-color-success-text-default);
+  background: var(--ds-color-success-background-tinted);
+}
+.admin-room-badge.tone-neutral {
+  color: var(--ds-color-neutral-text-default);
+  background: var(
+    --ds-color-neutral-background-tinted,
+    var(--ds-color-neutral-surface-tinted)
+  );
 }
 .admin-room p {
   display: flex;
@@ -4375,7 +4410,14 @@ a.stat.is-other-day {
   margin-top: 8px;
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
-.admin-room .ds-button {
+.admin-room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.admin-room-actions .ds-button {
   min-height: 44px;
 }
 .settings-grid {
@@ -4844,8 +4886,12 @@ button.admin-users-menu-trigger:disabled {
     width: 112px;
     height: 84px;
   }
-  .admin-room .ds-button {
+  .admin-room-actions {
     grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+  .admin-room-actions .ds-button {
+    flex: 1 1 auto;
   }
   .admin-booking-row {
     grid-template-columns: 1.3fr 1fr 1fr;
@@ -5286,9 +5332,16 @@ button.admin-users-menu-trigger:disabled {
   .insights-filters {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
   .insights-filters .ds-field {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
     max-width: none;
+  }
+  .insights-compare {
+    margin-bottom: 0;
   }
   .insights-rankings {
     grid-template-columns: 1fr;
