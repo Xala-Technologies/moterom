@@ -429,7 +429,7 @@
       },
       "rooms": {
         "title": "Rooms and content",
-        "body": "Update details that customers see."
+        "body": "Update room content, publish or save as draft, and add new rooms."
       },
       "users": {
         "title": "Users",
@@ -498,6 +498,26 @@
     "requires_approval": "Requires approval",
     "direct_booking": "Direct booking",
     "edit": "Edit",
+    "room_published_status": "Published",
+    "room_draft_status": "Draft",
+    "publish_room": "Publish",
+    "unpublish_room": "Save as draft",
+    "new_room": "New room",
+    "new_room_title": "Add room",
+    "new_room_intro": "The room is created as a Digilist draft. Publish it when it is ready for booking.",
+    "new_room_submit": "Create as draft",
+    "creating_room": "Creating…",
+    "rooms_filter_visibility": "Status",
+    "rooms_filter_all": "All ({{count}})",
+    "rooms_filter_published": "Published ({{count}})",
+    "rooms_filter_draft": "Draft ({{count}})",
+    "empty_rooms_title": "No rooms in this filter",
+    "empty_rooms_body": "Change the filter, or add a new room.",
+    "unpublish_room_title": "Save as draft",
+    "unpublish_room_body": "{{name}} becomes a Digilist draft. Customers will not see it in Find rooms until you publish again. Existing bookings stay in place.",
+    "unpublish_room_confirm": "Save as draft",
+    "unpublish_room_cancel": "Cancel",
+    "unpublishing_room": "Saving…",
     "settings_building": "Building",
     "settings_building_caption": "Basic details for this portal.",
     "settings_name": "Name",
@@ -607,7 +627,10 @@
       "approved": "The booking is approved.",
       "rejected": "The request has been declined.",
       "block_removed": "The block has been removed.",
-      "room_updated": "The room has been updated."
+      "room_updated": "The room has been updated.",
+      "room_unpublished": "The room has been saved as a draft.",
+      "room_published": "The room has been published.",
+      "room_created": "The room has been created as a draft."
     },
     "insights": {
       "demo_prefix": "Demo data. ",

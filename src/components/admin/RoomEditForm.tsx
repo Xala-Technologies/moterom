@@ -40,6 +40,8 @@ export function RoomEditForm({
   busy,
   error,
   onSubmit,
+  submitLabel,
+  submittingLabel,
 }: {
   room: Room;
   onChange: (room: Room) => void;
@@ -47,6 +49,8 @@ export function RoomEditForm({
   busy: boolean;
   error?: Error;
   onSubmit: (payload: RoomEditPayload) => void;
+  submitLabel?: string;
+  submittingLabel?: string;
 }) {
   const { t } = useT();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -362,7 +366,9 @@ export function RoomEditForm({
           <ErrorState error={formError ? new Error(formError) : error!} />
         )}
         <Button type="submit" disabled={busy || reading}>
-          {busy ? t("common.saving") : t("admin.save_changes")}
+          {busy
+            ? submittingLabel || t("common.saving")
+            : submitLabel || t("admin.save_changes")}
         </Button>
       </div>
     </form>

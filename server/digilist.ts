@@ -1,7 +1,7 @@
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { ConvexError } from "convex/values";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
   adminEmails,
@@ -47,6 +47,83 @@ const list = (value: unknown): Row[] =>
       : []) as Row[];
 const str = (v: unknown, fallback = "") =>
   typeof v === "string" ? v : fallback;
+
+const PORTAL_OPENING_HOURS = [
+  { dayIndex: 1, day: "Mandag", open: "08:00", close: "17:00" },
+  { dayIndex: 2, day: "Tirsdag", open: "08:00", close: "17:00" },
+  { dayIndex: 3, day: "Onsdag", open: "08:00", close: "17:00" },
+  { dayIndex: 4, day: "Torsdag", open: "08:00", close: "17:00" },
+  { dayIndex: 5, day: "Fredag", open: "08:00", close: "17:00" },
+  { dayIndex: 6, day: "Lørdag", open: "00:00", close: "00:00", isClosed: true },
+  { dayIndex: 0, day: "Søndag", open: "00:00", close: "00:00", isClosed: true },
+];
+
+const PORTAL_BOOKING_CONFIG = {
+  bookingModel: "TIME_RANGE",
+  slotDurationMinutes: 60,
+  minLeadTimeHours: 0,
+  maxAdvanceDays: 180,
+  bufferBeforeMinutes: 0,
+  bufferAfterMinutes: 0,
+  approvalRequired: false,
+  paymentRequired: false,
+  depositPercent: 0,
+  cancellationPolicy: "flexible",
+  freeCancellationHours: 0,
+  allowRecurring: false,
+  allowSeasonalLease: false,
+  minBookingDurationMinutes: 60,
+};
+
+function isTenantPortalRoom(source: Row): boolean {
+  const channel = str(
+    source.accessChannel,
+    str(row(source.metadata).accessChannel, "marketplace"),
+  );
+  const visibility = str(
+    source.visibility,
+    str(row(source.metadata).visibility),
+  );
+  return channel === "tenant_portal" && visibility === "private";
+}
+
+/** Digilist status is the publish authority (draft / archived are not bookable). */
+function isDigilistPublished(source: Row): boolean {
+  const status = str(source.status);
+  if (!status) {
+    const listing = str(source.listingStatus, "published");
+    return ![
+      "draft",
+      "paused",
+      "expired",
+      "rejected",
+      "deleted",
+      "changes_requested",
+    ].includes(listing);
+  }
+  if (["draft", "archived", "deleted", "scheduled"].includes(status))
+    return false;
+  return status === "published" || status === "active";
+}
+
+function portalRoomId(source: Row): string {
+  const slug = str(source.slug);
+  return inventory.find((item) => item.slug === slug)?.id || slug;
+}
+
+function slugFromName(name: string): string {
+  const base = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return `${base || "rom"}-${randomBytes(3).toString("hex")}`;
+}
 export async function rest(
   path: string,
   method = "GET",
@@ -234,85 +311,124 @@ export class Digilist {
   constructor(private session?: Session) {
     this.c = client(session);
   }
-  async rooms(): Promise<Room[]> {
+  async allRooms(): Promise<Room[]> {
+    let listed: Row[] = [];
+    try {
+      listed = list(
+        await query(this.c, "domain/resources:list", {
+          tenantId,
+          limit: 200,
+        }),
+      ).filter(
+        (source) =>
+          source.tenantId === tenantId &&
+          isTenantPortalRoom(source) &&
+          str(source.status) !== "deleted" &&
+          str(source._id),
+      );
+    } catch {
+      listed = [];
+    }
+    if (listed.length) {
+      return listed.map((source) => {
+        const room = this.mapSourceToRoom(source);
+        this.sources.set(room.id, source);
+        return room;
+      });
+    }
+    // Fallback when Digilist list is empty or unavailable for this session.
     return Promise.all(inventory.map((definition) => this.room(definition.id)));
   }
+  async rooms(): Promise<Room[]> {
+    return (await this.allRooms()).filter((room) => room.portalPublished);
+  }
   async room(id: string): Promise<Room> {
-    const definition = inventory.find((item) => item.id === id);
-    if (!definition)
-      throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
-    let request = this.roomRequests.get(id);
+    const definition = inventory.find(
+      (item) => item.id === id || item.slug === id,
+    );
+    const slug = definition?.slug || id;
+    let request = this.roomRequests.get(id) || this.roomRequests.get(slug);
     if (!request) {
       request = (async () => {
         const source = row(
           await query(this.c, "domain/resources:getBySlug", {
-            slug: definition.slug,
+            slug,
             tenantId,
           }),
         );
-        const channel = str(
-          source.accessChannel,
-          str(row(source.metadata).accessChannel, "marketplace"),
-        );
-        if (
-          source.tenantId !== tenantId ||
-          !source._id ||
-          channel !== "tenant_portal" ||
-          str(source.visibility, str(row(source.metadata).visibility)) !==
-            "private"
-        )
+        if (!source._id)
+          throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
+        if (source.tenantId !== tenantId || !isTenantPortalRoom(source))
           throw new AppError(
             503,
-            `Rommet ${definition.name} er ikke tilgjengelig i byggets oppsett.`,
+            `Rommet ${str(source.name, definition?.name || slug)} er ikke tilgjengelig i byggets oppsett.`,
             "room_setup_unavailable",
-            { name: definition.name },
+            { name: str(source.name, definition?.name || slug) },
           );
-        this.sources.set(definition.id, source);
-        const images = Array.isArray(source.images) ? source.images : [];
-        const image =
-          typeof images[0] === "string" ? images[0] : str(row(images[0]).url);
-        const liveImage =
-          image && /^https:\/\//.test(image) ? image : undefined;
-        const portal = row(row(source.metadata).moterom);
-        return {
-          ...definition,
-          sourceId: str(source._id),
-          name: str(source.name, definition.name),
-          slug: definition.slug,
-          description: str(source.description, definition.description),
-          descriptionEn: str(
-            portal.descriptionEn,
-            definition.descriptionEn || "",
-          ),
-          capacity: z.number().int().positive().parse(source.capacity),
-          capacityLabel:
-            str(portal.capacityLabel) || `${source.capacity} personer`,
-          capacityLabelEn:
-            str(portal.capacityLabelEn) || `${source.capacity} people`,
-          image: liveImage || definition.image,
-          imageKind:
-            portal.imageUrl === (liveImage || definition.image) &&
-            ["actual", "illustrative"].includes(str(portal.imageKind))
-              ? (portal.imageKind as Room["imageKind"])
-              : liveImage
-                ? "illustrative"
-                : definition.imageKind,
-          amenities: Array.isArray(source.amenities)
-            ? source.amenities.flatMap((x) => {
-                const name = typeof x === "string" ? x : str(row(x).name);
-                return name ? [name] : [];
-              })
-            : [],
-          requiresApproval: Boolean(
-            row(source.bookingConfig).approvalRequired ||
-            source.requiresApproval,
-          ),
-          arrivalInfo: str(row(source.metadata).arrivalInfo),
-        };
+        const room = this.mapSourceToRoom(source, definition);
+        this.sources.set(room.id, source);
+        return room;
       })();
       this.roomRequests.set(id, request);
+      this.roomRequests.set(slug, request);
     }
     return request;
+  }
+  private mapSourceToRoom(source: Row, definition?: Room): Room {
+    const slug = str(source.slug, definition?.slug || "");
+    const seed = definition || inventory.find((item) => item.slug === slug);
+    const id = seed?.id || slug;
+    const images = Array.isArray(source.images) ? source.images : [];
+    const image =
+      typeof images[0] === "string" ? images[0] : str(row(images[0]).url);
+    const liveImage = image && /^https:\/\//.test(image) ? image : undefined;
+    const portal = row(row(source.metadata).moterom);
+    const capacity = z
+      .number()
+      .int()
+      .positive()
+      .parse(source.capacity ?? seed?.capacity ?? 1);
+    return {
+      id,
+      name: str(source.name, seed?.name || slug),
+      slug,
+      sourceId: str(source._id),
+      description: str(source.description, seed?.description || ""),
+      descriptionEn: str(portal.descriptionEn, seed?.descriptionEn || ""),
+      capacity,
+      capacityLabel:
+        str(portal.capacityLabel) ||
+        seed?.capacityLabel ||
+        `${capacity} personer`,
+      capacityLabelEn:
+        str(portal.capacityLabelEn) ||
+        seed?.capacityLabelEn ||
+        `${capacity} people`,
+      image: liveImage || seed?.image,
+      imageKind:
+        portal.imageUrl === (liveImage || seed?.image) &&
+        ["actual", "illustrative"].includes(str(portal.imageKind))
+          ? (portal.imageKind as Room["imageKind"])
+          : liveImage
+            ? "illustrative"
+            : seed?.imageKind,
+      amenities: Array.isArray(source.amenities)
+        ? source.amenities.flatMap((x) => {
+            const name = typeof x === "string" ? x : str(row(x).name);
+            return name ? [name] : [];
+          })
+        : seed?.amenities || [],
+      requiresApproval: Boolean(
+        row(source.bookingConfig).approvalRequired || source.requiresApproval,
+      ),
+      portalPublished: isDigilistPublished(source),
+      arrivalInfo: str(row(source.metadata).arrivalInfo),
+      nameNeedsConfirmation: seed?.nameNeedsConfirmation,
+    };
+  }
+  private assertPortalPublished(room: Room) {
+    if (!room.portalPublished)
+      throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
   }
   async availability(
     search: Search,
@@ -323,6 +439,12 @@ export class Digilist {
     const rooms = roomId ? [await this.room(roomId)] : await this.rooms();
     return Promise.all(
       rooms.map(async (room) => {
+        if (!room.portalPublished)
+          return {
+            roomId: room.id,
+            state: "unavailable" as const,
+            reason: translateMessage(locale, "room_not_found"),
+          };
         if (span.startTime < Date.now() || room.capacity < search.people)
           return {
             roomId: room.id,
@@ -448,7 +570,7 @@ export class Digilist {
     };
   }
   async bookings(user: User) {
-    const rooms = await this.rooms();
+    const rooms = await this.allRooms();
     const data = list(
       await query(this.c, "domain/bookings:listMine", {
         userId: user.id,
@@ -471,7 +593,7 @@ export class Digilist {
         sessionToken: this.session?.token,
       }),
     );
-    const b = this.normalizeBooking(raw, await this.rooms());
+    const b = this.normalizeBooking(raw, await this.allRooms());
     if (!user.isAdmin && b.userId !== user.id)
       throw new AppError(
         404,
@@ -533,6 +655,7 @@ export class Digilist {
     const existing = await this.replay(input, user, key);
     if (existing) return existing;
     const room = await this.room(input.roomId);
+    this.assertPortalPublished(room);
     const span = interval(input);
     const slot = row(
       await query(this.c, "domain/bookings:validateBookingSlot", {
@@ -635,7 +758,7 @@ export class Digilist {
   }
   async admin(user: User): Promise<AdminData> {
     this.assertAdmin(user);
-    const rooms = await this.rooms();
+    const rooms = await this.allRooms();
     const [bookings, blocks] = await Promise.all([
       query(this.c, "domain/bookings:list", {
         tenantId,
@@ -671,7 +794,7 @@ export class Digilist {
     opts: { fetchFrom: number; fetchTo: number },
   ): Promise<{ bookings: InsightsBooking[]; truncated: boolean }> {
     this.assertAdmin(user);
-    const rooms = await this.rooms();
+    const rooms = await this.allRooms();
     const mapped = await collectPaged(async (startAfter) => {
       const rows = list(
         await query(this.c, "domain/bookings:list", {
@@ -713,7 +836,7 @@ export class Digilist {
   }
   async listBlocksForInsights(user: User): Promise<InsightsBlock[]> {
     this.assertAdmin(user);
-    const rooms = await this.rooms();
+    const rooms = await this.allRooms();
     const blocks = list(
       await query(this.c, "domain/blocks:list", { tenantId, status: "active" }),
     );
@@ -868,6 +991,145 @@ export class Digilist {
     this.roomRequests.delete(id);
     return this.room(id);
   }
+  async setRoomPortalPublished(id: string, published: boolean, user: User) {
+    this.assertAdmin(user);
+    const room = await this.room(id);
+    if (!room.sourceId)
+      throw new AppError(
+        503,
+        "Rommet er ikke tilgjengelig i byggets oppsett.",
+        "room_setup_unavailable",
+      );
+    if (published) {
+      await mutate(this.c, "domain/resources:update", {
+        id: room.sourceId,
+        updatedBy: user.id,
+        status: "published",
+      });
+    } else {
+      await mutate(this.c, "domain/resources:unpublish", {
+        id: room.sourceId,
+        unpublishedBy: user.id,
+      });
+    }
+    this.roomRequests.delete(id);
+    this.roomRequests.delete(room.slug);
+    return this.room(id);
+  }
+  async createRoom(
+    input: {
+      name: string;
+      capacity: number;
+      description: string;
+      descriptionEn?: string;
+      capacityLabel?: string;
+      capacityLabelEn?: string;
+      requiresApproval: boolean;
+      amenities?: string[];
+      arrivalInfo?: string;
+      image?: string;
+      imageKind?: "illustrative" | "actual";
+    },
+    user: User,
+  ): Promise<Room> {
+    this.assertAdmin(user);
+    const name = input.name.trim();
+    if (!name)
+      throw new AppError(400, "Skriv inn et romnavn.", "room_name_required");
+    const capacity = z.number().int().positive().parse(input.capacity);
+    const slug = slugFromName(name);
+    const description = input.description.trim() || name;
+    const image = input.image?.trim();
+    const liveImage = image && /^https:\/\//.test(image) ? image : undefined;
+    if (image && !liveImage)
+      throw new AppError(
+        400,
+        "Bruk en HTTPS-adresse til bildet.",
+        "invalid_image_url",
+      );
+    const capacityLabel = input.capacityLabel?.trim() || `${capacity} personer`;
+    const capacityLabelEn =
+      input.capacityLabelEn?.trim() || `${capacity} people`;
+    let created: Row;
+    try {
+      created = row(
+        await mutate(this.c, "domain/resources:create", {
+          tenantId,
+          actorId: user.id,
+          ownerId: user.id,
+          name,
+          slug,
+          description,
+          fullDescription: description,
+          categoryKey: "LOKALER",
+          timeMode: "PERIOD",
+          status: "draft",
+          requiresApproval: input.requiresApproval,
+          capacity,
+          visibility: "private",
+          accessChannel: "tenant_portal",
+          images: liveImage ? [{ url: liveImage }] : [],
+          amenities: input.amenities || [],
+          pricing: { basePrice: 0, currency: "NOK", unit: "hour" },
+          bookingConfig: {
+            ...PORTAL_BOOKING_CONFIG,
+            approvalRequired: input.requiresApproval,
+          },
+          openingHours: PORTAL_OPENING_HOURS,
+          slotDurationMinutes: 60,
+          metadata: {
+            moterom: {
+              descriptionEn: input.descriptionEn?.trim() || "",
+              capacityLabel,
+              capacityLabelEn,
+              ...(input.imageKind || liveImage
+                ? {
+                    imageKind: input.imageKind || "illustrative",
+                    imageUrl: liveImage || "",
+                  }
+                : {}),
+            },
+            ...(input.arrivalInfo?.trim()
+              ? { arrivalInfo: input.arrivalInfo.trim() }
+              : {}),
+          },
+        }),
+      );
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      throw new AppError(
+        502,
+        text || "Rommet kunne ikke opprettes i Digilist.",
+        "room_create_failed",
+      );
+    }
+    const sourceId = str(created.id, str(created._id));
+    if (!sourceId)
+      throw new AppError(
+        502,
+        "Rommet kunne ikke opprettes i Digilist.",
+        "room_create_failed",
+      );
+    try {
+      await mutate(this.c, "domain/pricing:create", {
+        tenantId,
+        userId: user.id,
+        resourceId: sourceId,
+        priceType: "hourly",
+        basePrice: 0,
+        currency: "NOK",
+        pricePerHour: 0,
+        slotDurationMinutes: 60,
+        taxRate: 0,
+        taxIncluded: true,
+      });
+    } catch {
+      // Quote may still succeed from resource pricing payload; do not roll back create.
+    }
+    this.roomRequests.clear();
+    this.sources.clear();
+    return this.room(slug);
+  }
   async createBlock(roomId: string, search: Search, title: string, user: User) {
     this.assertAdmin(user);
     const room = await this.room(roomId);
@@ -977,7 +1239,7 @@ export class Digilist {
       return enrichBookingConversation(
         conversation,
         booking,
-        await this.rooms(),
+        await this.allRooms(),
       );
     } catch {
       return conversation;
@@ -1013,7 +1275,7 @@ export class Digilist {
     }
   }
   async inbox(user: User): Promise<ConversationSummary[]> {
-    const rooms = await this.rooms();
+    const rooms = await this.allRooms();
     try {
       const rows = user.isAdmin
         ? list(
@@ -1063,7 +1325,7 @@ export class Digilist {
       }
       return {
         conversation: await this.enrichConversation(
-          this.mapConversation(raw, await this.rooms()),
+          this.mapConversation(raw, await this.allRooms()),
           user,
         ),
         messages: await this.loadMessages(id, user),
@@ -1115,7 +1377,7 @@ export class Digilist {
       }
       return {
         conversation: await this.enrichConversation(
-          this.mapConversation(raw, await this.rooms()),
+          this.mapConversation(raw, await this.allRooms()),
           user,
         ),
         messages: await this.loadMessages(id, user),

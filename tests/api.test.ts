@@ -407,6 +407,92 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       .get("/api/admin/insights/rooms/does-not-exist")
       .expect(404);
   });
+  it("lets admins draft, publish and create rooms in the portal catalogue", async () => {
+    const target = (await administrator.get("/api/admin").expect(200)).body
+      .rooms[2] as { id: string; portalPublished: boolean };
+    expect(target.portalPublished).toBe(true);
+    await customer
+      .post(`/api/admin/rooms/${target.id}/portal`)
+      .set("Origin", origin)
+      .send({ published: false })
+      .expect(403);
+    const hidden = (
+      await administrator
+        .post(`/api/admin/rooms/${target.id}/portal`)
+        .set("Origin", origin)
+        .send({ published: false })
+        .expect(200)
+    ).body;
+    expect(hidden.portalPublished).toBe(false);
+    const catalogue = (await customer.get("/api/rooms").expect(200))
+      .body as Array<{ id: string }>;
+    expect(catalogue.some((room) => room.id === target.id)).toBe(false);
+    const adminRooms = (await administrator.get("/api/admin").expect(200)).body
+      .rooms as Array<{ id: string; portalPublished: boolean }>;
+    expect(
+      adminRooms.find((room) => room.id === target.id)?.portalPublished,
+    ).toBe(false);
+    await administrator
+      .post(`/api/admin/rooms/${target.id}/portal`)
+      .set("Origin", origin)
+      .send({ published: true })
+      .expect(200);
+    expect(
+      (
+        (await customer.get("/api/rooms").expect(200)).body as Array<{
+          id: string;
+        }>
+      ).some((room) => room.id === target.id),
+    ).toBe(true);
+    const created = (
+      await administrator
+        .post("/api/admin/rooms")
+        .set("Origin", origin)
+        .send({
+          name: "Nytt møterom",
+          capacity: 6,
+          description: "Opprettet i test",
+          descriptionEn: "Created in test",
+          capacityLabel: "6 personer",
+          capacityLabelEn: "6 people",
+          requiresApproval: false,
+          amenities: ["Projektor"],
+          arrivalInfo: "Resepsjonen",
+        })
+        .expect(201)
+    ).body as {
+      id: string;
+      portalPublished: boolean;
+      name: string;
+      descriptionEn: string;
+      amenities: string[];
+      arrivalInfo?: string;
+    };
+    expect(created.name).toBe("Nytt møterom");
+    expect(created.portalPublished).toBe(false);
+    expect(created.descriptionEn).toBe("Created in test");
+    expect(created.amenities).toEqual(["Projektor"]);
+    expect(created.arrivalInfo).toBe("Resepsjonen");
+    expect(
+      (
+        (await customer.get("/api/rooms").expect(200)).body as Array<{
+          id: string;
+        }>
+      ).some((room) => room.id === created.id),
+    ).toBe(false);
+    await administrator
+      .post(`/api/admin/rooms/${created.id}/portal`)
+      .set("Origin", origin)
+      .send({ published: true })
+      .expect(200);
+    expect(
+      (
+        (await customer.get("/api/rooms").expect(200)).body as Array<{
+          id: string;
+        }>
+      ).some((room) => room.id === created.id),
+    ).toBe(true);
+  });
   it("lets a customer message the administrator and shows the thread in both inboxes", async () => {
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
       id: string;
