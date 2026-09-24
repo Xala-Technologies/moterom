@@ -247,6 +247,7 @@ a.brand {
 .app-header .brand-mark-img {
   width: 34px;
   height: 34px;
+  background: transparent;
 }
 .brand-mark-img {
   width: 39px;
