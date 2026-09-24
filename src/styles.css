@@ -1,7 +1,6 @@
 :root {
-  --ds-font-family-base: "Inter Variable", Inter, system-ui, sans-serif;
-  --ds-font-family-default: var(--ds-font-family-base);
-  --ds-font-family: var(--ds-font-family-base);
+  /* Digilist base.css reads --ds-font-family-base; Digdir exposes --ds-font-family. */
+  --ds-font-family-base: var(--ds-font-family, Inter, system-ui, sans-serif);
   --app-header-height: 66px;
   --app-safe-top: env(safe-area-inset-top, 0px);
   --app-safe-right: env(safe-area-inset-right, 0px);
@@ -27,9 +26,14 @@ html {
   overflow-x: clip;
 }
 body {
-  font-family: var(--ds-font-family-base);
-  font-size: 16px;
-  line-height: 1.55;
+  font-family: var(--ds-font-family, Inter, system-ui, sans-serif);
+  font-size: var(--ds-body-md-font-size, var(--ds-font-size-md, 1rem));
+  font-weight: var(
+    --ds-body-md-font-weight,
+    var(--ds-font-weight-regular, 400)
+  );
+  line-height: var(--ds-body-md-line-height, var(--ds-line-height-md, 1.5));
+  letter-spacing: var(--ds-body-md-letter-spacing, 0.005em);
 }
 button,
 input,
@@ -54,23 +58,37 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: var(--ds-font-size-4xl, 2.25rem);
-  font-weight: 650;
-  letter-spacing: -0.035em;
-  line-height: 1.18;
+  font-family: var(--ds-font-family, Inter, system-ui, sans-serif);
+  font-size: var(--ds-heading-lg-font-size, var(--ds-font-size-4xl, 2.25rem));
+  font-weight: var(
+    --ds-heading-lg-font-weight,
+    var(--ds-font-weight-medium, 500)
+  );
+  line-height: var(--ds-heading-lg-line-height, var(--ds-line-height-sm, 1.3));
+  letter-spacing: var(--ds-heading-lg-letter-spacing, -0.005em);
 }
 h2 {
-  font-size: var(--ds-font-size-xl, 1.3125rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.35;
+  font-family: var(--ds-font-family, Inter, system-ui, sans-serif);
+  font-size: var(--ds-heading-xs-font-size, var(--ds-font-size-xl, 1.3125rem));
+  font-weight: var(
+    --ds-heading-xs-font-weight,
+    var(--ds-font-weight-medium, 500)
+  );
+  line-height: var(--ds-heading-xs-line-height, var(--ds-line-height-sm, 1.3));
+  letter-spacing: var(--ds-heading-xs-letter-spacing, 0.0015em);
 }
 h3 {
-  font-size: var(--ds-font-size-lg, 1.125rem);
-  font-weight: 600;
+  font-family: var(--ds-font-family, Inter, system-ui, sans-serif);
+  font-size: var(--ds-heading-2xs-font-size, var(--ds-font-size-lg, 1.125rem));
+  font-weight: var(
+    --ds-heading-2xs-font-weight,
+    var(--ds-font-weight-medium, 500)
+  );
+  line-height: var(--ds-heading-2xs-line-height, var(--ds-line-height-sm, 1.3));
+  letter-spacing: var(--ds-heading-2xs-letter-spacing, 0.0015em);
 }
 strong {
-  font-weight: 600;
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 img {
   display: block;
@@ -88,7 +106,7 @@ button:disabled {
   white-space: normal;
   text-decoration: none;
   border-radius: var(--digilist-radius-md);
-  font-weight: 500;
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .ds-button svg {
   flex-shrink: 0;
@@ -98,8 +116,8 @@ button:disabled {
   min-width: 0;
 }
 .ds-label {
-  font-weight: 500;
-  font-size: 0.875rem;
+  font-weight: var(--ds-font-weight-medium, 500);
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .ds-input,
 .ds-select,
@@ -121,8 +139,13 @@ button:disabled {
   color: var(--ds-color-neutral-text-subtle);
 }
 .caption {
-  font-size: 0.8125rem;
-  line-height: 1.5;
+  font-size: var(--ds-body-xs-font-size, var(--ds-font-size-sm, 0.875rem));
+  font-weight: var(
+    --ds-body-xs-font-weight,
+    var(--ds-font-weight-regular, 400)
+  );
+  line-height: var(--ds-body-xs-line-height, var(--ds-line-height-md, 1.5));
+  letter-spacing: var(--ds-body-xs-letter-spacing, 0.0015em);
 }
 .caption svg {
   vertical-align: middle;
@@ -130,8 +153,8 @@ button:disabled {
 }
 .eyebrow {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.085em;
 }
 .full-width {
@@ -153,9 +176,9 @@ button:disabled {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  font-weight: 500;
+  font-weight: var(--ds-font-weight-medium, 500);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .text-link:hover,
 .back-link:hover {
@@ -243,20 +266,20 @@ a.brand {
 }
 .brand-mark-name {
   display: block;
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
+  font-weight: var(--ds-font-weight-bold, 700);
   letter-spacing: 0.04em;
   line-height: 1;
   color: var(--ds-color-accent-text-default, #003057);
 }
 .app-header .brand-mark-name {
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   white-space: nowrap;
 }
 .brand-mark-tagline {
   display: block;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1;
@@ -284,7 +307,7 @@ a.brand {
   padding: 0;
 }
 .login-logo-link .brand-mark-name {
-  font-size: 1.5rem;
+  font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
 }
 
 .desktop-nav {
@@ -300,8 +323,8 @@ a.brand {
   display: flex;
   align-items: center;
   position: relative;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   color: var(--ds-color-neutral-text-subtle);
   text-decoration: none;
   white-space: nowrap;
@@ -352,8 +375,8 @@ a.brand {
 .language-switch {
   min-width: 2.5rem;
   padding-inline: 0.55rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.04em;
 }
 .user-name {
@@ -363,7 +386,7 @@ a.brand {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .page-main {
   flex: 1;
@@ -435,8 +458,8 @@ a.brand {
   }
   .header-menu-label {
     margin: 16px 12px 4px;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+    font-weight: var(--ds-font-weight-semibold, 600);
     line-height: 1.3;
     color: var(--ds-color-neutral-text-subtle);
   }
@@ -458,8 +481,8 @@ a.brand {
     min-height: var(--ds-touch-target-min, 44px);
     justify-content: flex-start;
     gap: 12px;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+    font-weight: var(--ds-font-weight-medium, 500);
     letter-spacing: 0;
     box-sizing: border-box;
     padding-inline: 12px;
@@ -482,7 +505,7 @@ a.brand {
     order: -1;
     display: flex;
     align-items: center;
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold, 600);
     color: var(--ds-color-neutral-text-default);
   }
   .header-menu .user-name.active,
@@ -537,7 +560,7 @@ a.brand {
     padding-right: max(36px, var(--app-safe-right));
   }
   .app-header .brand-mark-name {
-    font-size: 1.125rem;
+    font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
   }
   .app-header .brand-mark-tagline {
     display: block;
@@ -619,17 +642,17 @@ a.brand {
 .page-heading p {
   margin-top: 12px;
   color: var(--ds-color-neutral-text-default);
-  font-size: 1.0625rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .page-heading p.page-heading-count {
   margin-top: 4px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .user-name-link {
   color: inherit;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .user-name-link:hover {
   text-decoration: underline;
@@ -668,8 +691,8 @@ a.brand {
   box-shadow: var(--ds-shadow-sm);
   color: var(--ds-color-neutral-text-default);
   font-family: inherit;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   cursor: pointer;
 }
 .pill-tabs button:hover:not([aria-pressed="true"]),
@@ -685,7 +708,7 @@ a.brand {
   border-color: var(--ds-color-accent-base-default);
   background: var(--ds-color-accent-base-default);
   color: var(--ds-color-accent-base-contrast-default);
-  font-weight: 600;
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .pill-tabs button > span,
 .admin-users-tab-count {
@@ -699,8 +722,8 @@ a.brand {
   border-radius: 999px;
   background: var(--ds-color-neutral-surface-hover);
   color: var(--ds-color-neutral-text-default);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   font-variant-numeric: tabular-nums;
 }
 .pill-tabs button[aria-pressed="true"] > span,
@@ -725,8 +748,8 @@ a.brand {
 }
 .booking-day-heading {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-subtle);
 }
 .booking-toolbar {
@@ -763,18 +786,18 @@ a.brand {
 .booking-date > span {
   display: block;
   text-transform: uppercase;
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .booking-date > strong {
   display: block;
-  font-size: 1.75rem;
+  font-size: var(--ds-font-size-3xl, var(--ds-font-size-7, 1.875rem));
   line-height: 1.3;
 }
 .booking-main h2,
 .booking-main h3 {
   margin: 8px 0 3px;
-  font-size: 1.125rem;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
 }
 .booking-main h2 a,
 .booking-main h3 a {
@@ -783,14 +806,14 @@ a.brand {
 }
 .booking-main p {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   overflow-wrap: anywhere;
   margin: 0;
 }
 .booking-time {
   display: flex;
   flex-direction: column;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   gap: 3px;
 }
 .booking-time > span {
@@ -835,7 +858,7 @@ a.brand {
 }
 .search-fields .ds-input {
   height: 48px;
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .search-submit {
   min-height: 48px;
@@ -846,7 +869,7 @@ a.brand {
   gap: 9px;
   align-items: center;
   padding: 16px 1px 0;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .search-summary button {
@@ -856,7 +879,7 @@ a.brand {
   align-items: center;
   gap: 5px;
   color: var(--ds-color-accent-text-subtle);
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-left: 10px;
 }
 .view-switch {
@@ -924,8 +947,8 @@ a.brand {
     transparent
   );
   color: var(--ds-color-neutral-text-default);
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.01em;
 }
 .no-photo {
@@ -938,11 +961,11 @@ a.brand {
   color: var(--ds-color-accent-text-subtle);
 }
 .no-photo > span {
-  font-size: 1.0625rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .no-photo > small {
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .room-card-content {
@@ -959,11 +982,11 @@ a.brand {
   min-height: 24px;
 }
 .room-card .eyebrow {
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .room-card h2 {
   margin: 8px 0 10px;
-  font-size: 1.3125rem;
+  font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
 }
 .room-card h2 a {
   color: inherit;
@@ -976,12 +999,12 @@ a.brand {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-default);
 }
 .room-description {
   margin-top: 14px;
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   color: var(--ds-color-neutral-text-default);
   min-height: 44px;
 }
@@ -996,7 +1019,7 @@ a.brand {
   background: var(--ds-color-neutral-background-tinted);
   border: 1px solid var(--ds-color-neutral-border-default);
   border-radius: 5px;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .room-card-footer {
   display: flex;
@@ -1009,15 +1032,15 @@ a.brand {
 }
 .room-card-footer .caption {
   max-width: 180px;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-default);
 }
 .room-action {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-  font-size: 0.9375rem;
+  font-weight: var(--ds-font-weight-semibold, 600);
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   text-decoration: none;
   color: var(--ds-color-accent-text-subtle);
   min-height: var(--ds-touch-target-min, 44px);
@@ -1070,8 +1093,8 @@ a.brand {
 }
 .room-schedule-selected {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-default);
 }
 .room-schedule-date {
@@ -1081,8 +1104,8 @@ a.brand {
   gap: 6px;
 }
 .room-schedule-date label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-default);
 }
 .room-date-trigger {
@@ -1098,7 +1121,7 @@ a.brand {
   background: var(--ds-color-neutral-background-default);
   color: var(--ds-color-neutral-text-default);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   text-align: start;
   cursor: pointer;
 }
@@ -1128,20 +1151,20 @@ a.brand {
   padding: 0 0 8px;
 }
 .room-date-popover .month-heading {
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .room-date-popover .month-weekdays {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .room-date-popover .month-days {
   gap: 6px;
 }
 .room-date-popover .month-days button {
   min-height: 48px;
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .room-date-popover .month-calendar > .caption {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 @media (max-width: 767px) {
   .room-date-popover {
@@ -1164,8 +1187,8 @@ a.brand {
   border-radius: var(--digilist-radius-md);
   background: var(--ds-color-neutral-background-default);
   color: var(--ds-color-neutral-text-default);
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   cursor: pointer;
   font-family: inherit;
 }
@@ -1186,7 +1209,7 @@ a.brand {
   justify-content: space-between;
 }
 .room-schedule-actions .room-more-options {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
   text-decoration: underline;
   background: none;
@@ -1211,15 +1234,15 @@ a.brand {
   gap: 2px;
 }
 .booking-confirm-summary dt {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .booking-confirm-summary dd {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   color: var(--ds-color-neutral-text-default);
 }
 .booking-confirm-actions {
@@ -1235,8 +1258,8 @@ a.brand {
   gap: 12px;
 }
 .availability-badge {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   border-radius: 99px;
   padding: 4px 10px;
 }
@@ -1264,7 +1287,7 @@ a.brand {
   padding: 22px 36px;
   border-top: 1px solid var(--ds-color-neutral-border-subtle);
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .app-footer span > span {
   margin-inline: 6px;
@@ -1293,7 +1316,7 @@ a.brand {
   min-height: var(--ds-touch-target-min, 44px);
   text-decoration: none;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.625rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   flex: 1;
   border-radius: 8px;
 }
@@ -1323,7 +1346,7 @@ a.brand {
   background: var(--ds-color-danger-background-tinted);
   color: var(--ds-color-danger-text-default);
   margin: 16px 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .error-state > svg {
   flex-shrink: 0;
@@ -1475,7 +1498,7 @@ a.brand {
   align-items: center;
   color: var(--ds-color-neutral-text-subtle);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-bottom: 28px;
 }
 .compact-fields {
@@ -1509,7 +1532,7 @@ a.brand {
   overflow: visible;
 }
 .block-form .room-date-trigger {
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   border-radius: var(--digilist-radius-lg, 12px);
   padding: 0 12px;
 }
@@ -1537,8 +1560,8 @@ a.brand {
   align-items: center;
   justify-content: space-between;
   text-transform: capitalize;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .month-weekdays,
 .month-days {
@@ -1550,7 +1573,7 @@ a.brand {
 .month-weekdays {
   margin: 12px 0 8px;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .month-days button {
   background: transparent;
@@ -1558,7 +1581,7 @@ a.brand {
   border-radius: 8px;
   min-height: var(--ds-touch-target-min, 44px);
   padding: 6px 0;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .month-days button:hover:not(:disabled) {
   background: var(--ds-color-neutral-surface-hover);
@@ -1576,7 +1599,7 @@ a.brand {
 .month-calendar > .caption {
   text-align: center;
   margin-top: 12px;
-  font-size: 0.7rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .auth-layout {
   width: min(100%, 1080px);
@@ -1623,7 +1646,7 @@ a.brand {
 }
 .login-intro {
   margin: 0 0 18px;
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .access-pending {
   display: flex;
@@ -1634,7 +1657,7 @@ a.brand {
 .access-pending h1,
 .access-pending h2 {
   margin: 0;
-  font-size: 1.375rem;
+  font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
 }
 .access-pending p {
   margin: 0;
@@ -1704,12 +1727,12 @@ a.login-option:hover {
   min-width: 0;
 }
 .login-option-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-default);
 }
 .login-option-desc {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
   line-height: 1.35;
 }
@@ -1725,7 +1748,7 @@ a.login-option:hover {
   gap: 12px;
   margin: 8px 0;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   text-transform: lowercase;
 }
 .login-divider::before,
@@ -1737,7 +1760,7 @@ a.login-option:hover {
 }
 .login-micro {
   margin: 8px 0 0;
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .login-form-card {
@@ -1747,7 +1770,7 @@ a.login-option:hover {
   min-height: 48px;
   margin-top: 4px;
   justify-content: center;
-  font-weight: 600;
+  font-weight: var(--ds-font-weight-semibold, 600);
   border-radius: var(--digilist-radius-lg, 12px);
 }
 .login-form-card .login-submit:disabled {
@@ -1766,8 +1789,8 @@ a.login-option:hover {
 }
 .login-form-title {
   margin: 0 0 8px;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .login-step-icon {
   width: 48px;
@@ -1795,8 +1818,8 @@ a.login-option:hover {
 }
 .login-resend-title {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .login-back {
   margin-top: 4px;
@@ -1810,7 +1833,7 @@ a.login-option:hover {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .login-micro-footer a {
@@ -1911,20 +1934,23 @@ a.login-option:hover {
 }
 .login-panel-headline {
   margin: 0 0 12px;
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  font-size: var(--ds-heading-lg-font-size, var(--ds-font-size-4xl, 2.25rem));
+  font-weight: var(
+    --ds-heading-lg-font-weight,
+    var(--ds-font-weight-medium, 500)
+  );
+  line-height: var(--ds-heading-lg-line-height, var(--ds-line-height-sm, 1.3));
+  letter-spacing: var(--ds-heading-lg-letter-spacing, -0.005em);
 }
 .login-panel-subline {
   margin: 0 0 24px;
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   line-height: 1.5;
   opacity: 0.9;
 }
 .login-panel-micro {
   margin: 0 0 20px;
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0.75;
@@ -1959,14 +1985,14 @@ a.login-option:hover {
   gap: 2px;
 }
 .auth-brand-name {
-  font-size: 0.8125rem;
-  font-weight: 700;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-bold, 700);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ds-color-accent-text-default, #003057);
 }
 .auth-brand-tagline {
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .auth-page {
@@ -1984,7 +2010,7 @@ a.login-option:hover {
   margin-bottom: 12px;
 }
 .auth-panel h1 {
-  font-size: var(--ds-font-size-2xl, 1.75rem);
+  font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
   margin-bottom: 12px;
 }
 .auth-panel > .muted {
@@ -2049,18 +2075,18 @@ a.login-option:hover {
   min-width: 0;
 }
 .auth-option-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-default);
 }
 .auth-option-desc {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
   line-height: 1.35;
 }
 .auth-micro {
   margin: 4px 0 0;
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
   text-align: start;
 }
@@ -2072,7 +2098,7 @@ a.login-option:hover {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .auth-layout-aside {
@@ -2086,21 +2112,21 @@ a.login-option:hover {
 }
 .auth-aside-eyebrow {
   margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0.85;
 }
 .auth-aside-title {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   line-height: 1.25;
 }
 .auth-aside-body {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   line-height: 1.45;
   opacity: 0.9;
   max-width: 28ch;
@@ -2160,26 +2186,26 @@ a.login-option:hover {
   flex-direction: column;
   gap: 2px;
   flex: 1;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .contact-summary > div > span {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .contact-summary > svg {
   color: var(--ds-color-success-text-default);
 }
 .optional {
-  font-weight: 400;
+  font-weight: var(--ds-font-weight-regular, 400);
   color: var(--ds-color-neutral-text-subtle);
 }
 .consent {
   display: flex;
   gap: 11px;
   align-items: start;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   cursor: pointer;
 }
 .consent input {
@@ -2205,7 +2231,7 @@ a.login-option:hover {
   top: calc(var(--app-header-offset) + 24px);
 }
 .order-summary h2 {
-  font-size: 1.5rem;
+  font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
   margin: 9px 0 22px;
 }
 .order-summary dl {
@@ -2219,12 +2245,12 @@ a.login-option:hover {
   align-items: center;
   gap: 8px;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .order-summary dd {
   margin: 5px 0 0 26px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .summary-total {
   display: flex;
@@ -2234,7 +2260,7 @@ a.login-option:hover {
   border-top: 1px solid var(--ds-color-neutral-border-subtle);
   margin: 25px 0 18px;
   padding-top: 18px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .order-summary > .caption {
   margin-top: 10px;
@@ -2264,8 +2290,8 @@ a.login-option:hover {
   border: 0;
   background: transparent;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   text-align: left;
 }
 .wizard-stepper button {
@@ -2283,7 +2309,7 @@ a.login-option:hover {
   border-radius: 50%;
   background: var(--ds-color-neutral-surface-default);
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .wizard-stepper [aria-current="step"] > span {
   color: var(--ds-color-accent-text-default);
@@ -2337,8 +2363,8 @@ a.login-option:hover {
   border-radius: var(--digilist-radius-md);
   background: var(--ds-color-neutral-background-default);
   color: var(--ds-color-neutral-text-default);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .wizard-slots button:hover:not(:disabled),
 .wizard-room-pick button:hover {
@@ -2397,8 +2423,8 @@ a.login-option:hover {
   border: 0;
   background: transparent;
   color: var(--ds-color-accent-text-default);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   cursor: pointer;
 }
 .wizard-contact {
@@ -2422,12 +2448,12 @@ a.login-option:hover {
 }
 .field-error {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-danger-text-default);
 }
 .status {
-  font-size: 0.6875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2473,13 +2499,13 @@ a.login-option:hover {
   margin-bottom: 28px;
 }
 .confirmation-banner-title {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   margin: 0;
   line-height: 1.35;
 }
 .confirmation-banner p:not(.confirmation-banner-title) {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin: 4px 0 0;
 }
 .confirmation-banner > svg {
@@ -2510,12 +2536,12 @@ a.login-option:hover {
 }
 .booking-detail-heading h1 {
   margin: 12px 0 8px;
-  font-size: 1.75rem;
+  font-size: var(--ds-font-size-3xl, var(--ds-font-size-7, 1.875rem));
   line-height: 1.2;
 }
 .booking-detail-heading .muted {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .booking-facts {
   display: grid;
@@ -2543,12 +2569,12 @@ a.login-option:hover {
   color: var(--ds-color-neutral-text-subtle);
 }
 .booking-facts span {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .booking-facts strong {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .detail-action-bar {
   display: flex;
@@ -2570,16 +2596,16 @@ a.login-option:hover {
 }
 .booking-info-panel h2 {
   margin: 0 0 4px;
-  font-size: 1.0625rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .booking-info-panel > a {
   display: inline-block;
   margin-top: 4px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .booking-information p {
   margin: 14px 0 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   line-height: 1.5;
 }
 .booking-information .preserve-lines {
@@ -2597,7 +2623,7 @@ a.login-option:hover {
   display: grid;
   grid-template-columns: minmax(7.5rem, 9rem) 1fr;
   gap: 12px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   padding: 12px 0;
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
 }
@@ -2614,7 +2640,7 @@ a.login-option:hover {
 .simple-dl dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-weight: 500;
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .booking-messages {
   margin-top: 20px;
@@ -2662,14 +2688,14 @@ a.login-option:hover {
 }
 .message-bubble header time,
 .message-bubble header strong {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .message-bubble header time {
   color: var(--ds-color-neutral-text-subtle);
 }
 .message-bubble p {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   line-height: 1.5;
 }
 .message-composer {
@@ -2718,7 +2744,7 @@ a.login-option:hover {
   background: var(--ds-color-accent-background-tinted);
 }
 .message-inbox-list button span {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   overflow-wrap: anywhere;
 }
 .customer-messages-page {
@@ -2736,14 +2762,14 @@ a.login-option:hover {
 }
 .customer-messages-heading h1 {
   margin: 0;
-  font-size: 1.75rem;
-  letter-spacing: -0.02em;
+  font-size: var(--ds-font-size-3xl, var(--ds-font-size-7, 1.875rem));
+  letter-spacing: var(--ds-letter-spacing-2, -0.005em);
 }
 .customer-messages-heading p {
   margin: 8px 0 0;
   max-width: 40rem;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.9875rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   line-height: 1.5;
 }
 .customer-messages-heading-actions {
@@ -2777,8 +2803,8 @@ a.login-option:hover {
 }
 .customer-messages-list-head h2 {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .customer-messages-list ul {
   list-style: none;
@@ -2824,8 +2850,8 @@ a.login-option:hover {
   border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.02em;
   color: var(--ds-color-accent-text-default);
   background: var(--ds-color-accent-surface-tinted);
@@ -2849,7 +2875,7 @@ a.login-option:hover {
   gap: 12px;
 }
 .customer-messages-row-top strong {
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2857,7 +2883,7 @@ a.login-option:hover {
 .customer-messages-row-top time,
 .customer-messages-row-meta,
 .customer-messages-row-preview {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .customer-messages-row-top time,
 .customer-messages-row-meta {
@@ -2879,11 +2905,11 @@ a.login-option:hover {
 }
 .customer-messages-thread-header h2 {
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .customer-messages-thread-header p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .customer-messages-thread-header .message-context {
   margin-top: 10px;
@@ -2976,12 +3002,12 @@ a.login-option:hover {
 .message-context-support strong,
 .message-context-body strong {
   display: block;
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .message-context-support p,
 .message-context-body p {
   margin: 4px 0 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .message-context-photo {
   flex: 0 0 7.5rem;
@@ -3045,8 +3071,8 @@ a.login-option:hover {
 }
 .admin-messages-toolbar h2 {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .admin-messages-toolbar .admin-list-search {
   flex: none;
@@ -3099,7 +3125,7 @@ a.login-option:hover {
 }
 .admin-messages-row-unread {
   color: var(--ds-color-accent-text-default);
-  font-weight: 600;
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .admin-messages-row-body {
   display: flex;
@@ -3115,7 +3141,7 @@ a.login-option:hover {
   gap: 12px;
 }
 .admin-messages-row-top strong {
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3124,7 +3150,7 @@ a.login-option:hover {
 .admin-messages-row-meta,
 .admin-messages-row-preview,
 .admin-messages-row-unread {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .admin-messages-row-top time,
 .admin-messages-row-meta {
@@ -3158,11 +3184,11 @@ a.login-option:hover {
 }
 .admin-messages-thread-header h2 {
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
 }
 .admin-messages-thread-header p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .admin-messages-back {
   align-self: flex-start;
@@ -3205,7 +3231,7 @@ a.login-option:hover {
   color: var(--ds-color-info-text-default);
   padding: 16px;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-bottom: 24px;
 }
 .toast {
@@ -3221,7 +3247,7 @@ a.login-option:hover {
   border-radius: 10px;
   box-shadow: var(--ds-shadow-md);
   max-width: min(550px, calc(100% - 32px));
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   z-index: 100;
   transition:
     opacity 0.2s,
@@ -3292,8 +3318,8 @@ a.login-option:hover {
   color: var(--ds-color-neutral-text-subtle);
   text-decoration: none;
   border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .admin-sidebar nav > a.active {
   background: var(--ds-color-accent-surface-tinted);
@@ -3305,7 +3331,7 @@ a.login-option:hover {
   color: var(--digilist-status-reserved-fg);
   padding: 0 6px;
   border-radius: 5px;
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .sidebar-footer {
   margin-top: auto;
@@ -3313,7 +3339,7 @@ a.login-option:hover {
   display: flex;
   align-items: start;
   gap: 8px;
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .sidebar-footer > svg {
@@ -3346,7 +3372,7 @@ a.login-option:hover {
 }
 .breadcrumb {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   margin-bottom: 12px;
 }
 .breadcrumb > span {
@@ -3354,10 +3380,10 @@ a.login-option:hover {
   opacity: 0.5;
 }
 .admin-heading h1 {
-  font-size: 1.875rem;
+  font-size: var(--ds-font-size-3xl, var(--ds-font-size-7, 1.875rem));
 }
 .admin-heading .muted {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-top: 9px;
 }
 .admin-heading-actions {
@@ -3395,7 +3421,7 @@ a.stat.is-other-day {
 }
 .stat-note {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   margin-top: 6px;
 }
 .admin-access-notice {
@@ -3405,7 +3431,7 @@ a.stat.is-other-day {
   border-radius: 8px;
   background: var(--ds-color-info-background-tinted);
   color: var(--ds-color-info-text-default);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   text-decoration: none;
 }
 .admin-access-notice:hover {
@@ -3421,11 +3447,11 @@ a.stat.is-other-day {
 }
 .stat > div > span {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .stat strong {
-  font-size: 1.875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-3xl, var(--ds-font-size-7, 1.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   margin-top: 8px;
 }
 .stat-icon {
@@ -3469,7 +3495,7 @@ a.stat.is-other-day {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .pending-main span,
 .pending-main small {
@@ -3499,7 +3525,7 @@ a.stat.is-other-day {
   margin-bottom: 0;
 }
 .insights-page .stat > div > span {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .insights-rankings {
   display: grid;
@@ -3543,7 +3569,7 @@ a.stat.is-other-day {
 .insights-trend-caption {
   margin: 0;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .insights-trend-frame {
   display: grid;
@@ -3567,7 +3593,7 @@ a.stat.is-other-day {
   list-style: none;
   margin: 4px 8px 8px;
   padding: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .insights-trend-legend li {
@@ -3591,7 +3617,7 @@ a.stat.is-other-day {
 }
 .insights-trend-detail h3 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
 }
 .insights-trend-detail .muted {
   margin: 0;
@@ -3608,13 +3634,13 @@ a.stat.is-other-day {
 }
 .insights-trend-stats dt {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .insights-trend-stats dd {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .insights-trend-tooltip {
   display: flex;
@@ -3625,7 +3651,7 @@ a.stat.is-other-day {
   border: 1px solid var(--ds-color-neutral-border-subtle);
   background: var(--ds-color-neutral-background-default);
   box-shadow: var(--ds-shadow-sm);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .insights-trend-tooltip strong {
@@ -3636,7 +3662,7 @@ a.stat.is-other-day {
 }
 .insights-chart figcaption {
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-top: 10px;
 }
 .insights-bars {
@@ -3652,7 +3678,7 @@ a.stat.is-other-day {
 }
 .insights-bar-label,
 .insights-bar-value {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   overflow-wrap: anywhere;
 }
 .insights-bar-value {
@@ -3675,7 +3701,7 @@ a.stat.is-other-day {
 .insights-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .insights-table-wrap {
   overflow-x: auto;
@@ -3717,12 +3743,12 @@ a.stat.is-other-day {
 }
 .date-controls > .ds-input {
   width: 160px;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-left: 7px;
   height: 38px;
 }
 .date-controls .ds-button {
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   min-height: 38px;
 }
 .timeline-scroll {
@@ -3746,15 +3772,15 @@ a.stat.is-other-day {
   left: 0;
   z-index: 2;
   background: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .timeline-header > div {
   display: flex;
 }
 .timeline-header > div > span {
   flex: 1;
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   padding: 16px 7px;
   color: var(--ds-color-neutral-text-subtle);
 }
@@ -3775,11 +3801,11 @@ a.stat.is-other-day {
 }
 .timeline-room strong {
   display: block;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .timeline-room > span {
   display: block;
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   color: var(--ds-color-neutral-text-subtle);
   margin-top: 5px;
 }
@@ -3811,11 +3837,11 @@ a.stat.is-other-day {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .timeline-event > span {
   margin-top: 3px;
-  font-size: 0.625rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .event-pending {
   background: var(--digilist-status-reserved-bg);
@@ -3832,7 +3858,7 @@ a.stat.is-other-day {
   flex-wrap: wrap;
   gap: 20px;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   margin-top: 16px;
 }
 .calendar-legend > span {
@@ -3873,7 +3899,7 @@ a.stat.is-other-day {
   border: 0;
 }
 .week-day h3 {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   margin-bottom: 18px;
   text-transform: capitalize;
 }
@@ -3889,10 +3915,10 @@ a.stat.is-other-day {
   text-align: left;
   background: var(--ds-color-accent-background-tinted);
   color: var(--ds-color-accent-text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .week-event small {
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .admin-list-toolbar {
   display: flex;
@@ -3945,7 +3971,7 @@ a.stat.is-other-day {
   border-radius: var(--digilist-radius-lg, 12px);
   background: var(--ds-color-neutral-background-default);
   color: var(--ds-color-neutral-text-default);
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   text-align: left;
   cursor: pointer;
 }
@@ -3993,7 +4019,7 @@ a.stat.is-other-day {
   border-radius: var(--digilist-radius-md);
   background: transparent;
   color: var(--ds-color-neutral-text-default);
-  font-size: 1rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   text-align: left;
   cursor: pointer;
 }
@@ -4029,8 +4055,8 @@ a.stat.is-other-day {
     minmax(7rem, auto);
   gap: 12px;
   padding: 0 16px;
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ds-color-neutral-text-subtle);
@@ -4100,7 +4126,7 @@ a.stat.is-other-day {
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-weight: 600;
+  font-weight: var(--ds-font-weight-semibold, 600);
   color: var(--ds-color-neutral-text-subtle);
   text-transform: uppercase;
 }
@@ -4111,7 +4137,7 @@ a.stat.is-other-day {
   gap: 2px;
 }
 .admin-bl-title {
-  font-size: 0.9375rem;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4123,21 +4149,21 @@ a.stat.is-other-day {
   gap: 2px;
 }
 .admin-bl-primary {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .admin-bl-secondary {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .admin-bl-phone {
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
   text-decoration: none;
 }
@@ -4147,7 +4173,7 @@ a.stat.is-other-day {
 }
 .admin-bl-payment-unpaid {
   color: var(--ds-color-warning-text-default);
-  font-weight: 500;
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .admin-bl-status {
   display: flex;
@@ -4161,8 +4187,8 @@ a.stat.is-other-day {
   min-height: 28px;
   padding: 0 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .admin-bl-badge.tone-warning {
   color: var(--ds-color-warning-text-default);
@@ -4197,8 +4223,8 @@ a.stat.is-other-day {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .admin-bl-action:disabled {
   opacity: 0.55;
@@ -4296,14 +4322,14 @@ a.stat.is-other-day {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 0.8125rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .admin-booking-row > div > span,
 .admin-booking-row small {
   color: var(--ds-color-neutral-text-subtle);
 }
 .admin-booking-row small {
-  font-size: 0.6875rem;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .admin-rooms {
   display: flex;
@@ -4333,7 +4359,7 @@ a.stat.is-other-day {
 }
 .admin-room h2 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
 }
 .admin-room p {
   display: flex;
@@ -4341,12 +4367,12 @@ a.stat.is-other-day {
   gap: 8px;
   margin: 6px 0 0;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .admin-room .caption {
   display: inline-block;
   margin-top: 8px;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .admin-room .ds-button {
   min-height: 44px;
@@ -4382,13 +4408,13 @@ a.stat.is-other-day {
 }
 .settings-card-header h2 {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 650;
+  font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: -0.01em;
 }
 .settings-card-header p {
   margin: 4px 0 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .settings-card-header > .ds-button {
@@ -4405,7 +4431,7 @@ a.stat.is-other-day {
 .admin-users-note {
   margin: 0;
   max-width: 62ch;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   line-height: 1.5;
   color: var(--ds-color-neutral-text-subtle);
 }
@@ -4431,8 +4457,8 @@ a.stat.is-other-day {
     max-content auto;
   gap: 12px;
   padding: 0 16px;
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ds-color-neutral-text-subtle);
@@ -4480,7 +4506,7 @@ a.stat.is-other-day {
 }
 .admin-members-role {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-default);
 }
 .admin-users-identity {
@@ -4496,8 +4522,8 @@ a.stat.is-other-day {
   border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   letter-spacing: 0.02em;
   color: var(--ds-color-accent-text-default);
   background: var(--ds-color-accent-surface-tinted);
@@ -4509,14 +4535,14 @@ a.stat.is-other-day {
   min-width: 0;
 }
 .admin-users-identity-text strong {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .admin-users-email {
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4525,7 +4551,7 @@ a.stat.is-other-day {
 .admin-users-message {
   margin: 0;
   min-width: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   line-height: 1.4;
   color: var(--ds-color-neutral-text-default);
   overflow: hidden;
@@ -4534,7 +4560,7 @@ a.stat.is-other-day {
 }
 .admin-users-date {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
 .admin-users-status {
@@ -4602,7 +4628,7 @@ button.admin-users-menu-trigger:disabled {
   border-radius: var(--digilist-radius-md, 8px);
   background: transparent;
   color: var(--ds-color-neutral-text-default);
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   text-align: start;
   cursor: pointer;
 }
@@ -4701,8 +4727,8 @@ button.admin-users-menu-trigger:disabled {
 .settings-rows dt {
   margin: 0;
   color: var(--ds-color-neutral-text-subtle);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .settings-rows dd {
   display: flex;
@@ -4711,20 +4737,20 @@ button.admin-users-menu-trigger:disabled {
   gap: 8px 16px;
   margin: 0;
   min-width: 0;
-  font-size: 0.9375rem;
-  font-weight: 550;
+  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   overflow-wrap: anywhere;
 }
 .settings-rows a {
-  font-size: 0.875rem;
-  font-weight: 550;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   color: var(--ds-color-accent-text-default);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 .settings-missing {
   color: var(--ds-color-neutral-text-subtle);
-  font-weight: 500;
+  font-weight: var(--ds-font-weight-medium, 500);
 }
 .settings-access {
   display: flex;
@@ -4738,8 +4764,8 @@ button.admin-users-menu-trigger:disabled {
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 550;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-medium, 500);
   background: var(--ds-color-accent-surface-tinted);
   color: var(--ds-color-accent-text-subtle);
 }
@@ -4757,12 +4783,12 @@ button.admin-users-menu-trigger:disabled {
 }
 .settings-callout h2 {
   margin: 0 0 6px;
-  font-size: 0.875rem;
-  font-weight: 650;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
 }
 .settings-callout p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   line-height: 1.5;
 }
 @media (max-width: 767px) {
@@ -4913,7 +4939,7 @@ button.admin-users-menu-trigger:disabled {
     scroll-margin-bottom: calc(var(--app-mobile-nav-offset) + 16px);
   }
   h1 {
-    font-size: 1.875rem;
+    font-size: var(--ds-font-size-3xl, var(--ds-font-size-7, 1.875rem));
   }
   .page-heading {
     gap: 15px;
@@ -4927,10 +4953,10 @@ button.admin-users-menu-trigger:disabled {
   }
   .page-heading > .ds-button {
     min-width: 44px;
-    font-size: 0.75rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .page-heading p {
-    font-size: 1.0625rem;
+    font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
     line-height: 1.6;
   }
   .dashboard-stats {
@@ -4980,7 +5006,7 @@ button.admin-users-menu-trigger:disabled {
   .search-fields .ds-input {
     min-height: 48px;
     height: 48px;
-    font-size: 16px;
+    font-size: var(--ds-body-md-font-size, var(--ds-font-size-md, 1rem));
   }
   .search-submit {
     width: 100%;
@@ -5017,7 +5043,7 @@ button.admin-users-menu-trigger:disabled {
     flex-direction: column;
     align-items: start;
     gap: 9px;
-    font-size: 0.7rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .month-days button {
     min-height: 44px;
@@ -5040,7 +5066,7 @@ button.admin-users-menu-trigger:disabled {
   }
   .wizard-stepper li > span,
   .wizard-stepper button {
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .checkout-form {
     order: 2;
@@ -5057,13 +5083,13 @@ button.admin-users-menu-trigger:disabled {
     gap: 15px;
   }
   .order-summary h2 {
-    font-size: 1.25rem;
+    font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
   }
   .order-summary dd {
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .order-summary > .caption {
-    font-size: 0.75rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .auth-layout {
     grid-template-columns: 1fr;
@@ -5085,16 +5111,16 @@ button.admin-users-menu-trigger:disabled {
     height: 40px;
   }
   .login-logo-link .brand-mark-name {
-    font-size: 1.25rem;
+    font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
   }
   .login-micro-footer {
     padding: 12px 20px 20px;
   }
   .auth-panel h1 {
-    font-size: 1.5rem;
+    font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
   }
   .auth-panel > .muted {
-    font-size: 0.9375rem;
+    font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   }
   .booking-detail-summary {
     grid-template-columns: 1fr;
@@ -5105,7 +5131,7 @@ button.admin-users-menu-trigger:disabled {
     height: 160px;
   }
   .booking-detail-heading h1 {
-    font-size: 1.5rem;
+    font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
   }
   .booking-facts,
   .booking-facts-three {
@@ -5193,10 +5219,10 @@ button.admin-users-menu-trigger:disabled {
     padding: 16px;
   }
   .confirmation-banner-title {
-    font-size: 1.0625rem;
+    font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   }
   .confirmation-banner p:not(.confirmation-banner-title) {
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .confirmation-banner > svg {
     width: 24px;
@@ -5208,11 +5234,11 @@ button.admin-users-menu-trigger:disabled {
   }
   .modal-actions > .ds-button {
     flex: 1;
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .toast {
     bottom: calc(var(--app-mobile-nav-offset) + 15px);
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .admin-sidebar {
     padding: 8px;
@@ -5244,14 +5270,14 @@ button.admin-users-menu-trigger:disabled {
     margin-bottom: 25px;
   }
   .admin-heading h1 {
-    font-size: 1.625rem;
+    font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
   }
   .admin-heading-actions {
     width: 100%;
   }
   .admin-heading-actions > .ds-button {
     flex: 1;
-    font-size: 0.75rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .admin-stats {
     grid-template-columns: 1fr;
@@ -5277,16 +5303,16 @@ button.admin-users-menu-trigger:disabled {
     padding: 13px 10px;
   }
   .stat > div > span {
-    font-size: 0.625rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .stat strong {
-    font-size: 1.5rem;
+    font-size: var(--ds-font-size-2xl, var(--ds-font-size-6, 1.5rem));
   }
   .section-heading h2 {
-    font-size: 1.125rem;
+    font-size: var(--ds-font-size-lg, var(--ds-font-size-4, 1.125rem));
   }
   .section-heading > .text-link {
-    font-size: 0.6875rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .calendar-toolbar {
     flex-wrap: wrap;
@@ -5300,7 +5326,7 @@ button.admin-users-menu-trigger:disabled {
     width: 160px;
     min-height: 44px;
     margin-left: 2px;
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .calendar-toolbar .view-switch {
     margin-left: auto;
@@ -5323,7 +5349,7 @@ button.admin-users-menu-trigger:disabled {
     background: transparent;
   }
   .mobile-agenda > button > span:first-child {
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
     min-width: 42px;
   }
   .mobile-agenda small {
@@ -5336,15 +5362,15 @@ button.admin-users-menu-trigger:disabled {
     min-width: 0;
   }
   .mobile-agenda strong {
-    font-size: 0.8125rem;
+    font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   }
   .mobile-agenda p {
-    font-size: 0.75rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
     color: var(--ds-color-neutral-text-subtle);
   }
   .mobile-agenda .status {
     max-width: 100px;
-    font-size: 0.625rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
   }
   .week-calendar {
     grid-template-columns: 1fr;
@@ -5361,7 +5387,7 @@ button.admin-users-menu-trigger:disabled {
     padding: 13px;
   }
   .calendar-legend {
-    font-size: 0.625rem;
+    font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
     gap: 12px;
   }
   .admin-list-toolbar {
