@@ -29,6 +29,11 @@ import {
 } from "../components/ui";
 import { MonthCalendar } from "../components/MonthCalendar";
 import type { Booking, Quote, Room, TimeSlot } from "../../shared/types";
+import {
+  nextSlotSelection,
+  rangeIsAvailable,
+  slotInRange,
+} from "../../shared/slots";
 import { readSearch } from "./Rooms";
 import { useFormatters, useT } from "../i18n";
 type Step = 1 | 2 | 3;
@@ -162,16 +167,15 @@ export function NewBooking() {
       />
     );
   }
-  const selectedSlot = slots.data?.find(
-    (slot) =>
-      slot.start === params.get("start") && slot.end === params.get("end"),
+  const timeAvailable = Boolean(
+    timeChosen &&
+    slots.data &&
+    rangeIsAvailable(slots.data, search.start, search.end),
   );
   const liveEmail = config?.mode === "live" && Boolean(user);
   const stepValid =
     step === 1
-      ? Boolean(
-          dateChosen && roomId && room && selectedSlot?.state === "available",
-        )
+      ? Boolean(dateChosen && roomId && room && timeAvailable)
       : step === 2
         ? contactReady
         : Boolean(quote && accepted && contactReady);
@@ -358,10 +362,12 @@ export function NewBooking() {
                       aria-label={t("a11y.available_times")}
                     >
                       {(slots.data || []).map((slot) => {
-                        const selected =
-                          timeChosen &&
-                          slot.start === search.start &&
-                          slot.end === search.end;
+                        const current = timeChosen
+                          ? { start: search.start, end: search.end }
+                          : null;
+                        const selected = Boolean(
+                          current && slotInRange(slot, current),
+                        );
                         const label = `${slot.start}–${slot.end}`;
                         return (
                           <button
@@ -379,19 +385,34 @@ export function NewBooking() {
                             aria-pressed={selected}
                             aria-label={
                               slot.state === "available"
-                                ? label
+                                ? selected
+                                  ? t("a11y.slot_selected", { label })
+                                  : label
                                 : slot.state === "error"
                                   ? t("a11y.slot_unknown", { label })
                                   : t("a11y.slot_unavailable", { label })
                             }
                             disabled={slot.state !== "available"}
-                            onClick={() =>
+                            onClick={() => {
+                              const next = nextSlotSelection(
+                                slots.data || [],
+                                current,
+                                slot,
+                              );
+                              if (!next) {
+                                patch({
+                                  start: null,
+                                  end: null,
+                                  people: "1",
+                                });
+                                return;
+                              }
                               patch({
-                                start: slot.start,
-                                end: slot.end,
+                                start: next.start,
+                                end: next.end,
                                 people: "1",
-                              })
-                            }
+                              });
+                            }}
                           >
                             {label}
                           </button>
