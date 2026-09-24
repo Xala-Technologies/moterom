@@ -15,13 +15,13 @@ Isolation is a **tenant boundary**, not a UI filter after loading every company�
 
 ## Architecture
 
-| Piece | Owner | Rule |
-| --- | --- | --- |
-| Digilist tenant | Digilist | One tenant per company / building |
-| Room / utleieobjekt | Digilist | `visibility=private`, `accessChannel=tenant_portal`, owned by that tenant |
-| Bookings, membership, conflicts | Digilist | Authoritative |
-| Portal UI + Express BFF | Møterom | Resolve tenant from hostname / configured origin; never trust a browser-supplied tenant id |
-| Room presentation overlay | Møterom | Photos, stable portal ids, copy — keyed to the Digilist tenant (today: single-tenant [`config/rooms.json`](../config/rooms.json)) |
+| Piece                           | Owner    | Rule                                                                                                                              |
+| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Digilist tenant                 | Digilist | One tenant per company / building                                                                                                 |
+| Room / utleieobjekt             | Digilist | `visibility=private`, `accessChannel=tenant_portal`, owned by that tenant                                                         |
+| Bookings, membership, conflicts | Digilist | Authoritative                                                                                                                     |
+| Portal UI + Express BFF         | Møterom  | Resolve tenant from hostname / configured origin; never trust a browser-supplied tenant id                                        |
+| Room presentation overlay       | Møterom  | Photos, stable portal ids, copy — keyed to the Digilist tenant (today: single-tenant [`config/rooms.json`](../config/rooms.json)) |
 
 ```mermaid
 flowchart LR
