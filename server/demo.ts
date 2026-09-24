@@ -111,7 +111,7 @@ export class DemoStore {
       .prepare("INSERT INTO audit VALUES (?, ?, ?, ?, ?)")
       .run(randomUUID(), user.id, action, entity, Date.now());
   }
-  rooms() {
+  allRooms() {
     return this.all<Room>("rooms").map((room) => {
       const seed = this.seedRooms.find((item) => item.id === room.id);
       return {
@@ -121,14 +121,22 @@ export class DemoStore {
         descriptionEn: room.descriptionEn || seed?.descriptionEn || "",
         capacityLabelEn:
           room.capacityLabelEn || seed?.capacityLabelEn || room.capacityLabel,
+        portalPublished: room.portalPublished !== false,
       };
     });
   }
+  rooms() {
+    return this.allRooms().filter((room) => room.portalPublished);
+  }
   room(id: string) {
-    const room = this.rooms().find((r) => r.id === id);
+    const room = this.allRooms().find((r) => r.id === id);
     if (!room)
       throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
     return room;
+  }
+  private assertPortalPublished(room: Room) {
+    if (!room.portalPublished)
+      throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
   }
   availability(
     search: Search,
@@ -137,6 +145,13 @@ export class DemoStore {
   ): Availability[] {
     const span = interval(search);
     return (roomId ? [this.room(roomId)] : this.rooms()).map((room) => {
+      if (!room.portalPublished) {
+        return {
+          roomId: room.id,
+          state: "unavailable" as const,
+          reason: translateMessage(locale, "room_not_found"),
+        };
+      }
       const occupied =
         this.all<Booking>("bookings").some(
           (b) =>
@@ -200,6 +215,7 @@ export class DemoStore {
         return this.booking(String(old.booking), user);
       }
       const room = this.room(input.roomId);
+      this.assertPortalPublished(room);
       const availability = this.availability(input).find(
         (r) => r.roomId === input.roomId,
       );
@@ -294,7 +310,7 @@ export class DemoStore {
   admin(user: User): AdminData {
     this.assertAdmin(user);
     return {
-      rooms: this.rooms(),
+      rooms: this.allRooms(),
       bookings: this.all<Booking>("bookings"),
       blocks: this.all<Block>("blocks"),
       truncated: false,
@@ -370,9 +386,65 @@ export class DemoStore {
         current.capacityLabelEn ||
         `${patch.capacity} people`,
       descriptionEn: patch.descriptionEn ?? current.descriptionEn ?? "",
+      portalPublished: current.portalPublished !== false,
     };
     this.save("rooms", room);
     this.audit(user, "room.updated", id);
+    return room;
+  }
+  setRoomPortalPublished(id: string, published: boolean, user: User) {
+    this.assertAdmin(user);
+    const room = {
+      ...this.room(id),
+      portalPublished: published,
+    };
+    this.save("rooms", room);
+    this.audit(user, published ? "room.published" : "room.unpublished", id);
+    return room;
+  }
+  createRoom(
+    input: {
+      name: string;
+      capacity: number;
+      description: string;
+      descriptionEn?: string;
+      capacityLabel?: string;
+      capacityLabelEn?: string;
+      requiresApproval: boolean;
+      amenities?: string[];
+      arrivalInfo?: string;
+      image?: string;
+      imageKind?: "illustrative" | "actual";
+    },
+    user: User,
+  ): Room {
+    this.assertAdmin(user);
+    const name = input.name.trim();
+    if (!name)
+      throw new AppError(400, "Skriv inn et romnavn.", "room_name_required");
+    const capacity = Math.max(1, Math.floor(input.capacity));
+    const id = `room-${randomUUID().slice(0, 8)}`;
+    const image = input.image?.trim() || undefined;
+    const room: Room = {
+      id,
+      name,
+      slug: id,
+      capacity,
+      capacityLabel: input.capacityLabel?.trim() || `${capacity} personer`,
+      capacityLabelEn: input.capacityLabelEn?.trim() || `${capacity} people`,
+      description: input.description.trim() || name,
+      descriptionEn: input.descriptionEn?.trim() || "",
+      amenities: input.amenities || [],
+      requiresApproval: input.requiresApproval,
+      arrivalInfo: input.arrivalInfo?.trim() || undefined,
+      portalPublished: false,
+      image,
+      imageKind: image
+        ? (input.imageKind ?? "illustrative")
+        : input.imageKind || "illustrative",
+    };
+    this.save("rooms", room);
+    this.audit(user, "room.created", id);
     return room;
   }
   createBlock(roomId: string, search: Search, title: string, user: User) {
@@ -385,11 +457,17 @@ export class DemoStore {
         "Velg et fremtidig tidspunkt.",
         "future_time_required",
       );
-    if (
-      this.availability({ ...search, people: 1 }).find(
-        (r) => r.roomId === roomId,
-      )?.state !== "available"
-    )
+    const occupied =
+      this.all<Booking>("bookings").some(
+        (b) =>
+          b.roomId === roomId &&
+          !["cancelled", "rejected"].includes(b.status) &&
+          overlaps(span, b),
+      ) ||
+      this.all<Block>("blocks").some(
+        (b) => b.roomId === roomId && overlaps(span, b),
+      );
+    if (occupied)
       throw new AppError(
         409,
         "Tidsrommet overlapper en booking eller blokkering.",

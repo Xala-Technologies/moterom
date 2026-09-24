@@ -11,6 +11,8 @@ export interface Room {
   imageKind?: "illustrative" | "actual";
   amenities: string[];
   requiresApproval: boolean;
+  /** When false, hidden from customer catalogue; admin still sees it. Absent means published. */
+  portalPublished?: boolean;
   nameNeedsConfirmation?: boolean;
   arrivalInfo?: string;
   sourceId?: string;

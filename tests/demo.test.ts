@@ -72,6 +72,46 @@ describe("persistent demo booking rules", () => {
     expect(() => store.admin(customer)).toThrow();
     expect(() => store.updateBooking(first.id, "approve", customer)).toThrow();
   });
+  it("hides draft rooms from the customer catalogue and blocks new bookings", () => {
+    expect(store.rooms().every((r) => r.portalPublished)).toBe(true);
+    const hidden = store.setRoomPortalPublished(input.roomId, false, admin);
+    expect(hidden.portalPublished).toBe(false);
+    expect(store.rooms().some((r) => r.id === input.roomId)).toBe(false);
+    expect(store.allRooms().some((r) => r.id === input.roomId)).toBe(true);
+    expect(store.admin(admin).rooms.some((r) => r.id === input.roomId)).toBe(
+      true,
+    );
+    expect(() => store.create(input, customer, "hidden-room")).toThrow();
+    store.setRoomPortalPublished(input.roomId, true, admin);
+    expect(store.create(input, customer, "restored").status).toBe("confirmed");
+  });
+  it("creates rooms as drafts that admins can publish", () => {
+    const created = store.createRoom(
+      {
+        name: "Nytt rom",
+        capacity: 8,
+        description: "Testrom på norsk",
+        descriptionEn: "Test room in English",
+        capacityLabel: "8 personer",
+        capacityLabelEn: "8 people",
+        requiresApproval: true,
+        amenities: ["Skjerm", "Whiteboard"],
+        arrivalInfo: "Ring på døren",
+      },
+      admin,
+    );
+    expect(created.portalPublished).toBe(false);
+    expect(created.descriptionEn).toBe("Test room in English");
+    expect(created.amenities).toEqual(["Skjerm", "Whiteboard"]);
+    expect(created.arrivalInfo).toBe("Ring på døren");
+    expect(created.requiresApproval).toBe(true);
+    expect(store.rooms().some((r) => r.id === created.id)).toBe(false);
+    expect(store.admin(admin).rooms.some((r) => r.id === created.id)).toBe(
+      true,
+    );
+    store.setRoomPortalPublished(created.id, true, admin);
+    expect(store.rooms().some((r) => r.id === created.id)).toBe(true);
+  });
   it("blocks booking during maintenance and preserves original edit intervals", () => {
     const block = store.createBlock(input.roomId, input, "Vedlikehold", admin);
     expect(() => store.create(input, customer, "one")).toThrow();

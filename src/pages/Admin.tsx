@@ -32,6 +32,8 @@ import {
   LockKeyhole,
   Megaphone,
   MessageCircle,
+  Eye,
+  EyeOff,
   Plus,
   Search as SearchIcon,
   Settings,
@@ -66,9 +68,7 @@ import {
   Button,
   Empty,
   ErrorState,
-  Field,
   Input,
-  Label,
   Loading,
   Modal,
   Status,
@@ -100,6 +100,24 @@ type CalendarEvent = {
   booking?: Booking;
   block?: Block;
 };
+
+function blankRoomDraft(): Room {
+  return {
+    id: "new",
+    name: "",
+    slug: "",
+    capacity: 10,
+    capacityLabel: "10 personer",
+    capacityLabelEn: "10 people",
+    description: "",
+    descriptionEn: "",
+    amenities: [],
+    requiresApproval: false,
+    portalPublished: false,
+    imageKind: "illustrative",
+  };
+}
+
 export function Admin() {
   const { user, loading, config, notify } = useApp();
   const { t } = useT();
@@ -143,6 +161,11 @@ export function Admin() {
   const term = params.get("q") ?? "";
   const [event, setEvent] = useState<CalendarEvent>();
   const [editRoom, setEditRoom] = useState<Room>();
+  const [portalHideRoom, setPortalHideRoom] = useState<Room>();
+  const [createDraft, setCreateDraft] = useState<Room>();
+  const [roomVisibilityFilter, setRoomVisibilityFilter] = useState<
+    "all" | "published" | "hidden"
+  >("all");
   const [blockForm, setBlockForm] = useState(false);
   const [blockRoom, setBlockRoom] = useState("");
   const [blockSearch, setBlockSearch] = useState<Search>(defaultSearch());
@@ -170,6 +193,14 @@ export function Admin() {
   }
   const bookings = result.data?.bookings || [];
   const rooms = result.data?.rooms || [];
+  const publishedRooms = rooms.filter((room) => room.portalPublished !== false);
+  const hiddenRooms = rooms.filter((room) => room.portalPublished === false);
+  const visibleRooms =
+    roomVisibilityFilter === "published"
+      ? publishedRooms
+      : roomVisibilityFilter === "hidden"
+        ? hiddenRooms
+        : rooms;
   const blocks = result.data?.blocks || [];
   const roomParam = params.get("rom");
   const roomFilter =
@@ -223,6 +254,8 @@ export function Admin() {
       notify(message);
       setEvent(undefined);
       setEditRoom(undefined);
+      setPortalHideRoom(undefined);
+      setCreateDraft(undefined);
       setBlockForm(false);
       result.reload();
     } catch (e) {
@@ -468,6 +501,21 @@ export function Admin() {
               >
                 <Megaphone size={17} />
                 {t("messages.announcement_new")}
+              </Button>
+            </div>
+          )}
+          {section === "rooms" && (
+            <div className="admin-heading-actions">
+              <Button
+                type="button"
+                data-size="sm"
+                onClick={() => {
+                  setError(undefined);
+                  setCreateDraft(blankRoomDraft());
+                }}
+              >
+                <Plus size={18} />
+                {t("admin.new_room")}
               </Button>
             </div>
           )}
@@ -755,37 +803,120 @@ export function Admin() {
             )}
             {section === "rooms" && (
               <div className="admin-rooms">
-                {rooms.map((room) => {
-                  const copy = roomCopy(room, locale);
-                  return (
-                    <article className="admin-room" key={room.id}>
-                      <div className="admin-room-media">
-                        <RoomPhoto room={room} />
-                      </div>
-                      <div className="admin-room-copy">
-                        <h2>{room.name}</h2>
-                        <p>
-                          <UsersRound size={16} />
-                          {copy.capacityLabel}
-                        </p>
-                        <span className="caption">
-                          {room.requiresApproval
-                            ? t("admin.requires_approval")
-                            : t("admin.direct_booking")}
-                        </span>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setEditRoom({ ...room });
-                          setError(undefined);
-                        }}
+                <div className="admin-list-toolbar">
+                  <FilterSelect
+                    label={t("admin.rooms_filter_visibility")}
+                    value={roomVisibilityFilter}
+                    onChange={(value) =>
+                      setRoomVisibilityFilter(
+                        value as "all" | "published" | "hidden",
+                      )
+                    }
+                    options={[
+                      {
+                        value: "all",
+                        label: t("admin.rooms_filter_all", {
+                          count: rooms.length,
+                        }),
+                        icon: <Building2 size={18} />,
+                      },
+                      {
+                        value: "published",
+                        label: t("admin.rooms_filter_published", {
+                          count: publishedRooms.length,
+                        }),
+                        icon: <Eye size={18} />,
+                      },
+                      {
+                        value: "hidden",
+                        label: t("admin.rooms_filter_draft", {
+                          count: hiddenRooms.length,
+                        }),
+                        icon: <EyeOff size={18} />,
+                      },
+                    ]}
+                  />
+                </div>
+                {visibleRooms.length ? (
+                  visibleRooms.map((room) => {
+                    const copy = roomCopy(room, locale);
+                    const published = room.portalPublished !== false;
+                    return (
+                      <article
+                        className={`admin-room${published ? "" : " is-hidden"}`}
+                        key={room.id}
                       >
-                        {t("admin.edit")}
-                      </Button>
-                    </article>
-                  );
-                })}
+                        <div className="admin-room-media">
+                          <RoomPhoto room={room} />
+                        </div>
+                        <div className="admin-room-copy">
+                          <div className="admin-room-title-row">
+                            <h2>{room.name}</h2>
+                            <span
+                              className={`admin-room-badge ${published ? "tone-success" : "tone-neutral"}`}
+                            >
+                              {published
+                                ? t("admin.room_published_status")
+                                : t("admin.room_draft_status")}
+                            </span>
+                          </div>
+                          <p>
+                            <UsersRound size={16} />
+                            {copy.capacityLabel}
+                          </p>
+                          <span className="caption">
+                            {room.requiresApproval
+                              ? t("admin.requires_approval")
+                              : t("admin.direct_booking")}
+                          </span>
+                        </div>
+                        <div className="admin-room-actions">
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setEditRoom({ ...room });
+                              setError(undefined);
+                            }}
+                          >
+                            {t("admin.edit")}
+                          </Button>
+                          {published ? (
+                            <Button
+                              variant="secondary"
+                              data-color="danger"
+                              onClick={() => {
+                                setPortalHideRoom(room);
+                                setError(undefined);
+                              }}
+                            >
+                              {t("admin.unpublish_room")}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              disabled={busy}
+                              onClick={() =>
+                                void run(
+                                  () =>
+                                    post(`/admin/rooms/${room.id}/portal`, {
+                                      published: true,
+                                    }),
+                                  t("admin.toasts.room_published"),
+                                )
+                              }
+                            >
+                              {t("admin.publish_room")}
+                            </Button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <Empty title={t("admin.empty_rooms_title")}>
+                    <p>{t("admin.empty_rooms_body")}</p>
+                  </Empty>
+                )}
               </div>
             )}
             {section === "users" && (
@@ -1059,6 +1190,74 @@ export function Admin() {
                     body: JSON.stringify(payload),
                   }),
                 t("admin.toasts.room_updated"),
+              );
+            }}
+          />
+        </Modal>
+      )}
+      {portalHideRoom && (
+        <Modal
+          title={t("admin.unpublish_room_title")}
+          close={() => {
+            if (!busy) setPortalHideRoom(undefined);
+          }}
+        >
+          <p>{t("admin.unpublish_room_body", { name: portalHideRoom.name })}</p>
+          {error && <ErrorState error={error} />}
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => setPortalHideRoom(undefined)}
+            >
+              {t("admin.unpublish_room_cancel")}
+            </Button>
+            <Button
+              data-color="danger"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  () =>
+                    post(`/admin/rooms/${portalHideRoom.id}/portal`, {
+                      published: false,
+                    }),
+                  t("admin.toasts.room_unpublished"),
+                )
+              }
+            >
+              {busy
+                ? t("admin.unpublishing_room")
+                : t("admin.unpublish_room_confirm")}
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {createDraft && (
+        <Modal
+          title={t("admin.new_room_title")}
+          wide
+          close={() => {
+            if (!busy) setCreateDraft(undefined);
+          }}
+        >
+          <p className="muted">{t("admin.new_room_intro")}</p>
+          <RoomEditForm
+            key="new-room"
+            room={createDraft}
+            mode={config?.mode}
+            busy={busy}
+            error={error}
+            submitLabel={t("admin.new_room_submit")}
+            submittingLabel={t("admin.creating_room")}
+            onChange={(next) => setCreateDraft(next)}
+            onSubmit={(payload) => {
+              void run(
+                () =>
+                  api("/admin/rooms", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                  }),
+                t("admin.toasts.room_created"),
               );
             }}
           />

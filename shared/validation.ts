@@ -46,7 +46,32 @@ export const roomSchema = z.object({
     })
     .optional(),
 });
+export const roomCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  capacity: z.coerce.number().int().min(1).max(500),
+  description: z.string().trim().max(3000).optional().default(""),
+  descriptionEn: z.string().trim().max(3000).optional().default(""),
+  capacityLabel: z.string().trim().max(100).optional(),
+  capacityLabelEn: z.string().trim().max(100).optional(),
+  requiresApproval: z.boolean().optional().default(false),
+  image: z.string().trim().max(2000).optional(),
+  imageKind: z.enum(["illustrative", "actual"]).optional(),
+  amenities: z
+    .array(z.string().trim().min(1).max(80))
+    .max(20)
+    .optional()
+    .default([]),
+  arrivalInfo: z.string().trim().max(1000).optional().default(""),
+  imageFile: z
+    .object({
+      filename: z.string().trim().min(1).max(200),
+      contentType: z.enum(["image/webp", "image/jpeg", "image/png"]),
+      data: z.string().min(1).max(2_800_000),
+    })
+    .optional(),
+});
 export type RoomPatch = z.infer<typeof roomSchema>;
+export type RoomCreate = z.infer<typeof roomCreateSchema>;
 export const accessRequestCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   email: z.email().max(254),

@@ -20,6 +20,7 @@ const source = {
   name: "Sauda",
   capacity: 12,
   requiresApproval: false,
+  status: "published",
   accessChannel: "tenant_portal",
   visibility: "private",
   bookingConfig: { approvalRequired: true, minBookingDurationMinutes: 60 },
@@ -127,6 +128,37 @@ describe("Digilist boundary contracts from the reviewed source", () => {
   });
   it("uses the canonical approvalRequired flag even when the legacy flag is false", async () => {
     expect((await new Digilist().rooms())[0].requiresApproval).toBe(true);
+  });
+  it("defaults portalPublished from Digilist status and hides drafts", async () => {
+    const digilist = new Digilist();
+    expect((await digilist.rooms())[0].portalPublished).toBe(true);
+    expect((await digilist.allRooms()).length).toBe(inventory.length);
+    mocks.query.mockResolvedValue({
+      ...source,
+      status: "draft",
+    });
+    const hidden = new Digilist();
+    expect(await hidden.rooms()).toEqual([]);
+    expect((await hidden.allRooms())[0].portalPublished).toBe(false);
+  });
+  it("publishes and unpublishes through Digilist lifecycle mutations", async () => {
+    await new Digilist().setRoomPortalPublished(inventory[0].id, false, user);
+    expect(getFunctionName(mocks.mutation.mock.calls[0][0])).toBe(
+      "domain/resources:unpublish",
+    );
+    expect(mocks.mutation.mock.calls[0][1]).toMatchObject({
+      unpublishedBy: user.id,
+    });
+    mocks.mutation.mockClear();
+    mocks.query.mockResolvedValue({ ...source, status: "draft" });
+    await new Digilist().setRoomPortalPublished(inventory[0].id, true, user);
+    expect(getFunctionName(mocks.mutation.mock.calls[0][0])).toBe(
+      "domain/resources:update",
+    );
+    expect(mocks.mutation.mock.calls[0][1]).toMatchObject({
+      updatedBy: user.id,
+      status: "published",
+    });
   });
   it("refuses a room resolved to another building", async () => {
     mocks.query.mockResolvedValue({ ...source, tenantId: "another-building" });

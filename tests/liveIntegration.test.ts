@@ -123,6 +123,7 @@ beforeEach(() => {
     name: room.name,
     slug: room.slug,
     capacity: room.capacity,
+    status: "published",
     accessChannel: "tenant_portal",
     visibility: "private",
     requiresApproval: false,
@@ -143,6 +144,8 @@ beforeEach(() => {
     switch (getFunctionName(ref)) {
       case "domain/resources:getBySlug":
         return sources.find((room) => room.slug === args.slug);
+      case "domain/resources:list":
+        return sources;
       case "domain/bookings:listMine":
         return records.filter((b) => b.userId === args.userId);
       case "domain/bookings:get":
