@@ -1,5 +1,7 @@
 # SKB private portal — DEV mapping and rollout
 
+Private Finn rom for one Digilist tenant. How Møterom expands to other companies without mixing room catalogues is recorded in [`multi-tenant-portals.md`](multi-tenant-portals.md).
+
 Møterom branch: `feat/skb-private-portal` (from `feat/adopt-room-admin` `6cd4730`, uncommitted grid/modal work kept).
 Digilist branch: `feat/tenant-portal-listings` (from `origin/dev` `f5a6c8f`).
 
