@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import { useApi } from "../api";
 import type { TimeSlot } from "../../shared/types";
+import {
+  nextSlotSelection,
+  rangeIsAvailable,
+  slotInRange,
+} from "../../shared/slots";
 import { Loading, ErrorState, Button } from "./ui";
 import { MonthCalendar } from "./MonthCalendar";
 import { useFormatters, useT } from "../i18n";
@@ -55,16 +60,12 @@ export function RoomCardSchedule({
     // Reload only when parent bumps revision after a successful booking.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slots.reload is stable
   }, [slotsRevision]);
-  const selected =
+  const canBook = Boolean(
     selection &&
     selection.date === date &&
-    slots.data?.find(
-      (slot) =>
-        slot.start === selection.start &&
-        slot.end === selection.end &&
-        slot.state === "available",
-    );
-  const canBook = Boolean(selected);
+    slots.data &&
+    rangeIsAvailable(slots.data, selection.start, selection.end),
+  );
   const chosen =
     selection && selection.date === date
       ? `${selection.start}–${selection.end}`
@@ -227,6 +228,7 @@ export function RoomCardSchedule({
             <ErrorState error={slots.error} retry={slots.reload} />
           ) : (
             <>
+              <p className="muted">{t("rooms.slots_range_hint")}</p>
               <div
                 ref={slotsGroupRef}
                 className="room-schedule-slots"
@@ -236,11 +238,13 @@ export function RoomCardSchedule({
               >
                 {(slots.data || []).map((slot) => {
                   const label = `${slot.start}–${slot.end}`;
-                  const pressed =
-                    Boolean(selection) &&
-                    selection!.date === date &&
-                    selection!.start === slot.start &&
-                    selection!.end === slot.end;
+                  const current =
+                    selection && selection.date === date
+                      ? { start: selection.start, end: selection.end }
+                      : null;
+                  const pressed = Boolean(
+                    current && slotInRange(slot, current),
+                  );
                   return (
                     <button
                       type="button"
@@ -266,16 +270,12 @@ export function RoomCardSchedule({
                       }
                       disabled={slot.state !== "available"}
                       onClick={() => {
-                        if (
-                          pressed ||
-                          (selection?.date === date &&
-                            selection.start === slot.start &&
-                            selection.end === slot.end)
-                        ) {
-                          onSelect(null);
-                          return;
-                        }
-                        onSelect({ date, start: slot.start, end: slot.end });
+                        const next = nextSlotSelection(
+                          slots.data || [],
+                          current,
+                          slot,
+                        );
+                        onSelect(next ? { date, ...next } : null);
                       }}
                     >
                       {label}

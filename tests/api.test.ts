@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
-import { addDays, today } from "../shared/time";
+import { addDays, interval, today } from "../shared/time";
 process.env.DATA_MODE = "demo";
 process.env.DEMO_DB_PATH = ":memory:";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
@@ -151,6 +151,39 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     expect(created.phone).toBe("41234567");
     await guest.get(`/api/bookings/${created.id}`).expect(200);
     await request(app).get(`/api/bookings/${created.id}`).expect(401);
+  });
+  it("lets a customer quote and book a multi-hour interval", async () => {
+    const search = {
+      roomId,
+      date: addDays(today(), 19),
+      start: "10:00",
+      end: "13:00",
+      people: 2,
+    };
+    const quote = (
+      await customer
+        .post("/api/quote")
+        .set("Origin", origin)
+        .send(search)
+        .expect(200)
+    ).body;
+    const created = (
+      await customer
+        .post("/api/bookings")
+        .set("Origin", origin)
+        .set("Idempotency-Key", randomUUID())
+        .send({
+          ...search,
+          title: "Halvdagsmøte",
+          notes: "",
+          quoteToken: quote.token,
+          ...contact,
+        })
+        .expect(201)
+    ).body;
+    const span = interval(search);
+    expect(created.startTime).toBe(span.startTime);
+    expect(created.endTime).toBe(span.endTime);
   });
   it("requires a matching signed quote, then books, retries, exports and cancels", async () => {
     const search = {
