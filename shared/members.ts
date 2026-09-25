@@ -1,20 +1,10 @@
 import type { TenantMember } from "./types";
+import { BUILDING_ADMIN_ROLES, isBuildingAdminRole } from "./adminAccess";
+
+export { BUILDING_ADMIN_ROLES, isBuildingAdminRole };
 
 /** Isolation-test identities, not people who use the building. */
 export const DIGILIST_FIXTURE_EMAIL = /@digilist\.dev$/i;
-
-export const BUILDING_ADMIN_ROLES = new Set([
-  "tenant_admin",
-  "saksbehandler",
-  "owner",
-  "admin",
-  "manager",
-  "staff",
-]);
-
-export function isBuildingAdminRole(role: string): boolean {
-  return BUILDING_ADMIN_ROLES.has(role.trim().toLowerCase());
-}
 
 function memberRank(member: TenantMember): number {
   return (

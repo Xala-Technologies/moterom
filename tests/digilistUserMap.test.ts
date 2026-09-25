@@ -38,6 +38,17 @@ describe("mapDigilistUser", () => {
     );
     expect(user.isMember).toBe(true);
     expect(user.isAdmin).toBe(true);
+    expect(user.adminAccess).toBe("full");
+    expect(user.tenantRole).toBe("tenant_admin");
+  });
+
+  it("marks saksbehandler admins as operations-only", () => {
+    const user = mapDigilistUser(
+      { ...allowlisted, tenantRole: "saksbehandler" },
+      building,
+    );
+    expect(user.isAdmin).toBe(true);
+    expect(user.adminAccess).toBe("operations");
   });
 
   it("matches allowlisted email case-insensitively", () => {

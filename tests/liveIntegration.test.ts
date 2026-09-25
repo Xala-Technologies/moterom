@@ -51,6 +51,8 @@ const admin = {
   id: "admin-1",
   email: "admin@example.invalid",
   isAdmin: true,
+  tenantRole: "tenant_admin",
+  adminAccess: "full" as const,
 };
 const outsider = {
   ...member,

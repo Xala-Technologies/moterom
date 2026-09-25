@@ -21,6 +21,7 @@ import { BrandMark } from "./BrandMark";
 import { useApp } from "../context";
 import { post } from "../api";
 import { useI18nLocale, useT } from "../i18n";
+import { canManagePortal } from "../../shared/adminAccess";
 export function Shell() {
   const { config, user, refresh, notify } = useApp();
   const { t } = useT();
@@ -30,6 +31,7 @@ export function Shell() {
   const login =
     location.pathname === "/login" || location.pathname === "/auth/callback";
   const building = config?.buildingName || t("common.app_name");
+  const portalAdmin = canManagePortal(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(() => {
     try {
@@ -160,11 +162,9 @@ export function Shell() {
       label: t("admin.nav.overview"),
       icon: LayoutDashboard,
     },
-    {
-      to: "/admin/innsikt",
-      label: t("admin.nav.insights"),
-      icon: ChartColumn,
-    },
+    ...(portalAdmin
+      ? [{ to: "/admin/rooms", label: t("admin.nav.rooms"), icon: Building2 }]
+      : []),
     {
       to: "/admin/calendar",
       label: t("admin.nav.calendar"),
@@ -180,8 +180,14 @@ export function Shell() {
       label: t("admin.nav.messages"),
       icon: MessageCircle,
     },
-    { to: "/admin/rooms", label: t("admin.nav.rooms"), icon: Building2 },
-    { to: "/admin/users", label: t("admin.nav.users"), icon: UsersRound },
+    {
+      to: "/admin/innsikt",
+      label: t("admin.nav.insights"),
+      icon: ChartColumn,
+    },
+    ...(portalAdmin
+      ? [{ to: "/admin/users", label: t("admin.nav.users"), icon: UsersRound }]
+      : []),
     {
       to: "/admin/settings",
       label: t("admin.nav.settings"),

@@ -19,6 +19,7 @@ import type {
 } from "../shared/types";
 import { addDays, interval, overlaps, today } from "../shared/time";
 import { AppError } from "../shared/validation";
+import { canManagePortal } from "../shared/adminAccess";
 import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
 import { enrichBookingConversation } from "./conversationContext";
@@ -347,6 +348,15 @@ export class DemoStore {
         "admin_required",
       );
   }
+  assertPortalAdmin(user: User) {
+    this.assertAdmin(user);
+    if (!canManagePortal(user))
+      throw new AppError(
+        403,
+        "Denne handlingen krever byggadministratorrollen.",
+        "portal_admin_required",
+      );
+  }
   updateRoom(
     id: string,
     patch: {
@@ -364,7 +374,7 @@ export class DemoStore {
     },
     user: User,
   ) {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     const current = this.room(id);
     const image =
       patch.image !== undefined
@@ -393,7 +403,7 @@ export class DemoStore {
     return room;
   }
   setRoomPortalPublished(id: string, published: boolean, user: User) {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     const room = {
       ...this.room(id),
       portalPublished: published,
@@ -401,6 +411,39 @@ export class DemoStore {
     this.save("rooms", room);
     this.audit(user, published ? "room.published" : "room.unpublished", id);
     return room;
+  }
+  deleteRoom(id: string, user: User) {
+    this.assertPortalAdmin(user);
+    const room = this.room(id);
+    if (room.portalPublished)
+      throw new AppError(
+        409,
+        "Sett rommet som utkast før du sletter det.",
+        "room_delete_published",
+      );
+    if (this.seedRooms.some((item) => item.id === id))
+      throw new AppError(
+        409,
+        "Byggets standardrom kan ikke slettes her.",
+        "room_delete_seed",
+      );
+    const active = this.all<Booking>("bookings").some(
+      (booking) =>
+        booking.roomId === id &&
+        !["cancelled", "rejected"].includes(booking.status),
+    );
+    if (active)
+      throw new AppError(
+        409,
+        "Rommet har aktive bookinger og kan ikke slettes.",
+        "room_has_bookings",
+      );
+    for (const block of this.all<Block>("blocks")) {
+      if (block.roomId === id)
+        this.db.prepare("DELETE FROM blocks WHERE id = ?").run(block.id);
+    }
+    this.db.prepare("DELETE FROM rooms WHERE id = ?").run(id);
+    this.audit(user, "room.deleted", id);
   }
   createRoom(
     input: {
@@ -418,7 +461,7 @@ export class DemoStore {
     },
     user: User,
   ): Room {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     const name = input.name.trim();
     if (!name)
       throw new AppError(400, "Skriv inn et romnavn.", "room_name_required");

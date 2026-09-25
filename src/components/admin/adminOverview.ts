@@ -135,6 +135,6 @@ export function calendarHref(date: string, todayDate: string): string {
     : `/admin/calendar?dato=${encodeURIComponent(date)}`;
 }
 
-export function newBookingHref(date: string): string {
-  return `/ny-booking?${new URLSearchParams({ fra: "admin", date }).toString()}`;
+export function newBookingHref(_date: string): string {
+  return "/";
 }

@@ -38,6 +38,7 @@ import {
   Search as SearchIcon,
   Settings,
   ShieldCheck,
+  Trash2,
   UsersRound,
   X,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import { useApp } from "../context";
 import { api, post, useApi } from "../api";
 import { RoomPhoto } from "../components/RoomPhoto";
 import { AdminBookingList } from "../components/admin/AdminBookingList";
+import { bookingIsCancellable } from "../components/admin/adminBookingRow";
 import {
   bookingStatusParam,
   bookingsOverlappingDay,
@@ -86,8 +88,9 @@ import { compareAgenda } from "../../shared/bookingOrder";
 import { addDays, defaultSearch, today, toSearch } from "../../shared/time";
 import { AdminInsights } from "./AdminInsights";
 import { AdminAccessRequests } from "../components/admin/AdminAccessRequests";
-import { AdminMembers } from "../components/admin/AdminMembers";
 import { AdminMessages } from "../components/admin/AdminMessages";
+import { AdminSettings } from "../components/admin/AdminSettings";
+import { canManagePortal } from "../../shared/adminAccess";
 import { roomCopy, useFormatters, useI18nLocale, useT } from "../i18n";
 type CalendarEvent = {
   id: string;
@@ -160,8 +163,10 @@ export function Admin() {
   const statusFilter = bookingStatusParam(params.get("status"));
   const term = params.get("q") ?? "";
   const [event, setEvent] = useState<CalendarEvent>();
+  const [cancelTarget, setCancelTarget] = useState<Booking>();
   const [editRoom, setEditRoom] = useState<Room>();
   const [portalHideRoom, setPortalHideRoom] = useState<Room>();
+  const [deleteRoom, setDeleteRoom] = useState<Room>();
   const [createDraft, setCreateDraft] = useState<Room>();
   const [roomVisibilityFilter, setRoomVisibilityFilter] = useState<
     "all" | "published" | "hidden"
@@ -183,6 +188,10 @@ export function Admin() {
       />
     );
   if (!user.isAdmin) return <Navigate replace to="/" />;
+  const portalAdmin = canManagePortal(user);
+  if (!portalAdmin && (section === "rooms" || section === "users")) {
+    return <Navigate replace to="/admin/settings" />;
+  }
   if (section === "today" && params.get("visning") === "innsikt") {
     const copy = new URLSearchParams(params);
     copy.delete("visning");
@@ -253,8 +262,10 @@ export function Admin() {
       await task();
       notify(message);
       setEvent(undefined);
+      setCancelTarget(undefined);
       setEditRoom(undefined);
       setPortalHideRoom(undefined);
+      setDeleteRoom(undefined);
       setCreateDraft(undefined);
       setBlockForm(false);
       result.reload();
@@ -406,10 +417,12 @@ export function Admin() {
             <LayoutDashboard size={19} />
             {t("admin.nav.overview")}
           </NavLink>
-          <NavLink to="/admin/innsikt">
-            <ChartColumn size={19} />
-            {t("admin.nav.insights")}
-          </NavLink>
+          {portalAdmin ? (
+            <NavLink to="/admin/rooms">
+              <Building2 size={19} />
+              {t("admin.nav.rooms")}
+            </NavLink>
+          ) : null}
           <NavLink to="/admin/calendar">
             <CalendarDays size={19} />
             {t("admin.nav.calendar")}
@@ -427,23 +440,27 @@ export function Admin() {
             <MessageCircle size={19} />
             {t("admin.nav.messages")}
           </NavLink>
-          <NavLink to="/admin/rooms">
-            <Building2 size={19} />
-            {t("admin.nav.rooms")}
+          <NavLink to="/admin/innsikt">
+            <ChartColumn size={19} />
+            {t("admin.nav.insights")}
           </NavLink>
-          <NavLink to="/admin/users">
-            <UsersRound size={19} />
-            {t("admin.nav.users")}
-            {(accessResult.data || []).some((r) => r.status === "pending") && (
-              <span className="nav-count">
-                {
-                  (accessResult.data || []).filter(
-                    (r) => r.status === "pending",
-                  ).length
-                }
-              </span>
-            )}
-          </NavLink>
+          {portalAdmin ? (
+            <NavLink to="/admin/users">
+              <UsersRound size={19} />
+              {t("admin.nav.users")}
+              {(accessResult.data || []).some(
+                (r) => r.status === "pending",
+              ) && (
+                <span className="nav-count">
+                  {
+                    (accessResult.data || []).filter(
+                      (r) => r.status === "pending",
+                    ).length
+                  }
+                </span>
+              )}
+            </NavLink>
+          ) : null}
           <NavLink to="/admin/settings">
             <Settings size={19} />
             {t("admin.nav.settings")}
@@ -491,11 +508,10 @@ export function Admin() {
               </Link>
             </div>
           )}
-          {section === "messages" && (
+          {section === "messages" && portalAdmin && (
             <div className="admin-heading-actions">
               <Button
                 type="button"
-                variant="secondary"
                 data-size="sm"
                 onClick={() => setAnnounceOpen(true)}
               >
@@ -504,7 +520,7 @@ export function Admin() {
               </Button>
             </div>
           )}
-          {section === "rooms" && (
+          {section === "rooms" && portalAdmin && (
             <div className="admin-heading-actions">
               <Button
                 type="button"
@@ -621,6 +637,10 @@ export function Admin() {
                             t("admin.toasts.rejected"),
                           )
                         }
+                        onCancel={(b) => {
+                          setError(undefined);
+                          setCancelTarget(b);
+                        }}
                       />
                     </div>
                   </>
@@ -792,6 +812,10 @@ export function Admin() {
                           t("admin.toasts.rejected"),
                         )
                       }
+                      onCancel={(b) => {
+                        setError(undefined);
+                        setCancelTarget(b);
+                      }}
                     />
                   ) : (
                     <Empty title={t("admin.empty_bookings_title")}>
@@ -892,21 +916,35 @@ export function Admin() {
                               {t("admin.unpublish_room")}
                             </Button>
                           ) : (
-                            <Button
-                              variant="secondary"
-                              disabled={busy}
-                              onClick={() =>
-                                void run(
-                                  () =>
-                                    post(`/admin/rooms/${room.id}/portal`, {
-                                      published: true,
-                                    }),
-                                  t("admin.toasts.room_published"),
-                                )
-                              }
-                            >
-                              {t("admin.publish_room")}
-                            </Button>
+                            <>
+                              <Button
+                                variant="secondary"
+                                disabled={busy}
+                                onClick={() =>
+                                  void run(
+                                    () =>
+                                      post(`/admin/rooms/${room.id}/portal`, {
+                                        published: true,
+                                      }),
+                                    t("admin.toasts.room_published"),
+                                  )
+                                }
+                              >
+                                {t("admin.publish_room")}
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                data-color="danger"
+                                disabled={busy}
+                                onClick={() => {
+                                  setDeleteRoom(room);
+                                  setError(undefined);
+                                }}
+                              >
+                                <Trash2 size={16} />
+                                {t("admin.delete_room")}
+                              </Button>
+                            </>
                           )}
                         </div>
                       </article>
@@ -921,7 +959,6 @@ export function Admin() {
             )}
             {section === "users" && (
               <div className="stack">
-                {config?.mode === "live" && <AdminMembers />}
                 <AdminAccessRequests result={accessResult} />
               </div>
             )}
@@ -931,135 +968,7 @@ export function Admin() {
                 onAnnounceOpenChange={setAnnounceOpen}
               />
             )}
-            {section === "settings" && (
-              <div className="settings-grid">
-                <section className="settings-card">
-                  <header className="settings-card-header">
-                    <div className="settings-card-heading">
-                      <h2>{t("admin.settings_building")}</h2>
-                      <p>{t("admin.settings_building_caption")}</p>
-                    </div>
-                  </header>
-                  <div className="settings-card-body">
-                    <dl className="settings-rows">
-                      <div>
-                        <dt>{t("admin.settings_name")}</dt>
-                        <dd>{config?.buildingName}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("admin.settings_address")}</dt>
-                        <dd
-                          className={
-                            config?.address ? undefined : "settings-missing"
-                          }
-                        >
-                          {config?.address || t("admin.address_missing")}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{t("admin.settings_contact")}</dt>
-                        <dd
-                          className={
-                            config?.contactEmail
-                              ? undefined
-                              : "settings-missing"
-                          }
-                        >
-                          {config?.contactEmail || t("admin.address_missing")}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{t("admin.settings_timezone")}</dt>
-                        <dd>{t("admin.timezone_value")}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                </section>
-                <section className="settings-card">
-                  <header className="settings-card-header">
-                    <div className="settings-card-heading">
-                      <h2>{t("admin.settings_access")}</h2>
-                      <p>{t("admin.settings_access_caption")}</p>
-                      <div className="settings-access">
-                        <span className="settings-access-pill">
-                          {config?.access === "members"
-                            ? t("admin.access_members")
-                            : t("admin.access_public_short")}
-                        </span>
-                        <p className="caption">
-                          {config?.access === "members"
-                            ? t("admin.access_members_hint")
-                            : t("admin.access_public")}
-                        </p>
-                      </div>
-                    </div>
-                    <Link
-                      to="/admin/users"
-                      className="ds-button"
-                      data-variant="secondary"
-                      data-size="sm"
-                    >
-                      {t("admin.settings_users_open_inbox")}
-                    </Link>
-                  </header>
-                </section>
-                <section className="settings-card settings-card-span">
-                  <header className="settings-card-header">
-                    <div className="settings-card-heading">
-                      <h2>{t("admin.settings_rules")}</h2>
-                      <p>{t("admin.settings_rules_caption")}</p>
-                    </div>
-                    <a
-                      href={config?.dashboardUrl}
-                      className="ds-button settings-digilist-btn"
-                      data-variant="secondary"
-                      data-size="sm"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t("common.open_digilist")}
-                      <ArrowUpRight size={17} />
-                      <span className="sr-only">
-                        {" "}
-                        {t("common.opens_new_tab")}
-                      </span>
-                    </a>
-                  </header>
-                  <div className="settings-card-body">
-                    <dl className="settings-rows">
-                      <div>
-                        <dt>{t("admin.settings_rule_approval")}</dt>
-                        <dd>
-                          <span>{t("admin.settings_rule_approval_value")}</span>
-                          <Link to="/admin/rooms">
-                            {t("admin.settings_open_rooms")}
-                          </Link>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{t("admin.settings_rule_hours")}</dt>
-                        <dd>{t("admin.settings_rule_hours_value")}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("admin.settings_rule_payment")}</dt>
-                        <dd>{t("admin.settings_rule_payment_value")}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                </section>
-                {config?.mode === "demo" && (
-                  <aside
-                    className="settings-card-span settings-callout"
-                    aria-labelledby="settings-prelaunch-title"
-                  >
-                    <h2 id="settings-prelaunch-title">
-                      {t("admin.prelaunch_title")}
-                    </h2>
-                    <p>{t("admin.prelaunch_body")}</p>
-                  </aside>
-                )}
-              </div>
-            )}
+            {section === "settings" && <AdminSettings />}
           </>
         )}
       </div>
@@ -1132,6 +1041,16 @@ export function Admin() {
                   <Download size={18} />
                   {t("booking.add_to_calendar")}
                 </a>
+                {event.booking ? (
+                  <Link
+                    className="ds-button"
+                    data-variant="secondary"
+                    to={`/booking/${encodeURIComponent(event.booking.id)}#meldinger`}
+                  >
+                    <MessageCircle size={18} />
+                    {t("admin.follow_up")}
+                  </Link>
+                ) : null}
                 {event.status === "pending" && (
                   <>
                     <Button
@@ -1162,8 +1081,61 @@ export function Admin() {
                     </Button>
                   </>
                 )}
+                {event.booking && bookingIsCancellable(event.booking) ? (
+                  <Button
+                    disabled={busy}
+                    variant="secondary"
+                    data-color="danger"
+                    onClick={() => {
+                      const target = event.booking!;
+                      setError(undefined);
+                      setEvent(undefined);
+                      setCancelTarget(target);
+                    }}
+                  >
+                    <X size={16} />
+                    {t("admin.cancel_booking")}
+                  </Button>
+                ) : null}
               </>
             )}
+          </div>
+        </Modal>
+      )}
+      {cancelTarget && (
+        <Modal
+          title={t("booking.cancel_modal_title")}
+          close={() => {
+            if (!busy) setCancelTarget(undefined);
+          }}
+        >
+          <p>
+            {cancelTarget.roomName} · {displayDate(cancelTarget.startTime)} ·{" "}
+            {shortTime(cancelTarget.startTime)}–
+            {shortTime(cancelTarget.endTime)}
+          </p>
+          <p className="caption">{cancelTarget.reference}</p>
+          {error && <ErrorState error={error} />}
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => setCancelTarget(undefined)}
+            >
+              {t("common.back")}
+            </Button>
+            <Button
+              disabled={busy}
+              data-color="danger"
+              onClick={() =>
+                run(
+                  () => post(`/bookings/${cancelTarget.id}/cancel`),
+                  t("booking.notify_cancelled"),
+                )
+              }
+            >
+              {busy ? t("common.sending") : t("booking.confirm_cancel")}
+            </Button>
           </div>
         </Modal>
       )}
@@ -1228,6 +1200,41 @@ export function Admin() {
               {busy
                 ? t("admin.unpublishing_room")
                 : t("admin.unpublish_room_confirm")}
+            </Button>
+          </div>
+        </Modal>
+      )}
+      {deleteRoom && (
+        <Modal
+          title={t("admin.delete_room_title")}
+          close={() => {
+            if (!busy) setDeleteRoom(undefined);
+          }}
+        >
+          <p>{t("admin.delete_room_body", { name: deleteRoom.name })}</p>
+          {error && <ErrorState error={error} />}
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => setDeleteRoom(undefined)}
+            >
+              {t("admin.delete_room_cancel")}
+            </Button>
+            <Button
+              data-color="danger"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  () =>
+                    api(`/admin/rooms/${deleteRoom.id}`, {
+                      method: "DELETE",
+                    }),
+                  t("admin.toasts.room_deleted"),
+                )
+              }
+            >
+              {busy ? t("admin.deleting_room") : t("admin.delete_room_confirm")}
             </Button>
           </div>
         </Modal>
