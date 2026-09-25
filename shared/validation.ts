@@ -104,3 +104,19 @@ export class AppError extends Error {
     super(message);
   }
 }
+
+/** Survive duplicate module copies under tsx/watch HMR. */
+export function isAppError(error: unknown): error is AppError {
+  if (error instanceof AppError) return true;
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    status?: unknown;
+    code?: unknown;
+    message?: unknown;
+  };
+  return (
+    typeof candidate.status === "number" &&
+    typeof candidate.code === "string" &&
+    typeof candidate.message === "string"
+  );
+}

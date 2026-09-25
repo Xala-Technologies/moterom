@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Booking } from "../shared/types";
-import { toAdminBookingRow } from "../src/components/admin/adminBookingRow";
+import {
+  bookingIsCancellable,
+  toAdminBookingRow,
+} from "../src/components/admin/adminBookingRow";
 
 const formatters = {
   displayDate: () => "torsdag 17. september 2026",
@@ -54,6 +57,64 @@ describe("toAdminBookingRow", () => {
     expect(row.actions).toEqual([]);
   });
 
+  it("exposes follow-up, calendar, and cancel in the overflow set", () => {
+    const future = Date.now() + 60 * 60 * 1000;
+    const row = toAdminBookingRow(
+      {
+        ...base,
+        status: "confirmed",
+        startTime: future,
+        endTime: future + 60 * 60 * 1000,
+      },
+      {
+        t: (key) => key,
+        formatters,
+        canCancel: true,
+        canMessage: true,
+        canCalendar: true,
+      },
+    );
+    expect(row.actions.map((a) => a.id)).toEqual([
+      "message",
+      "calendar",
+      "cancel",
+    ]);
+    expect(row.actions.every((a) => !a.primary)).toBe(true);
+    expect(row.actions.find((a) => a.id === "message")?.href).toBe(
+      "/booking/b1#meldinger",
+    );
+  });
+
+  it("keeps approve and reject as primary pending actions", () => {
+    const future = Date.now() + 60 * 60 * 1000;
+    const row = toAdminBookingRow(
+      {
+        ...base,
+        status: "pending",
+        startTime: future,
+        endTime: future + 60 * 60 * 1000,
+      },
+      {
+        t: (key) => key,
+        formatters,
+        canApprove: true,
+        canReject: true,
+        canCancel: true,
+        canMessage: true,
+        canCalendar: true,
+      },
+    );
+    expect(row.actions.filter((a) => a.primary).map((a) => a.id)).toEqual([
+      "approve",
+      "reject",
+    ]);
+    expect(row.actions.filter((a) => !a.primary).map((a) => a.id)).toEqual([
+      "message",
+      "calendar",
+      "cancel",
+    ]);
+  });
+
   it("passes through illustrative image provenance from the room", () => {
     const row = toAdminBookingRow(base, {
       t: (key) => key,
@@ -75,5 +136,37 @@ describe("toAdminBookingRow", () => {
     });
     expect(row.imageUrl).toBe("/rooms/sauda-1.webp");
     expect(row.imageKind).toBe("illustrative");
+  });
+});
+
+describe("bookingIsCancellable", () => {
+  it("allows open future bookings and blocks closed or past ones", () => {
+    const future = Date.now() + 10_000;
+    const past = Date.now() - 10_000;
+    expect(
+      bookingIsCancellable({
+        status: "confirmed",
+        endTime: future,
+      }),
+    ).toBe(true);
+    expect(
+      bookingIsCancellable({
+        status: "pending",
+        endTime: future,
+        cancellationAllowed: false,
+      }),
+    ).toBe(false);
+    expect(
+      bookingIsCancellable({
+        status: "cancelled",
+        endTime: future,
+      }),
+    ).toBe(false);
+    expect(
+      bookingIsCancellable({
+        status: "confirmed",
+        endTime: past,
+      }),
+    ).toBe(false);
   });
 });

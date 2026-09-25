@@ -10,7 +10,13 @@ const customer: User = {
   isAdmin: false,
   isMember: true,
 };
-const admin: User = { ...customer, id: "admin", isAdmin: true };
+const admin: User = {
+  ...customer,
+  id: "admin",
+  isAdmin: true,
+  tenantRole: "tenant_admin",
+  adminAccess: "full",
+};
 const input: BookingInput = {
   roomId: rooms[0].id,
   date: addDays(today(), 10),
@@ -111,6 +117,22 @@ describe("persistent demo booking rules", () => {
     );
     store.setRoomPortalPublished(created.id, true, admin);
     expect(store.rooms().some((r) => r.id === created.id)).toBe(true);
+  });
+  it("deletes draft rooms and refuses published catalogue rooms", () => {
+    const created = store.createRoom(
+      {
+        name: "Slettbart",
+        capacity: 4,
+        description: "Utkast",
+        requiresApproval: false,
+      },
+      admin,
+    );
+    store.deleteRoom(created.id, admin);
+    expect(store.allRooms().some((r) => r.id === created.id)).toBe(false);
+    expect(() => store.deleteRoom(input.roomId, admin)).toThrow(
+      /utkast|draft|standardrom|catalogue/i,
+    );
   });
   it("blocks booking during maintenance and preserves original edit intervals", () => {
     const block = store.createBlock(input.roomId, input, "Vedlikehold", admin);

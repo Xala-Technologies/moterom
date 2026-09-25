@@ -41,7 +41,17 @@ export interface User {
   email: string;
   isAdmin: boolean;
   isMember: boolean;
+  /** Digilist tenant role on this building, when known. */
+  tenantRole?: string;
+  /**
+   * Portal capability derived from Digilist tenant role and/or Brukere assignment.
+   * `full` = rooms, users, settings; `operations` = bookings and day-to-day.
+   */
+  adminAccess?: "full" | "operations";
+  /** Effective portal role shown and edited on Admin → Brukere. */
+  portalRole?: "member" | "operations" | "full";
 }
+
 export interface Booking {
   id: string;
   reference: string;
@@ -114,6 +124,8 @@ export interface TenantMember {
   email: string;
   role: string;
   status: "active" | "invited";
+  /** Møterom portal role managed on Brukere. */
+  portalRole?: "member" | "operations" | "full";
 }
 export interface AccessRequest {
   id: string;

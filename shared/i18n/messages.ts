@@ -65,6 +65,13 @@ const nb: Record<string, string> = {
   image_gallery_managed_in_digilist:
     "Rommet har flere bilder. Administrer bildegalleriet i Digilist før du bytter til illustrasjonsbildet.",
   invalid_image_size: "Bildet må være mellom 32 byte og 2 MB.",
+  room_name_required: "Skriv inn et romnavn.",
+  room_create_failed: "Rommet kunne ikke opprettes i Digilist.",
+  room_delete_failed: "Rommet kunne ikke slettes i Digilist.",
+  room_delete_published: "Sett rommet som utkast før du sletter det.",
+  room_delete_seed: "Byggets standardrom kan ikke slettes her.",
+  room_has_bookings: "Rommet har aktive bookinger og kan ikke slettes.",
+  portal_admin_required: "Denne handlingen krever byggadministratorrollen.",
   request_failed: "Noe gikk galt. Prøv igjen.",
   messaging_unavailable:
     "Meldinger er ikke tilgjengelig for dette bygget akkurat nå.",
@@ -185,6 +192,14 @@ const en: Record<string, string> = {
   image_gallery_managed_in_digilist:
     "This room has multiple photos. Manage its gallery in Digilist before switching to the catalogue illustration.",
   invalid_image_size: "The image must be between 32 bytes and 2 MB.",
+  room_name_required: "Enter a room name.",
+  room_create_failed: "The room could not be created in Digilist.",
+  room_delete_failed: "The room could not be deleted in Digilist.",
+  room_delete_published: "Save the room as a draft before deleting it.",
+  room_delete_seed: "Building catalogue rooms cannot be deleted here.",
+  room_has_bookings: "The room has active bookings and cannot be deleted.",
+  portal_admin_required:
+    "This action requires the building administrator role.",
   request_failed: "Something went wrong. Try again.",
   messaging_unavailable:
     "Messages are not available for this building right now.",

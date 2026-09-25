@@ -15,9 +15,11 @@ import {
   floorplanPath,
   httpUrl,
   origin,
+  adminEmails,
 } from "./config";
 import { DemoStore } from "./demo";
 import { AccessRequestStore } from "./accessRequests";
+import { PortalRoleStore } from "./portalRoles";
 import { MessagingLocalStore, isSupportConversationId } from "./messagingLocal";
 import {
   Digilist,
@@ -42,12 +44,19 @@ import {
   accessRequestStatusSchema,
   announcementCreateSchema,
   bookingSchema,
+  isAppError,
   messageCreateSchema,
   roomSchema,
   roomCreateSchema,
   searchSchema,
   supportOpenSchema,
 } from "../shared/validation";
+import {
+  canManagePortal,
+  isPortalRole,
+  resolvePortalCapabilities,
+  type PortalRole,
+} from "../shared/adminAccess";
 import { interval, suggestedSlots } from "../shared/time";
 import { translateMessage } from "../shared/i18n/messages";
 import { requestLocale } from "./locale";
@@ -58,6 +67,7 @@ import type {
   Room,
   Search,
   TimeSlot,
+  TenantMember,
   User,
 } from "../shared/types";
 import {
@@ -77,9 +87,59 @@ const demo =
 const accessRequests = new AccessRequestStore(
   process.env.ACCESS_REQUESTS_DB_PATH || ".data/access_requests.sqlite",
 );
+const portalRoles = new PortalRoleStore(
+  process.env.PORTAL_ROLES_DB_PATH || ".data/portal_roles.sqlite",
+);
 const messagingLocal = new MessagingLocalStore(
   process.env.MESSAGING_LOCAL_DB_PATH || ".data/messaging_local.sqlite",
 );
+
+function withPortalRole(user: User, allowlisted: boolean): User {
+  const caps = resolvePortalCapabilities({
+    email: user.email,
+    isMember: user.isMember,
+    allowlisted,
+    tenantRole: user.tenantRole,
+    assigned: portalRoles.get(user.email),
+  });
+  return { ...user, ...caps };
+}
+
+function attachPortalRoles(members: TenantMember[]): TenantMember[] {
+  return members.map((member) => {
+    const caps = resolvePortalCapabilities({
+      email: member.email,
+      isMember: true,
+      allowlisted:
+        adminEmails.has(member.email.trim().toLowerCase()) ||
+        config.mode === "demo",
+      tenantRole: member.role,
+      assigned: portalRoles.get(member.email),
+    });
+    return { ...member, portalRole: caps.portalRole ?? "member" };
+  });
+}
+
+function demoMembers(): TenantMember[] {
+  return attachPortalRoles([
+    {
+      userId: "demo-admin",
+      name: "Demo administrator",
+      email: "admin@example.invalid",
+      role: "tenant_admin",
+      status: "active",
+      portalRole: "full",
+    },
+    {
+      userId: "demo-customer",
+      name: "Kari Nordmann",
+      email: "kari@example.invalid",
+      role: "member",
+      status: "active",
+      portalRole: "member",
+    },
+  ]);
+}
 interface Context {
   session?: Session;
   user?: User;
@@ -171,7 +231,7 @@ app.use(
       : false,
   }),
 );
-app.use(express.json({ limit: "32kb" }));
+app.use(express.json({ limit: "3mb" }));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
@@ -247,21 +307,30 @@ async function context(
   let user: User | undefined;
   if (config.mode === "demo" && session?.demoRole) {
     const admin = session.demoRole === "admin";
-    user = {
-      id: admin ? "demo-admin" : "demo-customer",
-      name: admin ? "Demo administrator" : "Kari Nordmann",
-      email: admin ? "admin@example.invalid" : "kari@example.invalid",
-      isAdmin: admin,
-      isMember: true,
-    };
+    const email = admin ? "admin@example.invalid" : "kari@example.invalid";
+    user = withPortalRole(
+      {
+        id: admin ? "demo-admin" : "demo-customer",
+        name: admin ? "Demo administrator" : "Kari Nordmann",
+        email,
+        isAdmin: admin,
+        isMember: true,
+        tenantRole: admin ? "tenant_admin" : "member",
+      },
+      true,
+    );
   } else if (config.mode === "demo" && session?.demoGuest) {
-    user = {
-      id: session.demoGuest.id,
-      name: session.demoGuest.name,
-      email: session.demoGuest.email,
-      isAdmin: false,
-      isMember: true,
-    };
+    user = withPortalRole(
+      {
+        id: session.demoGuest.id,
+        name: session.demoGuest.name,
+        email: session.demoGuest.email,
+        isAdmin: false,
+        isMember: true,
+        tenantRole: "member",
+      },
+      true,
+    );
   } else if (session?.token) {
     if (!httpUrl)
       throw new AppError(
@@ -271,7 +340,11 @@ async function context(
       );
     // Digilist session token is the durable login. Access JWT mint failures
     // must not look like logout — that forced a new OTP despite rememberMe.
-    user = await liveUser(session);
+    const live = await liveUser(session);
+    user = withPortalRole(
+      live,
+      adminEmails.has(live.email.trim().toLowerCase()),
+    );
     try {
       if (await refreshAccess(session)) await writeSession(res, session);
     } catch (e) {
@@ -302,6 +375,19 @@ async function context(
       "admin_required",
     );
   return { session, user, provider: demo || new Digilist(session) };
+}
+async function requirePortalAdminContext(
+  req: Request,
+  res: Response,
+): Promise<Context> {
+  const ctx = await context(req, res, true, true);
+  if (!canManagePortal(ctx.user))
+    throw new AppError(
+      403,
+      "Denne handlingen krever byggadministratorrollen.",
+      "portal_admin_required",
+    );
+  return ctx;
 }
 async function contextForQuote(req: Request, res: Response): Promise<Context> {
   const ctx = await context(req, res, config.mode === "live");
@@ -946,7 +1032,7 @@ app.get("/api/admin/access-requests", async (req, res) => {
   res.json(accessRequests.list());
 });
 app.patch("/api/admin/access-requests/:id", async (req, res) => {
-  const ctx = await context(req, res, true, true);
+  const ctx = await requirePortalAdminContext(req, res);
   const status = accessRequestStatusSchema.parse(req.body?.status);
   if (status === "approved" && ctx.provider instanceof Digilist) {
     const item = accessRequests.get(String(req.params.id));
@@ -955,16 +1041,52 @@ app.patch("/api/admin/access-requests/:id", async (req, res) => {
   res.json(accessRequests.updateStatus(String(req.params.id), status));
 });
 app.delete("/api/admin/access-requests/:id", async (req, res) => {
-  await context(req, res, true, true);
+  await requirePortalAdminContext(req, res);
   accessRequests.remove(String(req.params.id));
   res.json({ success: true });
 });
 app.get("/api/admin/members", async (req, res) => {
   const ctx = await context(req, res, true, true);
-  res.json(
+  if (ctx.provider instanceof Digilist) {
+    res.json(attachPortalRoles(await ctx.provider.members(ctx.user!)));
+    return;
+  }
+  res.json(demoMembers());
+});
+app.patch("/api/admin/members/portal-role", async (req, res) => {
+  const ctx = await requirePortalAdminContext(req, res);
+  const body = z
+    .object({
+      email: z.string().email(),
+      role: z.string(),
+    })
+    .parse(req.body);
+  if (!isPortalRole(body.role))
+    throw new AppError(400, "Ugyldig portalrolle.", "invalid_portal_role");
+  const email = body.email.trim().toLowerCase();
+  if (email === ctx.user!.email.trim().toLowerCase() && body.role !== "full")
+    throw new AppError(
+      409,
+      "Du kan ikke fjerne din egen byggadministratorrolle.",
+      "cannot_demote_self",
+    );
+  const role = portalRoles.set(email, body.role);
+  const members =
     ctx.provider instanceof Digilist
-      ? await ctx.provider.members(ctx.user!)
-      : [],
+      ? attachPortalRoles(await ctx.provider.members(ctx.user!))
+      : demoMembers();
+  const member = members.find(
+    (row) => row.email.trim().toLowerCase() === email,
+  );
+  res.json(
+    member ?? {
+      userId: email,
+      name: email,
+      email,
+      role: "member",
+      status: "active" as const,
+      portalRole: role,
+    },
   );
 });
 app.get("/api/admin/messages", async (req, res) => {
@@ -999,12 +1121,12 @@ app.get("/api/admin/announcements", async (req, res) => {
   res.json(messagingLocal.listAnnouncements());
 });
 app.post("/api/admin/announcements", async (req, res) => {
-  const ctx = await context(req, res, true, true);
+  const ctx = await requirePortalAdminContext(req, res);
   const body = announcementCreateSchema.parse(req.body);
   res.status(201).json(messagingLocal.createAnnouncement(body, ctx.user!));
 });
 app.post("/api/admin/announcements/:id/deactivate", async (req, res) => {
-  await context(req, res, true, true);
+  await requirePortalAdminContext(req, res);
   res.json(messagingLocal.deactivateAnnouncement(String(req.params.id)));
 });
 app.get("/api/admin", async (req, res) => {
@@ -1039,7 +1161,7 @@ app.get("/api/admin/insights", async (req, res) => {
   );
 });
 app.post("/api/admin/rooms", async (req, res) => {
-  const ctx = await context(req, res, true, true);
+  const ctx = await requirePortalAdminContext(req, res);
   const body = roomCreateSchema.parse(req.body);
   const { imageFile, ...fields } = body;
   let image = fields.image?.trim();
@@ -1085,7 +1207,7 @@ app.post("/api/admin/rooms", async (req, res) => {
   res.status(201).json(created);
 });
 app.patch("/api/admin/rooms/:id", async (req, res) => {
-  const ctx = await context(req, res, true, true);
+  const ctx = await requirePortalAdminContext(req, res);
   const body = roomSchema.parse(req.body);
   const { imageFile, ...fields } = body;
   let image = fields.image?.trim();
@@ -1113,7 +1235,7 @@ app.patch("/api/admin/rooms/:id", async (req, res) => {
   );
 });
 app.post("/api/admin/rooms/:id/portal", async (req, res) => {
-  const ctx = await context(req, res, true, true);
+  const ctx = await requirePortalAdminContext(req, res);
   const body = z.object({ published: z.boolean() }).parse(req.body);
   res.json(
     await ctx.provider.setRoomPortalPublished(
@@ -1122,6 +1244,11 @@ app.post("/api/admin/rooms/:id/portal", async (req, res) => {
       ctx.user!,
     ),
   );
+});
+app.delete("/api/admin/rooms/:id", async (req, res) => {
+  const ctx = await requirePortalAdminContext(req, res);
+  await ctx.provider.deleteRoom(String(req.params.id), ctx.user!);
+  res.json({ success: true });
 });
 app.post("/api/admin/blocks", async (req, res) => {
   const ctx = await context(req, res, true, true);
@@ -1146,7 +1273,7 @@ app.use("/api", (_req, _res, next) =>
 );
 app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
   const locale = requestLocale(req);
-  if (error instanceof AppError) {
+  if (isAppError(error)) {
     return res.status(error.status).json({
       code: error.code,
       message: translateMessage(
@@ -1157,13 +1284,32 @@ app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
       ),
     });
   }
+  if (isPayloadTooLarge(error)) {
+    return res.status(413).json({
+      code: "invalid_image_size",
+      message: translateMessage(locale, "invalid_image_size"),
+    });
+  }
   const status = error instanceof z.ZodError ? 400 : 502;
   const code =
     error instanceof z.ZodError
       ? "validation_failed"
       : "booking_service_incomplete";
+  if (!(error instanceof z.ZodError)) {
+    console.error("[api] unhandled", error);
+  }
   res.status(status).json({
     code,
     message: translateMessage(locale, code),
   });
 });
+
+function isPayloadTooLarge(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { type?: string; status?: number; name?: string };
+  return (
+    candidate.type === "entity.too.large" ||
+    candidate.status === 413 ||
+    candidate.name === "PayloadTooLargeError"
+  );
+}

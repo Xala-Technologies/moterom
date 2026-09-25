@@ -480,6 +480,41 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
         }>
       ).some((room) => room.id === created.id),
     ).toBe(false);
+    const jpegBase64 = Buffer.alloc(50_000, 0xff).toString("base64");
+    expect(
+      Buffer.byteLength(JSON.stringify({ data: jpegBase64 })),
+    ).toBeGreaterThan(32_768);
+    const withPhoto = (
+      await administrator
+        .post("/api/admin/rooms")
+        .set("Origin", origin)
+        .send({
+          name: "Rom med bilde",
+          capacity: 4,
+          description: "Med opplastet bilde",
+          requiresApproval: false,
+          imageKind: "illustrative",
+          imageFile: {
+            filename: "room.jpg",
+            contentType: "image/jpeg",
+            data: jpegBase64,
+          },
+        })
+        .expect(201)
+    ).body as { id: string; image?: string; imageKind?: string };
+    expect(withPhoto.imageKind).toBe("illustrative");
+    expect(withPhoto.image).toMatch(/^\/rooms\/room-/);
+    await administrator
+      .delete(`/api/admin/rooms/${withPhoto.id}`)
+      .set("Origin", origin)
+      .expect(200);
+    expect(
+      (
+        (await administrator.get("/api/admin").expect(200)).body as {
+          rooms: Array<{ id: string }>;
+        }
+      ).rooms.some((room) => room.id === withPhoto.id),
+    ).toBe(false);
     await administrator
       .post(`/api/admin/rooms/${created.id}/portal`)
       .set("Origin", origin)

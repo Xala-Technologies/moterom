@@ -36,6 +36,10 @@ import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
 import { collectPaged, INSIGHTS_PAGE_SIZE } from "./insights";
 import { assertSameBooking, bookingFingerprint } from "./bookingRetry";
 import { presentBuildingMembers } from "../shared/members";
+import {
+  canManagePortal,
+  resolvePortalCapabilities,
+} from "../shared/adminAccess";
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row =>
   value && typeof value === "object" ? (value as Row) : {};
@@ -216,22 +220,9 @@ export async function action(
 }
 /**
  * Map Digilist `/auth/me` fields to the portal User after switchTenant.
- * Møterom Admin requires ADMIN_EMAILS and an admin-capable Digilist tenant
- * role on this building tenant. Membership is Digilist tenant membership only.
+ * Admin access requires ADMIN_EMAILS plus a portal role (Digilist tenant role
+ * seed and/or Brukere assignment). Membership is Digilist tenant membership.
  */
-const ADMIN_TENANT_ROLES = new Set([
-  "tenant_admin",
-  "saksbehandler",
-  "owner",
-  "admin",
-  "manager",
-  "staff",
-]);
-
-function isDigilistTenantAdminRole(role: string | null | undefined): boolean {
-  return ADMIN_TENANT_ROLES.has((role ?? "").trim().toLowerCase());
-}
-
 export function mapDigilistUser(
   raw: {
     id: string;
@@ -242,23 +233,27 @@ export function mapDigilistUser(
     tenantRole?: string | null;
   },
   buildingTenantId: string = tenantId,
+  assignedPortalRole?: "member" | "operations" | "full" | null,
 ): User {
   const email = raw.email.trim().toLowerCase();
+  const tenantRole = raw.tenantRole?.trim() || undefined;
   const isMember = Boolean(
-    buildingTenantId &&
-    raw.tenantId === buildingTenantId &&
-    raw.tenantRole?.trim(),
+    buildingTenantId && raw.tenantId === buildingTenantId && tenantRole,
   );
-  const isAdmin =
-    isMember &&
-    adminEmails.has(email) &&
-    isDigilistTenantAdminRole(raw.tenantRole);
+  const caps = resolvePortalCapabilities({
+    email,
+    isMember,
+    allowlisted: adminEmails.has(email),
+    tenantRole,
+    assigned: assignedPortalRole,
+  });
   return {
     id: raw.id,
     name: raw.name || raw.email,
     email: raw.email,
     isMember,
-    isAdmin,
+    tenantRole,
+    ...caps,
   };
 }
 
@@ -323,7 +318,7 @@ export class Digilist {
         (source) =>
           source.tenantId === tenantId &&
           isTenantPortalRoom(source) &&
-          str(source.status) !== "deleted" &&
+          !["deleted", "archived"].includes(str(source.status)) &&
           str(source._id),
       );
     } catch {
@@ -392,7 +387,7 @@ export class Digilist {
       id,
       name: str(source.name, seed?.name || slug),
       slug,
-      sourceId: str(source._id),
+      sourceId: str(source._id, str(source.id)),
       description: str(source.description, seed?.description || ""),
       descriptionEn: str(portal.descriptionEn, seed?.descriptionEn || ""),
       capacity,
@@ -863,6 +858,15 @@ export class Digilist {
         "admin_building_required",
       );
   }
+  assertPortalAdmin(user: User) {
+    this.assertAdmin(user);
+    if (!canManagePortal(user))
+      throw new AppError(
+        403,
+        "Denne handlingen krever byggadministratorrollen.",
+        "portal_admin_required",
+      );
+  }
   async members(user: User): Promise<TenantMember[]> {
     this.assertAdmin(user);
     // Digilist binds actorId to the authenticated session and checks its role.
@@ -891,7 +895,7 @@ export class Digilist {
     );
   }
   async ensureActiveBooker(email: string, name: string, user: User) {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     try {
       await mutate(this.c, "domain/tenantTeam:ensureActiveBooker", {
         tenantId,
@@ -924,7 +928,7 @@ export class Digilist {
     },
     user: User,
   ) {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     const room = await this.room(id);
     const source = this.sources.get(id);
     const image = patch.image?.trim();
@@ -992,7 +996,7 @@ export class Digilist {
     return this.room(id);
   }
   async setRoomPortalPublished(id: string, published: boolean, user: User) {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     const room = await this.room(id);
     if (!room.sourceId)
       throw new AppError(
@@ -1016,6 +1020,39 @@ export class Digilist {
     this.roomRequests.delete(room.slug);
     return this.room(id);
   }
+  async deleteRoom(id: string, user: User): Promise<void> {
+    this.assertPortalAdmin(user);
+    const room = await this.room(id);
+    if (room.portalPublished)
+      throw new AppError(
+        409,
+        "Sett rommet som utkast før du sletter det.",
+        "room_delete_published",
+      );
+    if (!room.sourceId)
+      throw new AppError(
+        503,
+        "Rommet er ikke tilgjengelig i byggets oppsett.",
+        "room_setup_unavailable",
+      );
+    try {
+      await mutate(this.c, "domain/resources:update", {
+        id: room.sourceId,
+        updatedBy: user.id,
+        status: "archived",
+      });
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      throw new AppError(
+        502,
+        text || "Rommet kunne ikke slettes i Digilist.",
+        "room_delete_failed",
+      );
+    }
+    this.roomRequests.delete(id);
+    this.roomRequests.delete(room.slug);
+    this.sources.delete(id);
+  }
   async createRoom(
     input: {
       name: string;
@@ -1032,7 +1069,7 @@ export class Digilist {
     },
     user: User,
   ): Promise<Room> {
-    this.assertAdmin(user);
+    this.assertPortalAdmin(user);
     const name = input.name.trim();
     if (!name)
       throw new AppError(400, "Skriv inn et romnavn.", "room_name_required");
@@ -1050,6 +1087,22 @@ export class Digilist {
     const capacityLabel = input.capacityLabel?.trim() || `${capacity} personer`;
     const capacityLabelEn =
       input.capacityLabelEn?.trim() || `${capacity} people`;
+    const metadata = {
+      moterom: {
+        descriptionEn: input.descriptionEn?.trim() || "",
+        capacityLabel,
+        capacityLabelEn,
+        ...(input.imageKind || liveImage
+          ? {
+              imageKind: input.imageKind || "illustrative",
+              imageUrl: liveImage || "",
+            }
+          : {}),
+      },
+      ...(input.arrivalInfo?.trim()
+        ? { arrivalInfo: input.arrivalInfo.trim() }
+        : {}),
+    };
     let created: Row;
     try {
       created = row(
@@ -1077,39 +1130,41 @@ export class Digilist {
           },
           openingHours: PORTAL_OPENING_HOURS,
           slotDurationMinutes: 60,
-          metadata: {
-            moterom: {
-              descriptionEn: input.descriptionEn?.trim() || "",
-              capacityLabel,
-              capacityLabelEn,
-              ...(input.imageKind || liveImage
-                ? {
-                    imageKind: input.imageKind || "illustrative",
-                    imageUrl: liveImage || "",
-                  }
-                : {}),
-            },
-            ...(input.arrivalInfo?.trim()
-              ? { arrivalInfo: input.arrivalInfo.trim() }
-              : {}),
-          },
+          metadata,
         }),
       );
     } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
-      throw new AppError(
-        502,
-        text || "Rommet kunne ikke opprettes i Digilist.",
-        "room_create_failed",
-      );
+      throw this.roomCreateFailure(error);
     }
-    const sourceId = str(created.id, str(created._id));
+    const sourceId = str(created._id, str(created.id));
     if (!sourceId)
       throw new AppError(
         502,
         "Rommet kunne ikke opprettes i Digilist.",
         "room_create_failed",
       );
+    // Normalize Convex id shapes so mapSourceToRoom can use the create payload.
+    if (!created._id) created._id = sourceId;
+    if (!created.slug) created.slug = slug;
+    if (!created.name) created.name = name;
+    if (!created.description) created.description = description;
+    if (created.capacity == null) created.capacity = capacity;
+    if (!created.accessChannel) created.accessChannel = "tenant_portal";
+    if (!created.visibility) created.visibility = "private";
+    if (!created.status) created.status = "draft";
+    if (!created.tenantId) created.tenantId = tenantId;
+    if (!created.metadata) created.metadata = metadata;
+    if (created.requiresApproval == null)
+      created.requiresApproval = input.requiresApproval;
+    if (!created.bookingConfig)
+      created.bookingConfig = {
+        ...PORTAL_BOOKING_CONFIG,
+        approvalRequired: input.requiresApproval,
+      };
+    if (!Array.isArray(created.amenities))
+      created.amenities = input.amenities || [];
+    if (!Array.isArray(created.images))
+      created.images = liveImage ? [{ url: liveImage }] : [];
     try {
       await mutate(this.c, "domain/pricing:create", {
         tenantId,
@@ -1128,7 +1183,32 @@ export class Digilist {
     }
     this.roomRequests.clear();
     this.sources.clear();
-    return this.room(slug);
+    try {
+      if (isTenantPortalRoom(created)) {
+        const room = this.mapSourceToRoom(created);
+        this.sources.set(room.id, created);
+        return room;
+      }
+      return await this.room(slug);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw this.roomCreateFailure(error);
+    }
+  }
+  private roomCreateFailure(error: unknown): AppError {
+    if (error instanceof AppError) return error;
+    const fromConvex =
+      error instanceof ConvexError
+        ? str(row(error.data).message, str(row(error.data).type, error.message))
+        : "";
+    const text =
+      fromConvex ||
+      (error instanceof Error ? error.message : String(error || ""));
+    return new AppError(
+      502,
+      text || "Rommet kunne ikke opprettes i Digilist.",
+      "room_create_failed",
+    );
   }
   async createBlock(roomId: string, search: Search, title: string, user: User) {
     this.assertAdmin(user);

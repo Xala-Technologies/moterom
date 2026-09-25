@@ -14,6 +14,7 @@ export function AdminBookingList({
   onOpen,
   onApprove,
   onReject,
+  onCancel,
 }: {
   bookings: Booking[];
   rooms: Room[];
@@ -21,6 +22,7 @@ export function AdminBookingList({
   onOpen: (booking: Booking) => void;
   onApprove?: (booking: Booking) => void;
   onReject?: (booking: Booking) => void;
+  onCancel?: (booking: Booking) => void;
 }): ReactElement {
   const { t } = useT();
   const formatters = useFormatters();
@@ -36,12 +38,16 @@ export function AdminBookingList({
           room: roomById.get(booking.roomId),
           canApprove: Boolean(onApprove),
           canReject: Boolean(onReject),
+          canCancel: Boolean(onCancel),
+          canMessage: true,
+          canCalendar: true,
           busy,
         });
         return (
           <AdminBookingRowView
             key={booking.id}
             row={row}
+            busy={busy}
             onView={(id) => {
               const match = bookings.find((entry) => entry.id === id);
               if (match) onOpen(match);
@@ -51,6 +57,7 @@ export function AdminBookingList({
               if (!match) return;
               if (action === "approve") onApprove?.(match);
               if (action === "reject") onReject?.(match);
+              if (action === "cancel") onCancel?.(match);
             }}
           />
         );

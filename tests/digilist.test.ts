@@ -33,6 +33,8 @@ const user = {
   email: "test@example.invalid",
   isAdmin: true,
   isMember: true,
+  tenantRole: "tenant_admin",
+  adminAccess: "full" as const,
 };
 beforeEach(() => {
   vi.clearAllMocks();
@@ -159,6 +161,22 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       updatedBy: user.id,
       status: "published",
     });
+  });
+  it("archives draft rooms through Digilist update", async () => {
+    mocks.query.mockResolvedValue({ ...source, status: "draft" });
+    await new Digilist().deleteRoom(inventory[0].id, user);
+    expect(getFunctionName(mocks.mutation.mock.calls[0][0])).toBe(
+      "domain/resources:update",
+    );
+    expect(mocks.mutation.mock.calls[0][1]).toMatchObject({
+      updatedBy: user.id,
+      status: "archived",
+    });
+  });
+  it("refuses deleting a published Digilist room", async () => {
+    await expect(
+      new Digilist().deleteRoom(inventory[0].id, user),
+    ).rejects.toMatchObject({ code: "room_delete_published" });
   });
   it("refuses a room resolved to another building", async () => {
     mocks.query.mockResolvedValue({ ...source, tenantId: "another-building" });
@@ -296,6 +314,87 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       tenantId: "building-test",
       resourceId: "source-room",
       userId: user.id,
+    });
+  });
+  it("creates a draft portal room without depending on getBySlug", async () => {
+    mocks.mutation.mockImplementation(async (ref) => {
+      const name = getFunctionName(ref);
+      if (name === "domain/resources:create")
+        return {
+          id: "new-source",
+          slug: "nytt-rom-abc",
+          name: "Nytt rom",
+          capacity: 6,
+          status: "draft",
+          tenantId: "building-test",
+          accessChannel: "tenant_portal",
+          visibility: "private",
+          requiresApproval: false,
+          amenities: ["Skjerm"],
+          images: [],
+          metadata: {
+            moterom: {
+              descriptionEn: "New room",
+              capacityLabel: "6 personer",
+              capacityLabelEn: "6 people",
+            },
+            arrivalInfo: "Resepsjonen",
+          },
+        };
+      if (name === "domain/pricing:create") return {};
+      return {};
+    });
+    mocks.query.mockRejectedValue(
+      new Error("getBySlug should not be required"),
+    );
+    const room = await new Digilist().createRoom(
+      {
+        name: "Nytt rom",
+        capacity: 6,
+        description: "Beskrivelse",
+        descriptionEn: "New room",
+        capacityLabel: "6 personer",
+        capacityLabelEn: "6 people",
+        requiresApproval: false,
+        amenities: ["Skjerm"],
+        arrivalInfo: "Resepsjonen",
+      },
+      user,
+    );
+    expect(room.name).toBe("Nytt rom");
+    expect(room.portalPublished).toBe(false);
+    expect(room.sourceId).toBe("new-source");
+    expect(room.amenities).toEqual(["Skjerm"]);
+    expect(getFunctionName(mocks.mutation.mock.calls[0][0])).toBe(
+      "domain/resources:create",
+    );
+    expect(mocks.mutation.mock.calls[0][1]).toMatchObject({
+      status: "draft",
+      accessChannel: "tenant_portal",
+      visibility: "private",
+      capacity: 6,
+    });
+  });
+  it("surfaces Digilist create failures instead of a generic incomplete error", async () => {
+    mocks.mutation.mockRejectedValueOnce(
+      new ConvexError({
+        type: "ArgumentValidationError",
+        message: "Invalid slug",
+      }),
+    );
+    await expect(
+      new Digilist().createRoom(
+        {
+          name: "Nytt rom",
+          capacity: 6,
+          description: "Beskrivelse",
+          requiresApproval: false,
+        },
+        user,
+      ),
+    ).rejects.toMatchObject({
+      code: "room_create_failed",
+      message: "Invalid slug",
     });
   });
 });
