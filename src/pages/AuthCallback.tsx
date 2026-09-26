@@ -7,7 +7,7 @@ import { ApiError, post } from "../api";
 import { useT } from "../i18n";
 import { postLoginPath } from "../postLoginPath";
 
-/** Digilist OAuth callback — receives sessionToken from Digilist auth redirect. */
+/** Digilist auth callback — receives sessionToken after Digilist redirect. */
 export function AuthCallback() {
   const { config, refresh } = useApp();
   const { t } = useT();
@@ -23,7 +23,7 @@ export function AuthCallback() {
       const returnPath =
         params.get("returnPath") || params.get("redirect") || "/";
       if (oauthError) {
-        setError(new Error(t("auth.bankid_error")));
+        setError(new Error(t("auth.sign_in_failed")));
         return;
       }
       if (!token) {

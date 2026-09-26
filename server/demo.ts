@@ -390,11 +390,15 @@ export class DemoStore {
       amenities: patch.amenities ?? current.amenities ?? [],
       arrivalInfo: patch.arrivalInfo?.trim() || undefined,
       capacityLabel:
-        patch.capacityLabel?.trim() || `${patch.capacity} personer`,
+        patch.capacityLabel !== undefined
+          ? patch.capacityLabel.trim() || `${patch.capacity} personer`
+          : current.capacityLabel || `${patch.capacity} personer`,
       capacityLabelEn:
-        patch.capacityLabelEn?.trim() ||
-        current.capacityLabelEn ||
-        `${patch.capacity} people`,
+        patch.capacityLabelEn !== undefined
+          ? patch.capacityLabelEn.trim() || `${patch.capacity} people`
+          : current.capacityLabelEn ||
+            current.capacityLabel ||
+            `${patch.capacity} people`,
       descriptionEn: patch.descriptionEn ?? current.descriptionEn ?? "",
       portalPublished: current.portalPublished !== false,
     };

@@ -268,6 +268,8 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
         .expect(200)
     ).body;
     expect(original.requiresApproval).toBe(true);
+    expect(original.capacityLabel).toBe(pendingRoom.capacityLabel);
+    expect(original.capacityLabelEn).toBe(pendingRoom.capacityLabelEn);
     const approvalQuote = (
       await customer
         .post("/api/quote")
