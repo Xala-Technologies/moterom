@@ -284,6 +284,13 @@ beforeEach(() => {
 });
 
 describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => {
+  it("rejects demo sign-in in live mode", async () => {
+    await request(app)
+      .post("/api/auth/demo")
+      .set("Origin", origin)
+      .send({ role: "customer" })
+      .expect(404);
+  });
   it("recovers the original booking before occupied-slot or quote checks; rejects changed retries", async () => {
     const body = { ...input(), quoteToken: await quote() };
     const key = randomUUID();

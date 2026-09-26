@@ -118,6 +118,24 @@ describe("persistent demo booking rules", () => {
     store.setRoomPortalPublished(created.id, true, admin);
     expect(store.rooms().some((r) => r.id === created.id)).toBe(true);
   });
+  it("keeps curated capacity labels when a patch omits them", () => {
+    const room = store.room(input.roomId);
+    expect(room.capacityLabel).toMatch(/–|-/);
+    const updated = store.updateRoom(
+      room.id,
+      {
+        name: room.name,
+        capacity: room.capacity,
+        description: room.description,
+        requiresApproval: true,
+        amenities: room.amenities ?? [],
+      },
+      admin,
+    );
+    expect(updated.capacityLabel).toBe(room.capacityLabel);
+    expect(updated.capacityLabelEn).toBe(room.capacityLabelEn);
+    expect(updated.requiresApproval).toBe(true);
+  });
   it("deletes draft rooms and refuses published catalogue rooms", () => {
     const created = store.createRoom(
       {

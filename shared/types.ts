@@ -99,7 +99,7 @@ export interface Config {
   contactEmail: string;
   access: "public" | "members";
   dashboardUrl: string;
-  /** True when Digilist Convex + HTTP URLs are set so email/SMS/BankID can call Digilist. */
+  /** True when Digilist Convex + HTTP URLs are set so email/SMS OTP can call Digilist. */
   digilistAuthConfigured: boolean;
 }
 export interface BookingInput extends Search {
