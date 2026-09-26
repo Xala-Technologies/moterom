@@ -179,9 +179,10 @@ export class DemoStore {
     });
   }
   bookings(user: User) {
-    return this.all<Booking>("bookings")
+    const bookings = this.all<Booking>("bookings")
       .filter((b) => b.userId === user.id)
       .sort((a, b) => a.startTime - b.startTime);
+    return { bookings, truncated: false };
   }
   booking(id: string, user: User) {
     const b = this.all<Booking>("bookings").find((b) => b.id === id);
@@ -390,11 +391,15 @@ export class DemoStore {
       amenities: patch.amenities ?? current.amenities ?? [],
       arrivalInfo: patch.arrivalInfo?.trim() || undefined,
       capacityLabel:
-        patch.capacityLabel?.trim() || `${patch.capacity} personer`,
+        patch.capacityLabel !== undefined
+          ? patch.capacityLabel.trim() || `${patch.capacity} personer`
+          : current.capacityLabel || `${patch.capacity} personer`,
       capacityLabelEn:
-        patch.capacityLabelEn?.trim() ||
-        current.capacityLabelEn ||
-        `${patch.capacity} people`,
+        patch.capacityLabelEn !== undefined
+          ? patch.capacityLabelEn.trim() || `${patch.capacity} people`
+          : current.capacityLabelEn ||
+            current.capacityLabel ||
+            `${patch.capacity} people`,
       descriptionEn: patch.descriptionEn ?? current.descriptionEn ?? "",
       portalPublished: current.portalPublished !== false,
     };
@@ -588,7 +593,7 @@ export class DemoStore {
   }
   inbox(user: User): ConversationSummary[] {
     if (user.isAdmin) return this.conversations();
-    const mine = new Set(this.bookings(user).map((b) => b.id));
+    const mine = new Set(this.bookings(user).bookings.map((b) => b.id));
     return this.conversations().filter(
       (c) => c.bookingId && mine.has(c.bookingId),
     );

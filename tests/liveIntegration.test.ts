@@ -13,6 +13,8 @@ process.env.DIGILIST_TENANT_ID = "building-test";
 process.env.BOOKING_ACCESS = "members";
 process.env.ADMIN_EMAILS = "admin@example.invalid";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
+process.env.PORTAL_ROLES_DB_PATH = ":memory:";
+process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
 
@@ -284,6 +286,13 @@ beforeEach(() => {
 });
 
 describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => {
+  it("rejects demo sign-in in live mode", async () => {
+    await request(app)
+      .post("/api/auth/demo")
+      .set("Origin", origin)
+      .send({ role: "customer" })
+      .expect(404);
+  });
   it("recovers the original booking before occupied-slot or quote checks; rejects changed retries", async () => {
     const body = { ...input(), quoteToken: await quote() };
     const key = randomUUID();
@@ -385,6 +394,18 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .get("/api/rooms")
       .set("Cookie", await cookie())
       .expect(502);
+    mocks.query.mockImplementation(async (ref, args) => {
+      if (getFunctionName(ref) === "domain/bookings:validateBookingSlot")
+        throw new Error("upstream unavailable");
+      return baseQuery(ref, args);
+    });
+    const availabilityDown = await request(app)
+      .post("/api/quote")
+      .set("Origin", origin)
+      .set("Cookie", await cookie())
+      .send(input())
+      .expect(503);
+    expect(availabilityDown.body.code).toBe("availability_fetch_failed");
     expect(mocks.mutation).not.toHaveBeenCalled();
   });
 

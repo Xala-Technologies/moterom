@@ -102,9 +102,7 @@
     "digilist_not_configured": "Digilist-innlogging er ikke konfigurert. Sett DIGILIST_URL og DIGILIST_HTTP_URL, eller bruk demoinnlogging.",
     "digilist_admin_hint": "Byggadministratorer bruker samme Digilist e-post eller SMS. Administratortilgang kommer fra Digilist-rollen for bygget.",
     "or_divider": "eller",
-    "bankid_title": "BankID",
-    "bankid_desc": "Logg inn med BankID på mobil eller kodebrikke",
-    "bankid_error": "BankID-pålogging feilet. Prøv e-post eller SMS.",
+    "sign_in_failed": "Innloggingen feilet. Prøv e-post eller SMS.",
     "session_missing": "Innloggingsøkten mangler. Prøv igjen.",
     "completing_login": "Fullfører innlogging …",
     "email_method_hint": "Vi sender en engangskode til e-posten din.",
@@ -332,7 +330,8 @@
     "empty_upcoming_title": "Du har ingen kommende bookinger",
     "empty_upcoming_body": "Finn et rom til ditt neste møte. Vi tar vare på oversikten her.",
     "empty_history_title": "Ingen tidligere bookinger",
-    "empty_history_body": "Avsluttede og kansellerte bookinger vil vises her."
+    "empty_history_body": "Avsluttede og kansellerte bookinger vil vises her.",
+    "truncated_warning": "Listen nådde grensen på 500 bookinger. Åpne Digilist for hele historikken."
   },
   "messages": {
     "document_title": "Meldinger",

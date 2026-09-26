@@ -13,6 +13,8 @@ process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.FLOORPLAN_PATH = "/nonexistent-moterom-test-floorplan.png";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
+process.env.PORTAL_ROLES_DB_PATH = ":memory:";
+process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
 
 const digilistMocks = vi.hoisted(() => ({
   liveUser: vi.fn(),

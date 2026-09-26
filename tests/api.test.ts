@@ -6,6 +6,7 @@ process.env.DATA_MODE = "demo";
 process.env.DEMO_DB_PATH = ":memory:";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
 process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
+process.env.PORTAL_ROLES_DB_PATH = ":memory:";
 process.env.FLOORPLAN_PATH = "/nonexistent-moterom-test-floorplan.png";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
@@ -268,6 +269,8 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
         .expect(200)
     ).body;
     expect(original.requiresApproval).toBe(true);
+    expect(original.capacityLabel).toBe(pendingRoom.capacityLabel);
+    expect(original.capacityLabelEn).toBe(pendingRoom.capacityLabelEn);
     const approvalQuote = (
       await customer
         .post("/api/quote")
@@ -530,10 +533,11 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
   });
   it("lets a customer message the administrator and shows the thread in both inboxes", async () => {
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
-      id: string;
-      userId: string;
-    }[];
-    const mine = bookings.find((b) => b.userId === "demo-customer");
+      bookings: { id: string; userId: string }[];
+      truncated: boolean;
+    };
+    expect(bookings.truncated).toBe(false);
+    const mine = bookings.bookings.find((b) => b.userId === "demo-customer");
     expect(mine).toBeTruthy();
     const empty = await customer
       .get(`/api/bookings/${mine!.id}/messages`)
@@ -626,10 +630,11 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     ).toBe(false);
 
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
-      id: string;
-      userId: string;
-    }[];
-    const mine = bookings.find((b) => b.userId === "demo-customer");
+      bookings: { id: string; userId: string }[];
+      truncated: boolean;
+    };
+    expect(bookings.truncated).toBe(false);
+    const mine = bookings.bookings.find((b) => b.userId === "demo-customer");
     expect(mine).toBeTruthy();
     const sent = await customer
       .post(`/api/bookings/${mine!.id}/messages`)
@@ -677,11 +682,10 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
   });
   it("includes room context on booking message threads", async () => {
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
-      id: string;
-      userId: string;
-      roomId: string;
-    }[];
-    const mine = bookings.find((b) => b.userId === "demo-customer");
+      bookings: { id: string; userId: string; roomId: string }[];
+      truncated: boolean;
+    };
+    const mine = bookings.bookings.find((b) => b.userId === "demo-customer");
     expect(mine).toBeTruthy();
     await customer
       .post(`/api/bookings/${mine!.id}/messages`)

@@ -607,37 +607,6 @@ app.post("/api/auth/sms/verify", async (req, res) => {
   await writeSession(res, session);
   res.json({ success: true });
 });
-app.post("/api/auth/oauth/bankid", async (req, res) => {
-  requireDigilistHttp();
-  const returnPath = z.string().max(500).optional().parse(req.body.returnPath);
-  const safeReturn =
-    returnPath &&
-    returnPath.startsWith("/") &&
-    !returnPath.startsWith("//") &&
-    !returnPath.includes("\\")
-      ? returnPath
-      : "/";
-  try {
-    const result = z.object({ authUrl: z.string().url() }).parse(
-      await action(client(), "auth/start:startOAuth", {
-        provider: "bankid",
-        appOrigin: origin,
-        returnPath: safeReturn,
-        appId: "web",
-      }),
-    );
-    res.json({ url: result.authUrl });
-  } catch (e) {
-    const detail = e instanceof Error ? e.message : "";
-    if (/allow-list|unavailable|not configured|BANKID|bankid/i.test(detail))
-      throw new AppError(
-        503,
-        "BankID er ikke tilgjengelig akkurat nå. Prøv e-post eller SMS.",
-        "bankid_unavailable",
-      );
-    throw e;
-  }
-});
 app.post("/api/auth/session", async (req, res) => {
   requireDigilistHttp();
   const token = z.string().min(20).max(500).parse(req.body.token);
@@ -782,6 +751,12 @@ app.post("/api/quote", async (req, res) => {
   const availability = (
     await ctx.provider.availability(search, requestLocale(req), roomId)
   ).find((a) => a.roomId === roomId);
+  if (availability?.state === "error")
+    throw new AppError(
+      503,
+      availability.reason || "Kunne ikke hente ledigheten. Prøv igjen.",
+      "availability_fetch_failed",
+    );
   if (availability?.state !== "available")
     throw new AppError(
       409,
