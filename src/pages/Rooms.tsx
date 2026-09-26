@@ -6,7 +6,7 @@ import { RoomCard } from "../components/RoomCard";
 import { BookingConfirmModal } from "../components/BookingConfirmModal";
 import type { RoomSlotSelection } from "../components/RoomCardSchedule";
 import type { Room, Search } from "../../shared/types";
-import { defaultSearch, today } from "../../shared/time";
+import { defaultSearch } from "../../shared/time";
 import { useApp } from "../context";
 import { useT } from "../i18n";
 
@@ -24,7 +24,9 @@ export function Rooms() {
   const { config } = useApp();
   const { t } = useT();
   const [floorplan, setFloorplan] = useState(false);
-  const pageDate = today();
+  // Match the booking wizard: start on tomorrow so today’s other occupancy
+  // is less likely to be mistaken for a booking made for a later day.
+  const pageDate = defaultSearch().date;
   const [cardDates, setCardDates] = useState<Record<string, string>>({});
   const [selections, setSelections] = useState<
     Record<string, RoomSlotSelection | null>
@@ -54,7 +56,8 @@ export function Rooms() {
   const confirmRoom = rooms.data?.find((r) => r.id === confirm?.roomId);
   const roomList = rooms.data || [];
 
-  const onBooked = (roomId: string) => {
+  const onBooked = (roomId: string, bookedDate: string) => {
+    setCardDates((prev) => ({ ...prev, [roomId]: bookedDate }));
     setSelections((prev) => ({ ...prev, [roomId]: null }));
     setSlotsRevision((prev) => ({
       ...prev,
@@ -143,7 +146,7 @@ export function Rooms() {
             }))
           }
           close={() => setConfirm(null)}
-          onSuccess={() => onBooked(confirmRoom.id)}
+          onSuccess={() => onBooked(confirmRoom.id, confirm.selection.date)}
         />
       )}
     </div>

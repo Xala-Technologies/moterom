@@ -152,3 +152,7 @@ Not claimed: a second Digilist user’s 403 on admin APIs, a simultaneous two-se
 - Overview calendar is day-only. `/admin/calendar` keeps Dag / 7 dager.
 
 Verified 20 September 2026 in local demo (`http://localhost:4173`, Chromium in Cursor): KPI links, `dato` and `status=pending` survived refresh, a calendar block appeared in Dagens program, **Ny booking** with `fra=admin` returned via **Tilbake til oversikt**, and approving a pending booking cleared the queue. A temporary membership request showed the separate notice and was deleted afterwards. Dark theme stayed readable. Viewport 360 had no horizontal page scroll; heading actions sat above the bottom nav. `npm run check` and `npm run format:check` passed. Not claimed: live Digilist, VoiceOver, Safari, or Firefox.
+
+## Privacy model — Digilist ops visibility (27 September 2026)
+
+Locked decision: Digilist remains booking authority; Møterom does not dual-write to hide data. See [`multi-tenant-portals.md`](multi-tenant-portals.md). Digilist follow-ups: [XAL-1796](https://linear.app/xala-technologies/issue/XAL-1796) (Utleieobjekter default-hide `tenant_portal`), [XAL-1797](https://linear.app/xala-technologies/issue/XAL-1797) (restrict platform act-as for private portal tenants). Digilist implementation branch: `wahid/xal-1796-platform-utleieobjekter-default-hide-tenant_portal-listings` (worktree).
