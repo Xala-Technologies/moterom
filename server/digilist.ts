@@ -183,6 +183,8 @@ export async function rest(
         "Tidspunktet eller bestillingen har endret seg. Kontroller valget ditt.",
         "booking_stale",
       );
+    const rateLimit = digilistRateLimitError(response.status, digilistDetail);
+    if (rateLimit) throw rateLimit;
     // Prefer Digilist problem detail over a generic catalogued code.
     throw new AppError(
       response.status,
@@ -191,6 +193,30 @@ export async function rest(
     );
   }
   return row(value);
+}
+
+/** Map Digilist auth/API rate limits to a localized portal message. */
+export function digilistRateLimitError(
+  status: number,
+  detail: string,
+): AppError | undefined {
+  if (status !== 429 && !/rate limit exceeded/i.test(detail)) return undefined;
+  const match = detail.match(/try again in\s*~?(\d+)\s*s/i);
+  const seconds = match ? Number(match[1]) : NaN;
+  if (Number.isFinite(seconds) && seconds > 0) {
+    const minutes = Math.max(1, Math.ceil(seconds / 60));
+    return new AppError(
+      429,
+      translateMessage(DEFAULT_LOCALE, "too_many_attempts_wait", { minutes }),
+      "too_many_attempts_wait",
+      { minutes },
+    );
+  }
+  return new AppError(
+    429,
+    translateMessage(DEFAULT_LOCALE, "too_many_attempts"),
+    "too_many_attempts",
+  );
 }
 export function client(session?: Session) {
   const c = new ConvexHttpClient(convexUrl);
