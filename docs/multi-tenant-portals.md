@@ -6,11 +6,11 @@ Møterom scales to other companies as **private Digilist-backed building portals
 
 **Keep Digilist as the booking authority.** Møterom stays the building portal (UI + BFF). Do not dual-write rooms or bookings into Møterom SQLite to “hide” them from Digilist.
 
-| Audience | Isolation |
-| --- | --- |
-| Other Digilist **customers** / marketplace | Already: `visibility=private` + `accessChannel=tenant_portal` (no public slug, guest checkout, or marketplace browse) |
+| Audience                                   | Isolation                                                                                                                                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Other Digilist **customers** / marketplace | Already: `visibility=private` + `accessChannel=tenant_portal` (no public slug, guest checkout, or marketplace browse)                                                                                                                                                     |
 | Digilist **platform ops** (Utleieobjekter) | Digilist must default-hide `tenant_portal` on platform lists and require an explicit channel filter / ops grant to open portal tenants ([XAL-1796](https://linear.app/xala-technologies/issue/XAL-1796), [XAL-1797](https://linear.app/xala-technologies/issue/XAL-1797)) |
-| Building members on Møterom | Unchanged: Finn rom and bookings for this tenant only |
+| Building members on Møterom                | Unchanged: Finn rom and bookings for this tenant only                                                                                                                                                                                                                     |
 
 Rejected alternatives: a second local booking engine; storing live Digilist bookings only in Møterom; copying Digilist platform React into this public repo.
 
