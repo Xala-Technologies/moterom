@@ -392,6 +392,18 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .get("/api/rooms")
       .set("Cookie", await cookie())
       .expect(502);
+    mocks.query.mockImplementation(async (ref, args) => {
+      if (getFunctionName(ref) === "domain/bookings:validateBookingSlot")
+        throw new Error("upstream unavailable");
+      return baseQuery(ref, args);
+    });
+    const availabilityDown = await request(app)
+      .post("/api/quote")
+      .set("Origin", origin)
+      .set("Cookie", await cookie())
+      .send(input())
+      .expect(503);
+    expect(availabilityDown.body.code).toBe("availability_fetch_failed");
     expect(mocks.mutation).not.toHaveBeenCalled();
   });
 

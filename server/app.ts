@@ -751,6 +751,12 @@ app.post("/api/quote", async (req, res) => {
   const availability = (
     await ctx.provider.availability(search, requestLocale(req), roomId)
   ).find((a) => a.roomId === roomId);
+  if (availability?.state === "error")
+    throw new AppError(
+      503,
+      availability.reason || "Kunne ikke hente ledigheten. Prøv igjen.",
+      "availability_fetch_failed",
+    );
   if (availability?.state !== "available")
     throw new AppError(
       409,

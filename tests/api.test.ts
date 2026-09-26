@@ -532,10 +532,11 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
   });
   it("lets a customer message the administrator and shows the thread in both inboxes", async () => {
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
-      id: string;
-      userId: string;
-    }[];
-    const mine = bookings.find((b) => b.userId === "demo-customer");
+      bookings: { id: string; userId: string }[];
+      truncated: boolean;
+    };
+    expect(bookings.truncated).toBe(false);
+    const mine = bookings.bookings.find((b) => b.userId === "demo-customer");
     expect(mine).toBeTruthy();
     const empty = await customer
       .get(`/api/bookings/${mine!.id}/messages`)
@@ -628,10 +629,11 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     ).toBe(false);
 
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
-      id: string;
-      userId: string;
-    }[];
-    const mine = bookings.find((b) => b.userId === "demo-customer");
+      bookings: { id: string; userId: string }[];
+      truncated: boolean;
+    };
+    expect(bookings.truncated).toBe(false);
+    const mine = bookings.bookings.find((b) => b.userId === "demo-customer");
     expect(mine).toBeTruthy();
     const sent = await customer
       .post(`/api/bookings/${mine!.id}/messages`)
@@ -679,11 +681,10 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
   });
   it("includes room context on booking message threads", async () => {
     const bookings = (await customer.get("/api/bookings").expect(200)).body as {
-      id: string;
-      userId: string;
-      roomId: string;
-    }[];
-    const mine = bookings.find((b) => b.userId === "demo-customer");
+      bookings: { id: string; userId: string; roomId: string }[];
+      truncated: boolean;
+    };
+    const mine = bookings.bookings.find((b) => b.userId === "demo-customer");
     expect(mine).toBeTruthy();
     await customer
       .post(`/api/bookings/${mine!.id}/messages`)

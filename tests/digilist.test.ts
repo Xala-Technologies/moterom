@@ -209,6 +209,26 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       ),
     ).toBe(true);
   });
+  it("marks customer booking history as truncated at the 500 cap", async () => {
+    mocks.query.mockImplementation(async (ref) => {
+      if (getFunctionName(ref).includes("getBySlug")) return source;
+      if (getFunctionName(ref).includes("listMine"))
+        return Array.from({ length: 500 }, (_, i) => ({
+          _id: `b-${i}`,
+          tenantId: "building-test",
+          resourceId: source._id,
+          userId: user.id,
+          startTime: Date.now() + i * 3600000,
+          endTime: Date.now() + i * 3600000 + 3600000,
+          status: "confirmed",
+          metadata: {},
+        }));
+      return [];
+    });
+    const page = await new Digilist().bookings(user);
+    expect(page.truncated).toBe(true);
+    expect(page.bookings).toHaveLength(500);
+  });
   it("preserves existing booking rules when changing approval mode", async () => {
     await new Digilist().updateRoom(
       inventory[0].id,
