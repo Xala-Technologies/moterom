@@ -2,6 +2,18 @@
 
 Møterom scales to other companies as **private Digilist-backed building portals**, not as a second booking inventory and not as a shared marketplace catalogue.
 
+## Chosen privacy model (locked)
+
+**Keep Digilist as the booking authority.** Møterom stays the building portal (UI + BFF). Do not dual-write rooms or bookings into Møterom SQLite to “hide” them from Digilist.
+
+| Audience                                   | Isolation                                                                                                                                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Other Digilist **customers** / marketplace | Already: `visibility=private` + `accessChannel=tenant_portal` (no public slug, guest checkout, or marketplace browse)                                                                                                                                                     |
+| Digilist **platform ops** (Utleieobjekter) | Digilist must default-hide `tenant_portal` on platform lists and require an explicit channel filter / ops grant to open portal tenants ([XAL-1796](https://linear.app/xala-technologies/issue/XAL-1796), [XAL-1797](https://linear.app/xala-technologies/issue/XAL-1797)) |
+| Building members on Møterom                | Unchanged: Finn rom and bookings for this tenant only                                                                                                                                                                                                                     |
+
+Rejected alternatives: a second local booking engine; storing live Digilist bookings only in Møterom; copying Digilist platform React into this public repo.
+
 ## Product rule
 
 Each company gets a private portal.
@@ -9,7 +21,7 @@ Each company gets a private portal.
 - **Finn rom**, bookings, calendar, messages, and admin for company A show **only** company A’s rooms.
 - Company B’s rooms never appear on company A’s portal.
 - Members of A cannot book B’s rooms through A’s hostname.
-- Digilist platform **Utleieobjekter** may still list every tenant’s resources for Digilist ops. That is not Finn rom. Ops visibility must not be confused with customer catalogue isolation.
+- Digilist platform **Utleieobjekter** must not casually mix portal rooms into the marketplace scan. Ops may open **Leietakerportal** / **Alle kanaler** deliberately. That is Digilist product work ([XAL-1796](https://linear.app/xala-technologies/issue/XAL-1796)), not a Møterom catalogue filter.
 
 Isolation is a **tenant boundary**, not a UI filter after loading every company’s rooms.
 
@@ -55,7 +67,7 @@ Then:
 1. **Tenant registry** — hostname → Digilist tenant id, building name, address, `ADMIN_EMAILS`, rooms overlay, access mode.
 2. **Request binding** — every BFF call uses the tenant for that `Host`; session membership must match that tenant.
 3. **Catalogue** — Finn rom lists only Digilist `tenant_portal` + private resources for the resolved tenant.
-4. **Digilist platform** — label/filter Utleieobjekter by channel (Marketplace · Tenant portals · Pending) so ops can tell portal rooms from public rentals. That work lives in Digilist, not this repository.
+4. **Digilist platform** — label/filter Utleieobjekter by channel (Marketplace · Tenant portals · All); default Marketplace. Tracked as [XAL-1796](https://linear.app/xala-technologies/issue/XAL-1796). Restrict platform act-as for private portal tenants as [XAL-1797](https://linear.app/xala-technologies/issue/XAL-1797).
 5. Prefer **one multi-tenant Møterom deployment** with per-domain config once there are more than a few customers; one VPS per customer remains valid for early pilots.
 
 ## Non-goals
@@ -68,4 +80,4 @@ Then:
 
 ## Digilist platform note
 
-Seeing SKB (or future portal) rooms under Digilist **Utleieobjekter** is expected: Digilist owns those resources. Private + `tenant_portal` keeps them off the public marketplace. Improving platform filters is Digilist product work and does not require changing Møterom’s booking authority model.
+Digilist still **owns** SKB resources and bookings. Private + `tenant_portal` keeps them off the public marketplace. Casual ops visibility is reduced by defaulting platform `listPlatform` to marketplace (XAL-1796). Full secrecy from Digilist staff with grants is neither possible nor the product goal while Digilist remains the database.
