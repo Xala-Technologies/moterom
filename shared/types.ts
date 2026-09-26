@@ -266,6 +266,8 @@ export interface ConversationSummary {
   customerName: string;
   customerId?: string;
   context?: ConversationContext;
+  /** Local/demo threads can store images; Digilist booking threads cannot. */
+  canAttachImages?: boolean;
 }
 export interface Message {
   id: string;
@@ -274,6 +276,7 @@ export interface Message {
   senderName: string;
   fromAdmin: boolean;
   content: string;
+  imageUrl?: string;
   createdAt: number;
 }
 export interface ConversationThread {

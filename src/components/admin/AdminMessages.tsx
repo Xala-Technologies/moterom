@@ -5,16 +5,10 @@ import { useApp } from "../../context";
 import { Button, Empty, ErrorState, Input, Loading, Modal } from "../ui";
 import { MessageThread } from "../MessageThread";
 import { MessageContextCard } from "../MessageContextCard";
+import { messageInitials } from "../messageIdentity";
 import { AnnouncementForm, publishAnnouncement } from "./AnnouncementForm";
 import type { ConversationSummary } from "../../../shared/types";
 import { useFormatters, useT } from "../../i18n";
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return `${parts[0]!.slice(0, 1)}${parts[parts.length - 1]!.slice(0, 1)}`.toUpperCase();
-}
 
 function rowMeta(row: ConversationSummary, supportLabel: string): string {
   if (row.kind === "support") return supportLabel;
@@ -237,7 +231,7 @@ export function AdminMessages({
                       onClick={() => openRow(row.id)}
                     >
                       <span className="admin-users-avatar" aria-hidden="true">
-                        {initials(name)}
+                        {messageInitials(name)}
                       </span>
                       <span className="admin-messages-row-body">
                         <span className="admin-messages-row-top">

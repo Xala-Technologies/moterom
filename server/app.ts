@@ -21,6 +21,7 @@ import { DemoStore } from "./demo";
 import { AccessRequestStore } from "./accessRequests";
 import { PortalRoleStore } from "./portalRoles";
 import { MessagingLocalStore, isSupportConversationId } from "./messagingLocal";
+import { saveMessageImage } from "./messageImage";
 import {
   Digilist,
   rest,
@@ -174,6 +175,7 @@ function sendConversationFrom(
   content: string,
   user: User,
   clientMessageId?: string,
+  imageUrl?: string,
 ): Promise<ConversationThread> | ConversationThread {
   if (isSupportConversationId(id)) {
     return messagingLocal.sendConversationMessage(
@@ -181,6 +183,7 @@ function sendConversationFrom(
       content,
       user,
       clientMessageId,
+      imageUrl,
     );
   }
   if (messagingLocal.isHidden(id))
@@ -194,6 +197,7 @@ function sendConversationFrom(
     content,
     user,
     clientMessageId,
+    imageUrl,
   );
 }
 function deleteConversationFrom(
@@ -888,6 +892,15 @@ app.get("/api/bookings/:id/messages", async (req, res) => {
 app.post("/api/bookings/:id/messages", async (req, res) => {
   const ctx = await context(req, res, true);
   const body = messageCreateSchema.parse(req.body);
+  if (body.imageFile && ctx.provider instanceof Digilist)
+    throw new AppError(
+      400,
+      "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
+      "message_images_unsupported",
+    );
+  const imageUrl = body.imageFile
+    ? await saveMessageImage(body.imageFile)
+    : undefined;
   res
     .status(201)
     .json(
@@ -896,6 +909,7 @@ app.post("/api/bookings/:id/messages", async (req, res) => {
         body.content,
         ctx.user!,
         body.clientMessageId,
+        imageUrl,
       ),
     );
 });
@@ -919,15 +933,30 @@ app.get("/api/messages/:id", async (req, res) => {
 app.post("/api/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true);
   const body = messageCreateSchema.parse(req.body);
+  const id = String(req.params.id);
+  if (
+    body.imageFile &&
+    !isSupportConversationId(id) &&
+    ctx.provider instanceof Digilist
+  )
+    throw new AppError(
+      400,
+      "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
+      "message_images_unsupported",
+    );
+  const imageUrl = body.imageFile
+    ? await saveMessageImage(body.imageFile)
+    : undefined;
   res
     .status(201)
     .json(
       await sendConversationFrom(
         ctx,
-        String(req.params.id),
+        id,
         body.content,
         ctx.user!,
         body.clientMessageId,
+        imageUrl,
       ),
     );
 });
@@ -1100,15 +1129,30 @@ app.get("/api/admin/messages/:id", async (req, res) => {
 app.post("/api/admin/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true, true);
   const body = messageCreateSchema.parse(req.body);
+  const id = String(req.params.id);
+  if (
+    body.imageFile &&
+    !isSupportConversationId(id) &&
+    ctx.provider instanceof Digilist
+  )
+    throw new AppError(
+      400,
+      "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
+      "message_images_unsupported",
+    );
+  const imageUrl = body.imageFile
+    ? await saveMessageImage(body.imageFile)
+    : undefined;
   res
     .status(201)
     .json(
       await sendConversationFrom(
         ctx,
-        String(req.params.id),
+        id,
         body.content,
         ctx.user!,
         body.clientMessageId,
+        imageUrl,
       ),
     );
 });

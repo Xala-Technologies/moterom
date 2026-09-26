@@ -1403,37 +1403,53 @@ a.brand {
 .modal-wide {
   width: min(1150px, calc(100% - 32px));
 }
+.modal-wide:has(.room-edit-form) {
+  width: min(1080px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 22px 24px;
+}
+.modal-wide:has(.room-edit-form) > header {
+  margin-bottom: 12px;
+}
+.modal-wide:has(.room-edit-form) > p {
+  margin-bottom: 12px;
+}
 .room-edit-form {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 28px 32px;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: 16px 24px;
   align-items: start;
 }
 .room-edit-side,
 .room-edit-main {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   min-width: 0;
 }
 .room-edit-photo {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .room-edit-photo .room-image {
   border-radius: var(--digilist-radius-lg, 12px);
   overflow: hidden;
   aspect-ratio: 16 / 10;
-  max-height: 220px;
+  max-height: 140px;
 }
 .room-edit-form .caption {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
 }
 .room-edit-form .filter-select {
   flex: none;
   width: 100%;
   max-width: none;
+}
+.room-edit-form .ds-textarea {
+  min-height: 0;
+  field-sizing: fixed;
 }
 .modal:has(.room-edit-form .filter-select.is-open) {
   overflow: visible;
@@ -1466,19 +1482,23 @@ a.brand {
 .room-edit-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
 }
 .room-edit-actions {
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
+  margin-top: 4px;
 }
 @media (max-width: 767px) {
   .room-edit-form,
   .room-edit-pair {
     grid-template-columns: 1fr;
+  }
+  .room-edit-photo .room-image {
+    max-height: 180px;
   }
 }
 .modal-actions {
@@ -2656,57 +2676,224 @@ a.login-option:hover {
 .message-log {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   max-height: 22rem;
   overflow: auto;
   overflow-x: hidden;
   padding-right: 4px;
 }
+.message-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.message-day {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ds-color-neutral-text-subtle);
+}
+.message-day::before,
+.message-day::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ds-color-neutral-border-subtle);
+}
+.message-day span {
+  flex: 0 0 auto;
+}
+.message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 100%;
+}
+.message-row.from-customer {
+  flex-direction: row-reverse;
+}
+.message-avatar {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
+  letter-spacing: 0.02em;
+}
+.message-avatar.tone-admin {
+  color: var(--ds-color-accent-text-default);
+  background: var(--ds-color-accent-surface-tinted);
+}
+.message-avatar.tone-customer {
+  color: var(--ds-color-neutral-text-default);
+  background: var(--ds-color-neutral-surface-tinted);
+}
 .message-bubble {
   width: fit-content;
-  max-width: min(36rem, 85%);
+  max-width: min(32rem, calc(100% - 46px));
   min-width: 0;
   box-sizing: border-box;
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 10px 12px 8px;
+  border-radius: 14px;
   border: 1px solid var(--ds-color-neutral-border-subtle);
   background: var(--ds-color-neutral-background-default);
 }
 .message-bubble.from-admin {
-  align-self: flex-start;
+  border-radius: 14px 14px 14px 4px;
   background: var(--ds-color-accent-background-tinted);
   border-color: var(--ds-color-accent-border-subtle);
 }
 .message-bubble.from-customer {
-  align-self: flex-end;
+  border-radius: 14px 14px 4px 14px;
+}
+.message-bubble.has-image {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.message-bubble.has-image.from-admin,
+.message-bubble.has-image.from-customer {
+  background: transparent;
+  border: 0;
+}
+.message-bubble.has-image header {
+  margin: 0 0 6px;
+  padding: 0 2px;
+}
+.message-bubble.has-image .message-meta {
+  margin-top: 6px;
+  padding: 0 2px;
+  justify-content: flex-start;
+}
+.message-bubble.has-image .message-image-link {
+  margin: 0;
+  border-radius: 12px;
+}
+.message-bubble.has-image p {
+  margin-top: 8px;
+  padding: 0 2px;
 }
 .message-bubble header {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
   align-items: baseline;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
-.message-bubble header time,
 .message-bubble header strong {
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
-}
-.message-bubble header time {
-  color: var(--ds-color-neutral-text-subtle);
 }
 .message-bubble p {
   margin: 0;
   font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
-  line-height: 1.5;
+  line-height: 1.45;
+}
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  color: var(--ds-color-neutral-text-subtle);
+}
+.message-sent {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ds-color-accent-text-subtle);
 }
 .message-composer {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.message-composer-main {
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-}
-.message-composer .ds-field {
   width: 100%;
+  min-width: 0;
+}
+.message-composer-main .ds-field {
+  width: 100%;
+  min-width: 0;
+}
+.message-composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.message-attach-button,
+.message-attach-remove {
+  flex: 0 0 auto;
+  min-width: var(--ds-touch-target-min, 44px);
+  min-height: var(--ds-touch-target-min, 44px);
+  padding-inline: 0;
+  aspect-ratio: 1;
+}
+.message-attach-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.message-attach-preview {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: 10px;
+  background: var(--ds-color-neutral-background-tinted);
+  overflow: hidden;
+}
+.message-attach-preview img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+}
+.message-attach-preview .message-attach-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 999px;
+  background: var(--ds-color-neutral-background-default);
+  box-shadow: 0 0 0 1px var(--ds-color-neutral-border-subtle);
+}
+.message-image-link {
+  display: block;
+  margin: 6px 0 4px;
+  border-radius: 10px;
+  overflow: hidden;
+  max-width: min(20rem, 100%);
+}
+.message-image {
+  display: block;
+  width: 100%;
+  max-height: 16rem;
+  object-fit: cover;
+  vertical-align: middle;
 }
 .message-inbox {
   display: grid;
@@ -2881,9 +3068,14 @@ a.login-option:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.customer-messages-row-unread {
+  color: var(--ds-color-accent-text-default);
+  font-weight: var(--ds-font-weight-semibold, 600);
+}
 .customer-messages-row-top time,
 .customer-messages-row-meta,
-.customer-messages-row-preview {
+.customer-messages-row-preview,
+.customer-messages-row-unread {
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .customer-messages-row-top time,
@@ -2949,6 +3141,12 @@ a.login-option:hover {
   padding-top: 8px;
   background: var(--ds-color-neutral-background-default);
 }
+.customer-messages[data-narrow="true"]
+  .message-thread-fill
+  .message-composer-main {
+  flex-direction: column;
+  align-items: stretch;
+}
 .customer-pane:has(.customer-messages-page) .page-main {
   display: flex;
   flex-direction: column;
@@ -2970,11 +3168,15 @@ a.login-option:hover {
   max-height: none;
 }
 .message-thread-fill .message-composer {
-  flex-direction: row;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: stretch;
   flex-shrink: 0;
 }
-.message-thread-fill .message-composer .ds-field {
+.message-thread-fill .message-composer-main {
+  flex-direction: row;
+  align-items: flex-end;
+}
+.message-thread-fill .message-composer-main .ds-field {
   flex: 1;
   min-width: 0;
 }
@@ -3226,6 +3428,12 @@ a.login-option:hover {
   z-index: 1;
   padding-top: 8px;
   background: var(--ds-color-neutral-background-default);
+}
+.admin-messages[data-narrow="true"]
+  .message-thread-fill
+  .message-composer-main {
+  flex-direction: column;
+  align-items: stretch;
 }
 .info-message {
   background: var(--ds-color-info-background-tinted);
@@ -4048,11 +4256,10 @@ a.stat.is-other-day {
 .admin-bl-header {
   display: grid;
   grid-template-columns:
-    minmax(12rem, 1.35fr)
-    minmax(9rem, 0.9fr)
+    minmax(12rem, 1.4fr)
     minmax(9rem, 1fr)
-    minmax(6rem, 0.6fr)
-    minmax(6rem, 0.55fr)
+    minmax(9rem, 1.1fr)
+    minmax(6rem, 0.65fr)
     minmax(7rem, auto);
   gap: 12px;
   padding: 0 16px;
@@ -4068,11 +4275,10 @@ a.stat.is-other-day {
 .admin-bl-row {
   display: grid;
   grid-template-columns:
-    minmax(12rem, 1.35fr)
-    minmax(9rem, 0.9fr)
+    minmax(12rem, 1.4fr)
     minmax(9rem, 1fr)
-    minmax(6rem, 0.6fr)
-    minmax(6rem, 0.55fr)
+    minmax(9rem, 1.1fr)
+    minmax(6rem, 0.65fr)
     minmax(7rem, auto);
   gap: 12px;
   align-items: center;
@@ -4100,6 +4306,44 @@ a.stat.is-other-day {
     --ds-color-neutral-surface-tinted,
     var(--ds-color-neutral-background-tinted)
   );
+}
+.admin-bl-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.admin-bl-finished-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0 16px;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  font-weight: var(--ds-font-weight-semibold, 600);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ds-color-neutral-text-subtle);
+}
+.admin-bl-finished-divider::before {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ds-color-neutral-border-subtle);
+}
+.admin-bl-finished-divider span {
+  flex: 0 0 auto;
+}
+.admin-bl-finished-divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ds-color-neutral-border-subtle);
+}
+.admin-bl-row.is-finished {
+  opacity: 0.72;
+}
+.admin-bl-row.is-finished.is-cancelled {
+  opacity: 0.8;
 }
 .admin-bl-resource {
   display: flex;
@@ -4171,10 +4415,6 @@ a.stat.is-other-day {
 .admin-bl-phone:hover {
   color: var(--ds-color-accent-text-default);
   text-decoration: underline;
-}
-.admin-bl-payment-unpaid {
-  color: var(--ds-color-warning-text-default);
-  font-weight: var(--ds-font-weight-medium, 500);
 }
 .admin-bl-status {
   display: flex;
@@ -4332,7 +4572,7 @@ button.admin-bl-menu-trigger:disabled {
     grid-template-columns: 1.4fr 1fr auto auto;
     grid-template-areas:
       "resource resource status actions"
-      "schedule customer payment actions";
+      "schedule customer customer actions";
     row-gap: 8px;
   }
   .admin-bl-resource {
@@ -4343,9 +4583,6 @@ button.admin-bl-menu-trigger:disabled {
   }
   .admin-bl-col:nth-of-type(3) {
     grid-area: customer;
-  }
-  .admin-bl-col:nth-of-type(4) {
-    grid-area: payment;
   }
   .admin-bl-status {
     grid-area: status;
@@ -4360,8 +4597,7 @@ button.admin-bl-menu-trigger:disabled {
     grid-template-areas:
       "resource status"
       "schedule schedule"
-      "customer customer"
-      "payment actions";
+      "customer actions";
   }
   .admin-bl-thumb {
     flex-basis: 48px;
@@ -5348,6 +5584,10 @@ button.admin-users-menu-trigger:disabled {
     z-index: 1;
     padding-top: 8px;
     background: var(--ds-color-neutral-background-default);
+  }
+  .message-thread-fill .message-composer-main {
+    flex-direction: column;
+    align-items: stretch;
   }
   .admin-messages-thread .message-thread-fill {
     padding: 16px 16px 20px;

@@ -1294,6 +1294,7 @@ export class Digilist {
       ),
       unread: Number(raw.unreadCount ?? raw.unread ?? 0),
       customerName: str(raw.userName),
+      canAttachImages: false,
     };
     if (room) {
       base.context = {
@@ -1472,7 +1473,14 @@ export class Digilist {
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): Promise<ConversationThread> {
+    if (imageUrl)
+      throw new AppError(
+        400,
+        "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
+        "message_images_unsupported",
+      );
     const booking = await this.booking(bookingId, user);
     const room = await this.room(booking.roomId);
     try {
@@ -1515,7 +1523,14 @@ export class Digilist {
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): Promise<ConversationThread> {
+    if (imageUrl)
+      throw new AppError(
+        400,
+        "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
+        "message_images_unsupported",
+      );
     await this.conversationThread(id, user);
     try {
       await mutate(this.c, "domain/messaging:sendMessage", {

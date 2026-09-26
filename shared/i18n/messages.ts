@@ -65,6 +65,8 @@ const nb: Record<string, string> = {
   image_gallery_managed_in_digilist:
     "Rommet har flere bilder. Administrer bildegalleriet i Digilist før du bytter til illustrasjonsbildet.",
   invalid_image_size: "Bildet må være mellom 32 byte og 2 MB.",
+  message_images_unsupported:
+    "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
   room_name_required: "Skriv inn et romnavn.",
   room_create_failed: "Rommet kunne ikke opprettes i Digilist.",
   room_delete_failed: "Rommet kunne ikke slettes i Digilist.",
@@ -192,6 +194,8 @@ const en: Record<string, string> = {
   image_gallery_managed_in_digilist:
     "This room has multiple photos. Manage its gallery in Digilist before switching to the catalogue illustration.",
   invalid_image_size: "The image must be between 32 bytes and 2 MB.",
+  message_images_unsupported:
+    "Image messages are not available for booking conversations yet. Use a general enquiry, or send a text message.",
   room_name_required: "Enter a room name.",
   room_create_failed: "The room could not be created in Digilist.",
   room_delete_failed: "The room could not be deleted in Digilist.",

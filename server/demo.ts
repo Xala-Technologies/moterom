@@ -542,6 +542,7 @@ export class DemoStore {
       {
         ...conversation,
         kind: conversation.kind || "booking",
+        canAttachImages: true,
       },
       booking,
       this.all<Room>("rooms"),
@@ -624,16 +625,24 @@ export class DemoStore {
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): ConversationThread {
     const booking = this.booking(bookingId, user);
     const conversation = this.conversationForBooking(booking, true)!;
-    return this.appendMessage(conversation, content, user, clientMessageId);
+    return this.appendMessage(
+      conversation,
+      content,
+      user,
+      clientMessageId,
+      imageUrl,
+    );
   }
   sendConversationMessage(
     id: string,
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): ConversationThread {
     const thread = this.conversationThread(id, user);
     if (!thread.conversation)
@@ -647,6 +656,7 @@ export class DemoStore {
       content,
       user,
       clientMessageId,
+      imageUrl,
     );
   }
   private appendMessage(
@@ -654,6 +664,7 @@ export class DemoStore {
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): ConversationThread {
     if (clientMessageId) {
       const replayed = this.messagesFor(conversation.id).find(
@@ -664,6 +675,13 @@ export class DemoStore {
       );
       if (replayed) return this.thread(conversation);
     }
+    const text = content.trim();
+    if (!text && !imageUrl)
+      throw new AppError(
+        400,
+        "Skriv en melding eller legg ved et bilde.",
+        "validation_failed",
+      );
     const createdAt = Date.now();
     const message: Message & { clientMessageId?: string } = {
       id: clientMessageId || randomUUID(),
@@ -671,14 +689,15 @@ export class DemoStore {
       senderId: user.id,
       senderName: user.isAdmin ? "Administrator" : user.name,
       fromAdmin: user.isAdmin,
-      content,
+      content: text,
+      ...(imageUrl ? { imageUrl } : {}),
       createdAt,
       clientMessageId,
     };
     this.db
       .prepare("INSERT INTO messages VALUES (?, ?, ?, ?)")
       .run(message.id, conversation.id, createdAt, JSON.stringify(message));
-    conversation.preview = content;
+    conversation.preview = text || "Bilde";
     conversation.updatedAt = createdAt;
     conversation.unread = user.isAdmin ? 0 : 1;
     this.save("conversations", conversation);

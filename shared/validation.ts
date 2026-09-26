@@ -82,14 +82,29 @@ export const accessRequestStatusSchema = z.enum([
   "approved",
   "rejected",
 ]);
-export const messageCreateSchema = z.object({
-  content: z.string().trim().min(1).max(4000),
-  clientMessageId: z.string().uuid().optional(),
+export const messageImageFileSchema = z.object({
+  filename: z.string().trim().min(1).max(200),
+  contentType: z.enum(["image/webp", "image/jpeg", "image/png"]),
+  data: z.string().min(1).max(2_800_000),
 });
+export const messageCreateSchema = z
+  .object({
+    content: z.string().trim().max(4000).optional().default(""),
+    imageFile: messageImageFileSchema.optional(),
+    clientMessageId: z.string().uuid().optional(),
+  })
+  .refine(
+    (value) => Boolean(value.content?.trim()) || Boolean(value.imageFile),
+    {
+      message: "Skriv en melding eller legg ved et bilde.",
+      path: ["content"],
+    },
+  );
 export const supportOpenSchema = z.object({
   content: z.string().trim().min(1).max(4000).optional(),
   clientMessageId: z.string().uuid().optional(),
 });
+export type MessageImageFile = z.infer<typeof messageImageFileSchema>;
 export const announcementCreateSchema = z.object({
   title: z.string().trim().min(1).max(120),
   body: z.string().trim().min(1).max(4000),

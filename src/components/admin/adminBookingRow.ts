@@ -1,3 +1,4 @@
+import { isOpenBooking } from "../../../shared/bookingOrder";
 import type { Booking, Room } from "../../../shared/types";
 
 export type AdminTranslate = (
@@ -24,8 +25,6 @@ export type AdminBookingAction = {
   href?: string;
 };
 
-export type AdminPaymentTone = "none" | "unpaid" | "default";
-
 export type AdminStatusTone =
   "neutral" | "warning" | "success" | "info" | "danger";
 
@@ -43,11 +42,10 @@ export type AdminBookingRow = {
   statusLabel: string;
   statusTone: AdminStatusTone;
   cancelled: boolean;
+  /** Past end time, or cancelled/rejected — same rule as agenda sort. */
+  finished: boolean;
   dateSpanLabel: string;
   timeWithDurationLabel: string;
-  paymentAmountLabel: string;
-  paymentStatusLabel: string | null;
-  paymentTone: AdminPaymentTone;
   openAriaLabel: string;
   actionsMenuAriaLabel: string;
   editRequestedLabel: string | null;
@@ -58,7 +56,6 @@ export type AdminBookingListColumns = {
   resource: string;
   schedule: string;
   customer: string;
-  payment: string;
   status: string;
   actions: string;
 };
@@ -98,7 +95,7 @@ export function bookingIsCancellable(
 
 /**
  * Build a Digilist-inspired admin row from a Møterom booking.
- * Payment stays unknown unless the server marks payment as required.
+ * Payment is not shown — SKB rooms are free in the portal.
  */
 export function toAdminBookingRow(
   booking: Booking,
@@ -171,18 +168,6 @@ export function toAdminBookingRow(
     });
   }
 
-  let paymentTone: AdminPaymentTone = "none";
-  let paymentStatusLabel: string | null = null;
-  if (booking.paymentRequired) {
-    paymentTone = "unpaid";
-    paymentStatusLabel = t("booking.payment_outstanding");
-  }
-
-  const amountLabel =
-    typeof booking.totalPrice === "number" && booking.totalPrice > 0
-      ? formatters.money(booking.totalPrice, booking.currency)
-      : t("common.money.no_payment");
-
   const imageKind =
     room?.imageKind === "actual"
       ? "actual"
@@ -204,11 +189,9 @@ export function toAdminBookingRow(
     statusLabel: statusLabel(booking.status, t),
     statusTone: statusTone(booking.status),
     cancelled: booking.status === "cancelled",
+    finished: !isOpenBooking(booking),
     dateSpanLabel: formatters.displayDate(booking.startTime, true),
     timeWithDurationLabel: `${formatters.shortTime(booking.startTime)}–${formatters.shortTime(booking.endTime)}`,
-    paymentAmountLabel: amountLabel,
-    paymentStatusLabel,
-    paymentTone,
     openAriaLabel: t("admin.open_booking_aria", {
       room: booking.roomName,
       reference: booking.reference,
@@ -230,7 +213,6 @@ export function adminBookingListColumns(
     resource: t("admin.cols.resource"),
     schedule: t("admin.cols.schedule"),
     customer: t("admin.cols.customer"),
-    payment: t("admin.cols.payment"),
     status: t("admin.cols.status"),
     actions: t("admin.cols.actions"),
   };

@@ -5,19 +5,13 @@ import { post, useApi } from "../api";
 import { Button, Empty, ErrorState, Loading } from "../components/ui";
 import { MessageThread } from "../components/MessageThread";
 import { MessageContextCard } from "../components/MessageContextCard";
+import { messageInitials } from "../components/messageIdentity";
 import type {
   ConversationSummary,
   ConversationThread,
 } from "../../shared/types";
 import { useFormatters, useT } from "../i18n";
 import { useEffect, useState } from "react";
-
-function initials(label: string): string {
-  const parts = label.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return `${parts[0]!.slice(0, 1)}${parts[parts.length - 1]!.slice(0, 1)}`.toUpperCase();
-}
 
 export function Messages() {
   const { user, loading, notify } = useApp();
@@ -181,7 +175,7 @@ export function Messages() {
                         {row.kind === "support" ? (
                           <MessageCircle size={18} />
                         ) : (
-                          initials(label)
+                          messageInitials(label)
                         )}
                       </span>
                       <span className="customer-messages-row-body">
@@ -204,6 +198,11 @@ export function Messages() {
                         {row.preview ? (
                           <span className="customer-messages-row-preview">
                             {row.preview}
+                          </span>
+                        ) : null}
+                        {row.unread > 0 ? (
+                          <span className="customer-messages-row-unread">
+                            {t("messages.unread", { count: row.unread })}
                           </span>
                         ) : null}
                       </span>
