@@ -13,6 +13,8 @@ process.env.DIGILIST_TENANT_ID = "building-test";
 process.env.BOOKING_ACCESS = "members";
 process.env.ADMIN_EMAILS = "admin@example.invalid";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
+process.env.PORTAL_ROLES_DB_PATH = ":memory:";
+process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
 
