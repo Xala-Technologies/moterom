@@ -332,7 +332,8 @@
     "empty_upcoming_title": "You have no upcoming bookings",
     "empty_upcoming_body": "Find a room for your next meeting. We keep the overview here.",
     "empty_history_title": "No past bookings",
-    "empty_history_body": "Completed and cancelled bookings will appear here."
+    "empty_history_body": "Completed and cancelled bookings will appear here.",
+    "truncated_warning": "The list reached the limit of 500 bookings. Open Digilist for the full history."
   },
   "messages": {
     "document_title": "Messages",

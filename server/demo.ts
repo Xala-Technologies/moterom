@@ -179,9 +179,10 @@ export class DemoStore {
     });
   }
   bookings(user: User) {
-    return this.all<Booking>("bookings")
+    const bookings = this.all<Booking>("bookings")
       .filter((b) => b.userId === user.id)
       .sort((a, b) => a.startTime - b.startTime);
+    return { bookings, truncated: false };
   }
   booking(id: string, user: User) {
     const b = this.all<Booking>("bookings").find((b) => b.id === id);
@@ -588,7 +589,7 @@ export class DemoStore {
   }
   inbox(user: User): ConversationSummary[] {
     if (user.isAdmin) return this.conversations();
-    const mine = new Set(this.bookings(user).map((b) => b.id));
+    const mine = new Set(this.bookings(user).bookings.map((b) => b.id));
     return this.conversations().filter(
       (c) => c.bookingId && mine.has(c.bookingId),
     );

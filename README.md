@@ -88,7 +88,7 @@ Email-code sign-in and MFA reuse Digilist. The opaque Digilist session and short
 
 Signed five-minute quotes bind the reviewed room, interval, attendees, price and approval mode to the user. Booking submissions retain their idempotency key and exact booking details on an uncertain network result. Live idempotency keys are namespaced by tenant and user. A matching committed booking is recovered before quote-expiry and occupied-slot checks; quote renewal preserves the retry key. Changed retry details are rejected. Replay currently searches the latest 500 user bookings; a dedicated atomic idempotency endpoint remains an upstream requirement. Changing or reloading the entire checkout is a new transaction. Digilist is the authority for write-time conflicts and final pricing.
 
-Admin history currently loads at most 1,000 bookings and shows a warning at the cap; customers load up to 500. Full tenant history remains in Digilist. The app uses request-based refresh, not live subscription updates. Recurring bookings, waitlists, door access, catering, automatic reminders and payment collection are outside this first implementation.
+Admin history currently loads at most 1,000 bookings and shows a warning at the cap; customers load up to 500 and see the same style of warning when that cap is hit. Full tenant history remains in Digilist. The app uses request-based refresh, not live subscription updates. Recurring bookings, waitlists, door access, catering, automatic reminders and payment collection are outside this first implementation.
 
 ## Build and deploy
 

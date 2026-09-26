@@ -53,7 +53,7 @@ describe("persistent demo booking rules", () => {
   it("replays a request without creating another reservation", () => {
     const first = store.create(input, customer, "one");
     expect(store.create(input, customer, "one").id).toBe(first.id);
-    expect(store.bookings(customer)).toHaveLength(1);
+    expect(store.bookings(customer).bookings).toHaveLength(1);
     expect(() =>
       store.create({ ...input, people: 5 }, customer, "one"),
     ).toThrow();

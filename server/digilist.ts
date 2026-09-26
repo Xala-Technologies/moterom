@@ -573,13 +573,14 @@ export class Digilist {
         audience: "tenant_portal",
       }),
     );
-    return data
+    const bookings = data
       .filter(
         (b) =>
           b.tenantId === tenantId &&
           rooms.some((r) => r.sourceId === b.resourceId),
       )
       .map((b) => this.normalizeBooking(b, rooms));
+    return { bookings, truncated: data.length >= 500 };
   }
   async booking(id: string, user: User) {
     const raw = row(

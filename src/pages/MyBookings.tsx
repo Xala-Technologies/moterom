@@ -86,10 +86,13 @@ export function MyBookings() {
   const [query, setQuery] = useState("");
   const [roomId, setRoomId] = useState("all");
   const [status, setStatus] = useState("all");
-  const result = useApi<Booking[]>(user ? "/bookings" : null);
+  const result = useApi<{ bookings: Booking[]; truncated: boolean }>(
+    user ? "/bookings" : null,
+  );
   if (loading) return <Loading />;
   if (!user) return <Navigate replace to="/login?returnTo=/mine-bookinger" />;
-  const all = result.data || [];
+  const all = result.data?.bookings || [];
+  const truncated = Boolean(result.data?.truncated);
   const upcomingCount = all.filter((booking) => isOpenBooking(booking)).length;
   const pendingCount = all.filter((b) => b.status === "pending").length;
   const confirmedCount = all.filter(
@@ -235,106 +238,114 @@ export function MyBookings() {
         <Loading />
       ) : result.error ? (
         <ErrorState error={result.error} retry={result.reload} />
-      ) : bookings.length ? (
-        <div className="booking-list">
-          {groups.map((group, groupIndex) => (
-            <section className="booking-day" key={group.date}>
-              <h2 className="booking-day-heading">
-                {groupIndex === 0 && tab === "upcoming"
-                  ? t("dashboard.next_day", {
-                      date: displayDate(group.items[0].startTime, true),
-                    })
-                  : displayDate(group.items[0].startTime, true)}
-              </h2>
-              {group.items.map((b, i) => (
-                <article
-                  className={`booking-row ${groupIndex === 0 && i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
-                  key={b.id}
-                >
-                  <div className="booking-date">
-                    <span>
-                      {new Intl.DateTimeFormat(undefined, {
-                        timeZone: "Europe/Oslo",
-                        month: "short",
-                      }).format(b.startTime)}
-                    </span>
-                    <strong>
-                      {new Intl.DateTimeFormat(undefined, {
-                        timeZone: "Europe/Oslo",
-                        day: "numeric",
-                      }).format(b.startTime)}
-                    </strong>
-                  </div>
-                  <div className="booking-main">
-                    <Status status={b.status} />
-                    <h3>
-                      <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
-                    </h3>
-                    <p>{b.title || b.reference}</p>
-                  </div>
-                  <div className="booking-time">
-                    <strong>
-                      {shortTime(b.startTime)}–{shortTime(b.endTime)}
-                    </strong>
-                    {typeof b.people === "number" && b.people > 0 ? (
-                      <span>
-                        {t("booking.participants")}: {b.people}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="booking-actions">
-                    <Link
-                      className="ds-button"
-                      data-variant="secondary"
-                      data-size="sm"
-                      to={`/booking/${b.id}`}
-                    >
-                      {t("dashboard.view_booking")}
-                      <ArrowRight size={16} />
-                    </Link>
-                    <Link
-                      className="ds-button"
-                      data-size="sm"
-                      to={`/booking/${b.id}#meldinger`}
-                    >
-                      {t("messages.send")}
-                      <MessageCircle size={16} />
-                    </Link>
-                    {typeof b.totalPrice === "number" && b.totalPrice > 0 ? (
-                      <span className="caption">
-                        {money(b.totalPrice, b.currency)}
-                      </span>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </section>
-          ))}
-        </div>
       ) : (
-        <Empty
-          icon={<CalendarDays size={36} />}
-          title={
-            filtersActive
-              ? t("dashboard.empty_filtered_title")
-              : tab === "upcoming"
-                ? t("dashboard.empty_upcoming_title")
-                : t("dashboard.empty_history_title")
-          }
-        >
-          <p>
-            {filtersActive
-              ? t("dashboard.empty_filtered_body")
-              : tab === "upcoming"
-                ? t("dashboard.empty_upcoming_body")
-                : t("dashboard.empty_history_body")}
-          </p>
-          {!filtersActive && (
-            <Link className="ds-button" to="/">
-              {t("common.find_rooms")}
-            </Link>
+        <>
+          {truncated ? (
+            <ErrorState error={t("dashboard.truncated_warning")} />
+          ) : null}
+          {bookings.length ? (
+            <div className="booking-list">
+              {groups.map((group, groupIndex) => (
+                <section className="booking-day" key={group.date}>
+                  <h2 className="booking-day-heading">
+                    {groupIndex === 0 && tab === "upcoming"
+                      ? t("dashboard.next_day", {
+                          date: displayDate(group.items[0].startTime, true),
+                        })
+                      : displayDate(group.items[0].startTime, true)}
+                  </h2>
+                  {group.items.map((b, i) => (
+                    <article
+                      className={`booking-row ${groupIndex === 0 && i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
+                      key={b.id}
+                    >
+                      <div className="booking-date">
+                        <span>
+                          {new Intl.DateTimeFormat(undefined, {
+                            timeZone: "Europe/Oslo",
+                            month: "short",
+                          }).format(b.startTime)}
+                        </span>
+                        <strong>
+                          {new Intl.DateTimeFormat(undefined, {
+                            timeZone: "Europe/Oslo",
+                            day: "numeric",
+                          }).format(b.startTime)}
+                        </strong>
+                      </div>
+                      <div className="booking-main">
+                        <Status status={b.status} />
+                        <h3>
+                          <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
+                        </h3>
+                        <p>{b.title || b.reference}</p>
+                      </div>
+                      <div className="booking-time">
+                        <strong>
+                          {shortTime(b.startTime)}–{shortTime(b.endTime)}
+                        </strong>
+                        {typeof b.people === "number" && b.people > 0 ? (
+                          <span>
+                            {t("booking.participants")}: {b.people}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="booking-actions">
+                        <Link
+                          className="ds-button"
+                          data-variant="secondary"
+                          data-size="sm"
+                          to={`/booking/${b.id}`}
+                        >
+                          {t("dashboard.view_booking")}
+                          <ArrowRight size={16} />
+                        </Link>
+                        <Link
+                          className="ds-button"
+                          data-size="sm"
+                          to={`/booking/${b.id}#meldinger`}
+                        >
+                          {t("messages.send")}
+                          <MessageCircle size={16} />
+                        </Link>
+                        {typeof b.totalPrice === "number" &&
+                        b.totalPrice > 0 ? (
+                          <span className="caption">
+                            {money(b.totalPrice, b.currency)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              ))}
+            </div>
+          ) : (
+            <Empty
+              icon={<CalendarDays size={36} />}
+              title={
+                filtersActive
+                  ? t("dashboard.empty_filtered_title")
+                  : tab === "upcoming"
+                    ? t("dashboard.empty_upcoming_title")
+                    : t("dashboard.empty_history_title")
+              }
+            >
+              <p>
+                {filtersActive
+                  ? t("dashboard.empty_filtered_body")
+                  : tab === "upcoming"
+                    ? t("dashboard.empty_upcoming_body")
+                    : t("dashboard.empty_history_body")}
+              </p>
+              {!filtersActive && (
+                <Link className="ds-button" to="/">
+                  {t("common.find_rooms")}
+                </Link>
+              )}
+            </Empty>
           )}
-        </Empty>
+        </>
       )}
     </div>
   );

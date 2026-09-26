@@ -332,7 +332,8 @@
     "empty_upcoming_title": "Du har ingen kommende bookinger",
     "empty_upcoming_body": "Finn et rom til ditt neste møte. Vi tar vare på oversikten her.",
     "empty_history_title": "Ingen tidligere bookinger",
-    "empty_history_body": "Avsluttede og kansellerte bookinger vil vises her."
+    "empty_history_body": "Avsluttede og kansellerte bookinger vil vises her.",
+    "truncated_warning": "Listen nådde grensen på 500 bookinger. Åpne Digilist for hele historikken."
   },
   "messages": {
     "document_title": "Meldinger",
