@@ -4,6 +4,8 @@ import { DEFAULT_LOCALE } from "./locale";
 const nb: Record<string, string> = {
   invalid_origin: "Ugyldig forespørsel. Last siden på nytt.",
   too_many_attempts: "For mange forsøk. Vent et minutt og prøv igjen.",
+  too_many_attempts_wait:
+    "For mange forsøk. Prøv igjen om {{minutes}} minutter.",
   login_required: "Logg inn for å fortsette.",
   building_member_required: "Du må være medlem av bygget for å bestille.",
   admin_required: "Du har ikke administratortilgang.",
@@ -130,6 +132,8 @@ const nb: Record<string, string> = {
 const en: Record<string, string> = {
   invalid_origin: "Invalid request. Reload the page.",
   too_many_attempts: "Too many attempts. Wait a minute and try again.",
+  too_many_attempts_wait:
+    "Too many attempts. Try again in {{minutes}} minutes.",
   login_required: "Sign in to continue.",
   building_member_required: "You must be a member of the building to book.",
   admin_required: "You do not have administrator access.",
