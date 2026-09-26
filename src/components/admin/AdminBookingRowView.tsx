@@ -183,7 +183,6 @@ export function AdminBookingColumnHeader({
       <span>{columns.resource}</span>
       <span>{columns.schedule}</span>
       <span>{columns.customer}</span>
-      <span>{columns.payment}</span>
       <span>{columns.status}</span>
       <span className="admin-bl-header-actions">{columns.actions}</span>
     </div>
@@ -208,17 +207,12 @@ export function AdminBookingRowView({
     }
   };
 
-  const paymentClass =
-    row.paymentTone === "unpaid"
-      ? "admin-bl-secondary admin-bl-payment-unpaid"
-      : "admin-bl-secondary";
-
   const primary = row.actions.filter((action) => action.primary);
   const menu = row.actions.filter((action) => !action.primary);
 
   return (
     <div
-      className={`admin-bl-row${row.cancelled ? " is-cancelled" : ""}`}
+      className={`admin-bl-row${row.cancelled ? " is-cancelled" : ""}${row.finished ? " is-finished" : ""}`}
       role="link"
       tabIndex={0}
       onClick={() => onView(row.id)}
@@ -248,12 +242,6 @@ export function AdminBookingRowView({
           </a>
         ) : row.customerEmail ? (
           <span className="admin-bl-secondary">{row.customerEmail}</span>
-        ) : null}
-      </div>
-      <div className="admin-bl-col">
-        <span className="admin-bl-primary">{row.paymentAmountLabel}</span>
-        {row.paymentStatusLabel ? (
-          <span className={paymentClass}>{row.paymentStatusLabel}</span>
         ) : null}
       </div>
       <div className="admin-bl-status">

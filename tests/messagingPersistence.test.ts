@@ -53,6 +53,7 @@ describe("message history survives reopening the database file", () => {
     const conversationId = opened.conversation!.id;
     expect(conversationId.startsWith("sup_")).toBe(true);
     expect(opened.messages).toHaveLength(1);
+    expect(opened.conversation?.canAttachImages).toBe(true);
 
     const replied = first.sendConversationMessage(
       conversationId,
@@ -61,20 +62,56 @@ describe("message history survives reopening the database file", () => {
       randomUUID(),
     );
     expect(replied.messages).toHaveLength(2);
+
+    const withImage = first.sendConversationMessage(
+      conversationId,
+      "Se bildet",
+      customer,
+      randomUUID(),
+      "/message-images/test-support.jpg",
+    );
+    expect(withImage.messages.at(-1)?.imageUrl).toBe(
+      "/message-images/test-support.jpg",
+    );
     first.db.close();
 
     const second = new MessagingLocalStore(path);
     const thread = second.conversationThread(conversationId, customer);
     expect(thread.conversation?.id).toBe(conversationId);
     expect(thread.conversation?.kind).toBe("support");
+    expect(thread.conversation?.canAttachImages).toBe(true);
     expect(thread.messages.map((m) => m.content)).toEqual([
       "Nettsiden laster sakte",
       "Takk, vi ser på det.",
+      "Se bildet",
     ]);
+    expect(thread.messages.at(-1)?.imageUrl).toBe(
+      "/message-images/test-support.jpg",
+    );
     expect(second.inbox(admin).some((row) => row.id === conversationId)).toBe(
       true,
     );
     second.db.close();
+  });
+
+  it("stores an image-only support message with preview Bilde", () => {
+    const { dir, path } = tempDb("support-image");
+    dirs.push(dir);
+    const store = new MessagingLocalStore(path);
+    const opened = store.openSupport(customer);
+    const conversationId = opened.conversation!.id;
+    const sent = store.sendConversationMessage(
+      conversationId,
+      "   ",
+      customer,
+      randomUUID(),
+      "/message-images/only.jpg",
+    );
+    expect(sent.messages).toHaveLength(1);
+    expect(sent.messages[0]?.content).toBe("");
+    expect(sent.messages[0]?.imageUrl).toBe("/message-images/only.jpg");
+    expect(sent.conversation?.preview).toBe("Bilde");
+    store.db.close();
   });
 
   it("keeps announcements and dismissals after reopen", () => {

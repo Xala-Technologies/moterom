@@ -78,6 +78,7 @@ export class MessagingLocalStore {
       unread: Number(row.unread || 0),
       customerName: String(row.customer_name),
       customerId: String(row.customer_id),
+      canAttachImages: true,
     };
   }
 
@@ -176,6 +177,7 @@ export class MessagingLocalStore {
         unread: 0,
         customerName: user.name,
         customerId: user.id,
+        canAttachImages: true,
       };
       this.saveConversation(conversation);
     } else if (conversation.customerName !== user.name) {
@@ -219,6 +221,7 @@ export class MessagingLocalStore {
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): ConversationThread {
     const thread = this.conversationThread(id, user);
     if (!thread.conversation)
@@ -232,6 +235,7 @@ export class MessagingLocalStore {
       content,
       user,
       clientMessageId,
+      imageUrl,
     );
   }
 
@@ -273,6 +277,7 @@ export class MessagingLocalStore {
     content: string,
     user: User,
     clientMessageId?: string,
+    imageUrl?: string,
   ): ConversationThread {
     if (clientMessageId) {
       const replayed = this.messagesFor(conversation.id).find(
@@ -283,6 +288,13 @@ export class MessagingLocalStore {
       );
       if (replayed) return this.thread(conversation);
     }
+    const text = content.trim();
+    if (!text && !imageUrl)
+      throw new AppError(
+        400,
+        "Skriv en melding eller legg ved et bilde.",
+        "validation_failed",
+      );
     const createdAt = Date.now();
     const message: Message & { clientMessageId?: string } = {
       id: clientMessageId || randomUUID(),
@@ -290,7 +302,8 @@ export class MessagingLocalStore {
       senderId: user.id,
       senderName: user.isAdmin ? "Administrator" : user.name,
       fromAdmin: user.isAdmin,
-      content,
+      content: text,
+      ...(imageUrl ? { imageUrl } : {}),
       createdAt,
       clientMessageId,
     };
@@ -300,7 +313,7 @@ export class MessagingLocalStore {
          VALUES (?, ?, ?, ?)`,
       )
       .run(message.id, conversation.id, createdAt, JSON.stringify(message));
-    conversation.preview = content;
+    conversation.preview = text || "Bilde";
     conversation.updatedAt = createdAt;
     conversation.unread = user.isAdmin ? 0 : 1;
     this.saveConversation(conversation);

@@ -295,58 +295,66 @@ export function RoomEditForm({
             />
           </Field>
         </div>
-        <Field>
-          <Label htmlFor={descriptionId}>{t("admin.description")}</Label>
-          <Textarea
-            id={descriptionId}
-            value={room.description}
-            maxLength={3000}
-            onChange={(event) =>
-              onChange({
-                ...roomRef.current,
-                description: event.target.value,
-              })
-            }
-          />
-        </Field>
-        <Field>
-          <Label htmlFor={descriptionEnId}>{t("admin.description_en")}</Label>
-          <Textarea
-            id={descriptionEnId}
-            value={room.descriptionEn}
-            maxLength={3000}
-            onChange={(event) =>
-              onChange({
-                ...roomRef.current,
-                descriptionEn: event.target.value,
-              })
-            }
-          />
-        </Field>
-        <Field>
-          <Label htmlFor={amenitiesId}>{t("admin.room_amenities")}</Label>
-          <Textarea
-            id={amenitiesId}
-            value={amenitiesText}
-            maxLength={1600}
-            onChange={(event) => setAmenitiesText(event.target.value)}
-          />
-          <p className="caption">{t("admin.room_amenities_hint")}</p>
-        </Field>
-        <Field>
-          <Label htmlFor={arrivalId}>{t("admin.room_arrival_info")}</Label>
-          <Textarea
-            id={arrivalId}
-            value={room.arrivalInfo || ""}
-            maxLength={1000}
-            onChange={(event) =>
-              onChange({
-                ...roomRef.current,
-                arrivalInfo: event.target.value || undefined,
-              })
-            }
-          />
-        </Field>
+        <div className="room-edit-pair">
+          <Field>
+            <Label htmlFor={descriptionId}>{t("admin.description")}</Label>
+            <Textarea
+              id={descriptionId}
+              value={room.description}
+              maxLength={3000}
+              rows={3}
+              onChange={(event) =>
+                onChange({
+                  ...roomRef.current,
+                  description: event.target.value,
+                })
+              }
+            />
+          </Field>
+          <Field>
+            <Label htmlFor={descriptionEnId}>{t("admin.description_en")}</Label>
+            <Textarea
+              id={descriptionEnId}
+              value={room.descriptionEn}
+              maxLength={3000}
+              rows={3}
+              onChange={(event) =>
+                onChange({
+                  ...roomRef.current,
+                  descriptionEn: event.target.value,
+                })
+              }
+            />
+          </Field>
+        </div>
+        <div className="room-edit-pair">
+          <Field>
+            <Label htmlFor={amenitiesId}>{t("admin.room_amenities")}</Label>
+            <Textarea
+              id={amenitiesId}
+              value={amenitiesText}
+              maxLength={1600}
+              rows={3}
+              onChange={(event) => setAmenitiesText(event.target.value)}
+            />
+            <p className="caption">{t("admin.room_amenities_hint")}</p>
+          </Field>
+          <Field>
+            <Label htmlFor={arrivalId}>{t("admin.room_arrival_info")}</Label>
+            <Textarea
+              id={arrivalId}
+              value={room.arrivalInfo || ""}
+              maxLength={1000}
+              rows={3}
+              onChange={(event) =>
+                onChange({
+                  ...roomRef.current,
+                  arrivalInfo: event.target.value || undefined,
+                })
+              }
+            />
+          </Field>
+        </div>
         <label className="consent">
           <input
             type="checkbox"

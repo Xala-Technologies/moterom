@@ -14,3 +14,7 @@ api/_app.bundle.js
 api/_app.bundle.js.map
 api/app.bundle.js
 api/app.bundle.js.map
+public/message-images/
+public/rooms/room-*.jpg
+public/rooms/room-*.png
+public/rooms/room-*.webp

@@ -31,29 +31,27 @@ const base: Booking = {
 };
 
 describe("toAdminBookingRow", () => {
-  it("does not invent a paid badge from price alone", () => {
+  it("builds approve and reject actions for pending bookings", () => {
     const row = toAdminBookingRow(base, {
       t: (key) => key,
       formatters,
       canApprove: true,
       canReject: true,
     });
-    expect(row.paymentAmountLabel).toBe("500 NOK");
-    expect(row.paymentTone).toBe("none");
-    expect(row.paymentStatusLabel).toBeNull();
     expect(row.actions.map((a) => a.id)).toEqual(["approve", "reject"]);
+    expect(row.status).toBe("pending");
   });
 
-  it("marks outstanding payment only when the server requires it", () => {
+  it("omits approve and reject when the booking is already confirmed", () => {
     const row = toAdminBookingRow(
-      { ...base, paymentRequired: true, status: "confirmed" },
+      { ...base, status: "confirmed" },
       {
         t: (key) => key,
         formatters,
+        canApprove: true,
+        canReject: true,
       },
     );
-    expect(row.paymentTone).toBe("unpaid");
-    expect(row.paymentStatusLabel).toBe("booking.payment_outstanding");
     expect(row.actions).toEqual([]);
   });
 
@@ -136,6 +134,44 @@ describe("toAdminBookingRow", () => {
     });
     expect(row.imageUrl).toBe("/rooms/sauda-1.webp");
     expect(row.imageKind).toBe("illustrative");
+  });
+
+  it("marks past and closed bookings as finished", () => {
+    const future = Date.now() + 60_000;
+    const past = Date.now() - 60_000;
+    expect(
+      toAdminBookingRow(
+        {
+          ...base,
+          status: "confirmed",
+          startTime: past - 3_600_000,
+          endTime: past,
+        },
+        { t: (key) => key, formatters },
+      ).finished,
+    ).toBe(true);
+    expect(
+      toAdminBookingRow(
+        {
+          ...base,
+          status: "cancelled",
+          startTime: future,
+          endTime: future + 3_600_000,
+        },
+        { t: (key) => key, formatters },
+      ).finished,
+    ).toBe(true);
+    expect(
+      toAdminBookingRow(
+        {
+          ...base,
+          status: "confirmed",
+          startTime: future,
+          endTime: future + 3_600_000,
+        },
+        { t: (key) => key, formatters },
+      ).finished,
+    ).toBe(false);
   });
 });
 
