@@ -3,6 +3,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,6 +13,29 @@ import type { InsightsTrendPoint } from "../../../shared/types";
 import { useFormatters, useT } from "../../i18n";
 
 type Measure = "timer" | "antall";
+
+type TrendRow = InsightsTrendPoint & {
+  current: number;
+  previous: number;
+};
+
+function readChartColors() {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    accent:
+      styles.getPropertyValue("--ds-color-accent-base-default").trim() ||
+      "#003057",
+    compare:
+      styles.getPropertyValue("--ds-color-neutral-text-subtle").trim() ||
+      "#7a90a4",
+    grid:
+      styles.getPropertyValue("--ds-color-neutral-border-subtle").trim() ||
+      "#d6dde5",
+    text:
+      styles.getPropertyValue("--ds-color-neutral-text-subtle").trim() ||
+      "#5c6b7a",
+  };
+}
 
 export function TrendChart({
   points,
@@ -28,41 +52,44 @@ export function TrendChart({
 }) {
   const { t } = useT();
   const { formatCount, formatHours, displayDate } = useFormatters();
-  const [selectedKey, setSelectedKey] = useState<string | null>(
-    points[0]?.date ?? null,
-  );
-  const [colors, setColors] = useState({
-    accent: "#003057",
-    compare: "#7a90a4",
-    grid: "#d6dde5",
-    text: "#5c6b7a",
+  const [selectedKey, setSelectedKey] = useState<string | null>(() => {
+    const withActivity = [...points]
+      .reverse()
+      .find((point) => point.reservedHours > 0 || point.bookingCount > 0);
+    return withActivity?.date ?? points.at(-1)?.date ?? null;
   });
+  const [colors, setColors] = useState(readChartColors);
 
   useEffect(() => {
-    const styles = getComputedStyle(document.documentElement);
-    setColors({
-      accent:
-        styles.getPropertyValue("--ds-color-accent-base-default").trim() ||
-        "#003057",
-      compare:
-        styles.getPropertyValue("--ds-color-neutral-border-default").trim() ||
-        "#7a90a4",
-      grid:
-        styles.getPropertyValue("--ds-color-neutral-border-subtle").trim() ||
-        "#d6dde5",
-      text:
-        styles.getPropertyValue("--ds-color-neutral-text-subtle").trim() ||
-        "#5c6b7a",
+    const sync = () => setColors(readChartColors());
+    sync();
+    const root = document.documentElement;
+    const observer = new MutationObserver(sync);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-color-scheme", "class", "style"],
     });
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", sync);
+    return () => {
+      observer.disconnect();
+      media.removeEventListener("change", sync);
+    };
   }, []);
 
   useEffect(() => {
-    if (!points.some((p) => p.date === selectedKey)) {
-      setSelectedKey(points[0]?.date ?? null);
-    }
+    if (points.some((p) => p.date === selectedKey)) return;
+    const withActivity = [...points]
+      .reverse()
+      .find((point) => point.reservedHours > 0 || point.bookingCount > 0);
+    setSelectedKey(withActivity?.date ?? points.at(-1)?.date ?? null);
   }, [points, selectedKey]);
 
   const format = measure === "antall" ? formatCount : formatHours;
+  const measureLabel =
+    measure === "antall"
+      ? t("admin.insights.bookings_starting")
+      : t("admin.insights.reserved_hours");
   const rows = useMemo(
     () =>
       points.map((point) => ({
@@ -92,6 +119,14 @@ export function TrendChart({
               : t("admin.insights.unit_hours"),
         });
 
+  const selectPoint = (data: unknown) => {
+    const point = data as { date?: string };
+    if (point.date) setSelectedKey(point.date);
+  };
+
+  const barOpacity = (date: string) =>
+    !selectedKey || date === selectedKey ? 1 : 0.32;
+
   return (
     <figure className="insights-trend-chart">
       <div className="insights-trend-toolbar">
@@ -119,16 +154,16 @@ export function TrendChart({
       </div>
       <div className="insights-trend-frame">
         <div className="insights-trend-plot">
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart
               data={rows}
-              margin={{ top: 12, right: 8, left: 0, bottom: 4 }}
-              barCategoryGap="28%"
-              barGap={4}
+              margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
+              barCategoryGap="18%"
+              barGap={3}
             >
               <CartesianGrid
                 stroke={colors.grid}
-                strokeDasharray="3 5"
+                strokeWidth={1}
                 vertical={false}
               />
               <XAxis
@@ -136,22 +171,23 @@ export function TrendChart({
                 tick={{ fill: colors.text, fontSize: 12 }}
                 axisLine={{ stroke: colors.grid }}
                 tickLine={false}
+                interval="preserveStartEnd"
               />
               <YAxis
                 tick={{ fill: colors.text, fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
-                width={44}
+                width={40}
                 tickFormatter={(value: number) => format(value)}
               />
               <Tooltip
-                cursor={{ fill: "rgba(0, 48, 87, 0.06)" }}
+                cursor={{
+                  fill: colors.accent,
+                  fillOpacity: 0.06,
+                }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.[0]) return null;
-                  const point = payload[0].payload as InsightsTrendPoint & {
-                    current: number;
-                    previous: number;
-                  };
+                  const point = payload[0].payload as TrendRow;
                   return (
                     <div className="insights-trend-tooltip">
                       <strong>{point.label}</strong>
@@ -160,19 +196,14 @@ export function TrendChart({
                         {displayDate(point.toInclusive)}
                       </span>
                       <span>
-                        {t("admin.insights.reserved_hours")}:{" "}
-                        {formatHours(point.reservedHours)}
+                        {measureLabel}: {format(point.current)}
                       </span>
-                      <span>
-                        {t("admin.insights.bookings_starting")}:{" "}
-                        {formatCount(point.bookingCount)}
-                      </span>
-                      {compare && (
+                      {compare ? (
                         <span>
                           {t("admin.insights.previous_period")}:{" "}
                           {format(point.previous)}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   );
                 }}
@@ -181,29 +212,41 @@ export function TrendChart({
                 dataKey="current"
                 name={t("admin.insights.selected_period")}
                 fill={colors.accent}
-                radius={[4, 4, 0, 0]}
-                maxBarSize={48}
-                onClick={(data) => {
-                  const point = data as { date?: string };
-                  if (point.date) setSelectedKey(point.date);
-                }}
-              />
-              {compare && (
+                radius={[3, 3, 0, 0]}
+                maxBarSize={32}
+                onClick={selectPoint}
+                cursor="pointer"
+              >
+                {rows.map((row) => (
+                  <Cell
+                    key={`current-${row.date}`}
+                    fill={colors.accent}
+                    fillOpacity={barOpacity(row.date)}
+                  />
+                ))}
+              </Bar>
+              {compare ? (
                 <Bar
                   dataKey="previous"
                   name={t("admin.insights.previous_period")}
                   fill={colors.compare}
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={48}
-                  onClick={(data) => {
-                    const point = data as { date?: string };
-                    if (point.date) setSelectedKey(point.date);
-                  }}
-                />
-              )}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={32}
+                  onClick={selectPoint}
+                  cursor="pointer"
+                >
+                  {rows.map((row) => (
+                    <Cell
+                      key={`previous-${row.date}`}
+                      fill={colors.compare}
+                      fillOpacity={barOpacity(row.date)}
+                    />
+                  ))}
+                </Bar>
+              ) : null}
             </BarChart>
           </ResponsiveContainer>
-          {compare && (
+          {compare ? (
             <ul className="insights-trend-legend">
               <li>
                 <i style={{ background: colors.accent }} />
@@ -214,7 +257,7 @@ export function TrendChart({
                 {t("admin.insights.previous_period")}
               </li>
             </ul>
-          )}
+          ) : null}
         </div>
         <aside className="insights-trend-detail" aria-live="polite">
           {selected ? (
@@ -233,7 +276,7 @@ export function TrendChart({
                   <dt>{t("admin.insights.bookings_starting")}</dt>
                   <dd>{formatCount(selected.bookingCount)}</dd>
                 </div>
-                {compare && (
+                {compare ? (
                   <>
                     <div>
                       <dt>{t("admin.insights.previous_hours")}</dt>
@@ -246,15 +289,15 @@ export function TrendChart({
                       <dd>{formatCount(selected.previousBookingCount ?? 0)}</dd>
                     </div>
                   </>
-                )}
+                ) : null}
               </dl>
-              {selected.incomplete && (
+              {selected.incomplete ? (
                 <p className="caption">
                   {grain === "month"
                     ? t("admin.insights.ongoing_month")
                     : t("admin.insights.ongoing_week")}
                 </p>
-              )}
+              ) : null}
               <p className="caption">{t("admin.insights.chart_click_hint")}</p>
             </>
           ) : (
