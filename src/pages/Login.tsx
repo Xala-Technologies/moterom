@@ -107,7 +107,7 @@ export function Login() {
       // Revoked Digilist members must not keep a one-tap / trusted shortcut.
       if (config?.access === "members" && !next.isMember) {
         forgetLoginIdentity(next.email);
-      } else {
+      } else if (config) {
         trustLoginIdentifier(
           next.email,
           "email",
@@ -117,7 +117,9 @@ export function Login() {
       }
       setEmailHistory(readLoginEmails());
     }
-    if (config?.access === "members" && next && !next.isMember) return;
+    // Do not enter the portal until members gating is known and satisfied.
+    if (!config) return;
+    if (config.access === "members" && next && !next.isMember) return;
     nav(postLoginPath(destination, next), { replace: true });
   };
 

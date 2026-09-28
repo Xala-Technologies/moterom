@@ -8,14 +8,20 @@ import type { AccessRequest } from "../../shared/types";
 type Props = {
   onDone?: () => void;
   onCancel?: () => void;
+  /** After submit — return to login / log out. Defaults to onCancel. */
+  onBackToLogin?: () => void;
   showCancel?: boolean;
+  /** Cancel while editing the form (default: Tilbake til innlogging). */
+  cancelLabel?: string;
 };
 
 /** In-app access request form. Membership is still granted in Digilist. */
 export function AccessRequestForm({
   onDone,
   onCancel,
+  onBackToLogin,
   showCancel = false,
+  cancelLabel,
 }: Props) {
   const { user, config } = useApp();
   const { t } = useT();
@@ -26,6 +32,7 @@ export function AccessRequestForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
   const [submitted, setSubmitted] = useState(false);
+  const backToLogin = onBackToLogin ?? onCancel;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -44,7 +51,7 @@ export function AccessRequestForm({
 
   if (submitted) {
     return (
-      <div className="access-request-form" role="status">
+      <div className="access-request-form stack" role="status">
         <h2 className="login-form-title">
           {t("auth.access_request_sent_title")}
         </h2>
@@ -58,6 +65,15 @@ export function AccessRequestForm({
               {t("auth.access_request_email_fallback")}
             </a>
           </p>
+        ) : null}
+        {backToLogin ? (
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => backToLogin()}
+          >
+            {t("auth.back_to_login")}
+          </Button>
         ) : null}
       </div>
     );
@@ -113,7 +129,7 @@ export function AccessRequestForm({
       </Button>
       {showCancel && onCancel ? (
         <Button variant="tertiary" type="button" onClick={onCancel}>
-          {t("auth.back_to_login")}
+          {cancelLabel ?? t("auth.back_to_login")}
         </Button>
       ) : null}
     </form>
