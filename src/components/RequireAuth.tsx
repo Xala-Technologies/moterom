@@ -7,7 +7,7 @@ import { AccessRequestForm } from "./AccessRequestForm";
 import { useT } from "../i18n";
 import { forgetLoginIdentity } from "../loginHistory";
 
-/** Shared panel: signed in (or Digilist auth refused) but not a building member. */
+/** Shared panel: signed in but not a building member (login layout only). */
 export function AccessPending({
   onLogout,
 }: {
@@ -32,7 +32,12 @@ export function AccessPending({
   return (
     <div className="container access-pending">
       {showForm ? (
-        <AccessRequestForm showCancel onCancel={() => setShowForm(false)} />
+        <AccessRequestForm
+          showCancel
+          cancelLabel={t("common.back")}
+          onCancel={() => setShowForm(false)}
+          onBackToLogin={() => void logout()}
+        />
       ) : (
         <>
           <h1>{t("auth.access_pending_title")}</h1>
@@ -70,13 +75,14 @@ export function RequireAuth() {
       />
     );
   }
+  // Keep pending UX on /login (auth-shell), not inside Dashboard chrome.
   if (config?.access === "members" && !user.isMember) {
-    return <AccessPending />;
+    return <Navigate replace to="/login" />;
   }
   return <Outlet />;
 }
 
-/** Shown on login when the user is signed in but not yet approved for the building. */
+/** Shown on login when Digilist auth is refused for non-members. */
 export function AccessRequestFromLogin({
   onDismiss,
 }: {
@@ -85,7 +91,14 @@ export function AccessRequestFromLogin({
   const { t } = useT();
   const [showForm, setShowForm] = useState(false);
   if (showForm) {
-    return <AccessRequestForm showCancel onCancel={() => setShowForm(false)} />;
+    return (
+      <AccessRequestForm
+        showCancel
+        cancelLabel={t("common.back")}
+        onCancel={() => setShowForm(false)}
+        onBackToLogin={onDismiss}
+      />
+    );
   }
   return (
     <div className="access-pending login-access-pending" role="status">

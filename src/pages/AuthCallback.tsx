@@ -9,13 +9,15 @@ import { postLoginPath } from "../postLoginPath";
 
 /** Digilist auth callback — receives sessionToken after Digilist redirect. */
 export function AuthCallback() {
-  const { config, refresh } = useApp();
+  const { config, loading, refresh } = useApp();
   const { t } = useT();
   const [params] = useSearchParams();
   const nav = useNavigate();
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
+    // Wait for portal config so members-only gating cannot race into the app shell.
+    if (loading || !config) return;
     let cancelled = false;
     const run = async () => {
       const token = params.get("sessionToken");
@@ -34,7 +36,7 @@ export function AuthCallback() {
         await post("/auth/session", { token });
         if (cancelled) return;
         const next = await refresh();
-        if (config?.access === "members" && next && !next.isMember) {
+        if (config.access === "members" && next && !next.isMember) {
           nav("/login", { replace: true });
           return;
         }
@@ -47,7 +49,7 @@ export function AuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, [params, refresh, nav, t, config?.access]);
+  }, [params, refresh, nav, t, config, loading]);
 
   if (error instanceof ApiError && error.code === "members_only_access") {
     return (
