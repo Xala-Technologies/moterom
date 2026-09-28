@@ -300,7 +300,7 @@ export function AdminMessages({
                         type="button"
                         variant="tertiary"
                         data-size="sm"
-                        className="admin-messages-read-toggle"
+                        className="messages-desk-read-toggle"
                         disabled={readBusyId === row.id}
                         aria-label={
                           isUnread

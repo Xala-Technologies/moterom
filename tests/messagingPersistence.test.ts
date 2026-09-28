@@ -158,6 +158,23 @@ describe("message history survives reopening the database file", () => {
       }).unread,
     ).toBe(1);
     store.clearAdminUnreadFlag("booking-conv-1");
+    store.setForcedUnreadFlag("booking-conv-1", false, true);
+    expect(
+      store.applyForcedUnreadFlag(
+        {
+          id: "booking-conv-1",
+          kind: "booking",
+          roomName: "Sauda 1",
+          subject: "Sauda 1",
+          preview: "Hei",
+          updatedAt: Date.now(),
+          unread: 0,
+          customerName: "Kari",
+        },
+        false,
+      ).unread,
+    ).toBe(1);
+    store.clearForcedUnreadFlag("booking-conv-1", false);
     store.db.close();
   });
 

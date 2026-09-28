@@ -176,10 +176,10 @@ async function mergedInbox(ctx: Context): Promise<ConversationSummary[]> {
   const rows = [...booking, ...support].sort(
     (a, b) => b.updatedAt - a.updatedAt,
   );
-  // Admin list may force-unread Digilist booking threads (no Digilist API).
+  // Forced unread for Digilist booking threads (no Digilist mark-unread API).
   if (ctx.user?.isAdmin)
-    return rows.map((row) => messagingLocal.applyAdminUnreadFlag(row));
-  return rows;
+    return rows.map((row) => messagingLocal.applyForcedUnreadFlag(row, true));
+  return rows.map((row) => messagingLocal.applyForcedUnreadFlag(row, false));
 }
 
 /** Digilist has no peer read receipts; track them in local SQLite. */
@@ -230,8 +230,8 @@ async function conversationFrom(
       "Samtalen ble ikke funnet.",
       "conversation_not_found",
     );
-  // Opening a thread clears any admin forced-unread flag.
-  if (user.isAdmin) messagingLocal.clearAdminUnreadFlag(id);
+  // Opening a thread clears any forced-unread flag for this viewer.
+  messagingLocal.clearForcedUnreadFlag(id, user.isAdmin);
   const thread = await ctx.provider.conversationThread(id, user);
   if (ctx.provider instanceof Digilist)
     return applyDigilistPeerReceipts(thread, user, { opened: true });
@@ -256,10 +256,10 @@ async function setConversationUnreadFrom(
   if (ctx.provider instanceof Digilist) {
     await ctx.provider.assertConversationAccess(id, user);
     if (unread) {
-      messagingLocal.setAdminUnreadFlag(id, true);
+      messagingLocal.setForcedUnreadFlag(id, user.isAdmin, true);
       return { success: true, unread: 1 };
     }
-    messagingLocal.clearAdminUnreadFlag(id);
+    messagingLocal.clearForcedUnreadFlag(id, user.isAdmin);
     await ctx.provider.markConversationRead(id, user);
     messagingLocal.clearDigilistPeerUnread(
       id,
@@ -313,6 +313,9 @@ async function digilistBookingThread(
   user: User,
 ): Promise<ConversationThread> {
   const thread = await ctx.provider.bookingThread(bookingId, user);
+  const conversationId = thread.conversation?.id;
+  if (conversationId)
+    messagingLocal.clearForcedUnreadFlag(conversationId, user.isAdmin);
   if (ctx.provider instanceof Digilist)
     return applyDigilistPeerReceipts(thread, user, { opened: true });
   return thread;
@@ -1114,6 +1117,18 @@ app.post("/api/messages/:id", async (req, res) => {
         imageUrl,
       ),
     );
+});
+app.post("/api/messages/:id/read-state", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const unread = z.boolean().parse(req.body?.unread);
+  res.json(
+    await setConversationUnreadFrom(
+      ctx,
+      String(req.params.id),
+      ctx.user!,
+      unread,
+    ),
+  );
 });
 app.get("/api/announcements/active", async (req, res) => {
   const ctx = await context(req, res, true);
