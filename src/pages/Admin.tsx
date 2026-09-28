@@ -134,6 +134,7 @@ export function Admin() {
   const accessResult = useApi<AccessRequest[]>(
     user?.isAdmin ? "/admin/access-requests" : null,
   );
+  const [membersRevision, setMembersRevision] = useState(0);
   const todayDate = today();
   const date = parseOsloDate(params.get("dato")) ?? todayDate;
   const [view, setView] = useState<"day" | "week">("day");
@@ -975,8 +976,13 @@ export function Admin() {
             )}
             {section === "users" && (
               <div className="stack">
-                <AdminMembers />
-                <AdminAccessRequests result={accessResult} />
+                <AdminMembers key={membersRevision} />
+                <AdminAccessRequests
+                  result={accessResult}
+                  onMembersChanged={() =>
+                    setMembersRevision((value) => value + 1)
+                  }
+                />
               </div>
             )}
             {section === "messages" && (
