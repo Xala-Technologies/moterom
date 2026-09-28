@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LifeBuoy,
+  Mail,
+  MailOpen,
   MessageCircle,
   Search,
 } from "lucide-react";
@@ -63,6 +65,7 @@ export function Messages() {
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<Error>();
   const [phoneThreadOpen, setPhoneThreadOpen] = useState(false);
+  const [readBusyId, setReadBusyId] = useState<string>();
   const contactFieldId = useId();
   const topicFieldId = useId();
   const [narrow, setNarrow] = useState(
@@ -164,6 +167,33 @@ export function Messages() {
   const openRow = (row: ConversationSummary) => {
     setSelected(conversationSelectionKey(row));
     if (narrow) setPhoneThreadOpen(true);
+    if (row.unread > 0 && !row.id.startsWith("booking:")) {
+      result.setData((current) =>
+        (current || []).map((item) =>
+          item.id === row.id ? { ...item, unread: 0 } : item,
+        ),
+      );
+    }
+  };
+
+  const setReadState = async (row: ConversationSummary, unread: boolean) => {
+    if (readBusyId || row.id.startsWith("booking:")) return;
+    setReadBusyId(row.id);
+    try {
+      const next = await post<{ success: true; unread: number }>(
+        `/messages/${encodeURIComponent(row.id)}/read-state`,
+        { unread },
+      );
+      result.setData((current) =>
+        (current || []).map((item) =>
+          item.id === row.id ? { ...item, unread: next.unread } : item,
+        ),
+      );
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setReadBusyId(undefined);
+    }
   };
 
   const upsertInbox = (conversation: ConversationSummary) => {
@@ -468,62 +498,95 @@ export function Messages() {
                     const key = conversationSelectionKey(row);
                     const isActive = key === active;
                     const isUnread = row.unread > 0;
+                    const canToggleRead = !row.id.startsWith("booking:");
                     return (
                       <li key={row.id}>
-                        <button
-                          type="button"
+                        <div
                           className={
                             isActive
                               ? "customer-messages-row active"
                               : "customer-messages-row"
                           }
                           data-unread={isUnread ? "true" : undefined}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => openRow(row)}
                         >
-                          <span
-                            className={
-                              row.kind === "support"
-                                ? "customer-messages-avatar support"
-                                : "customer-messages-avatar"
-                            }
-                            aria-hidden="true"
+                          <button
+                            type="button"
+                            className="customer-messages-row-main"
+                            aria-current={isActive ? "true" : undefined}
+                            onClick={() => openRow(row)}
                           >
-                            {row.kind === "support" ? (
-                              <MessageCircle size={18} />
-                            ) : (
-                              messageInitials(label)
-                            )}
-                          </span>
-                          <span className="customer-messages-row-body">
-                            <span className="customer-messages-row-top">
-                              <strong>{label}</strong>
-                              <time
-                                dateTime={new Date(row.updatedAt).toISOString()}
-                              >
-                                {displayDate(row.updatedAt)}{" "}
-                                {shortTime(row.updatedAt)}
-                              </time>
+                            <span
+                              className={
+                                row.kind === "support"
+                                  ? "customer-messages-avatar support"
+                                  : "customer-messages-avatar"
+                              }
+                              aria-hidden="true"
+                            >
+                              {row.kind === "support" ? (
+                                <MessageCircle size={18} />
+                              ) : (
+                                messageInitials(label)
+                              )}
                             </span>
-                            {row.kind === "booking" &&
-                            row.roomName &&
-                            row.roomName !== label ? (
-                              <span className="customer-messages-row-meta">
-                                {row.roomName}
+                            <span className="customer-messages-row-body">
+                              <span className="customer-messages-row-top">
+                                <strong>{label}</strong>
+                                <time
+                                  dateTime={new Date(
+                                    row.updatedAt,
+                                  ).toISOString()}
+                                >
+                                  {displayDate(row.updatedAt)}{" "}
+                                  {shortTime(row.updatedAt)}
+                                </time>
                               </span>
-                            ) : null}
-                            {row.preview ? (
-                              <span className="customer-messages-row-preview">
-                                {row.preview}
-                              </span>
-                            ) : null}
-                            {isUnread ? (
-                              <span className="customer-messages-row-unread">
-                                {t("messages.unread", { count: row.unread })}
-                              </span>
-                            ) : null}
-                          </span>
-                        </button>
+                              {row.kind === "booking" &&
+                              row.roomName &&
+                              row.roomName !== label ? (
+                                <span className="customer-messages-row-meta">
+                                  {row.roomName}
+                                </span>
+                              ) : null}
+                              {row.preview ? (
+                                <span className="customer-messages-row-preview">
+                                  {row.preview}
+                                </span>
+                              ) : null}
+                              {isUnread ? (
+                                <span className="customer-messages-row-unread">
+                                  {t("messages.unread", { count: row.unread })}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                          {canToggleRead ? (
+                            <Button
+                              type="button"
+                              variant="tertiary"
+                              data-size="sm"
+                              className="messages-desk-read-toggle"
+                              disabled={readBusyId === row.id}
+                              aria-label={
+                                isUnread
+                                  ? t("messages.mark_read")
+                                  : t("messages.mark_unread")
+                              }
+                              title={
+                                isUnread
+                                  ? t("messages.mark_read")
+                                  : t("messages.mark_unread")
+                              }
+                              onClick={() => void setReadState(row, !isUnread)}
+                            >
+                              {isUnread ? (
+                                <MailOpen size={16} aria-hidden="true" />
+                              ) : (
+                                <Mail size={16} aria-hidden="true" />
+                              )}
+                            </Button>
+                          ) : null}
+                        </div>
                       </li>
                     );
                   })}
