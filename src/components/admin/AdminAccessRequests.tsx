@@ -128,7 +128,14 @@ function RequestMenu({
   );
 }
 
-export function AdminAccessRequests({ result }: { result: ApiResult }) {
+export function AdminAccessRequests({
+  result,
+  onMembersChanged,
+}: {
+  result: ApiResult;
+  /** Refresh Digilist member directory after grant/revoke. */
+  onMembersChanged?: () => void;
+}) {
   const { config, notify } = useApp();
   const { t } = useT();
   const { displayDate } = useFormatters();
@@ -154,6 +161,7 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
   const rows = all.filter((row) => filter === "all" || row.status === filter);
 
   const setStatus = async (id: string, status: AccessRequestStatus) => {
+    const previous = all.find((row) => row.id === id);
     setBusyId(id);
     try {
       const updated = await api<AccessRequest>(`/admin/access-requests/${id}`, {
@@ -171,9 +179,14 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
                 : "admin.users.toasts.marked_approved_demo",
             )
           : status === "rejected"
-            ? t("admin.users.toasts.marked_rejected")
-            : t("admin.users.toasts.marked_pending"),
+            ? previous?.status === "approved"
+              ? t("admin.users.toasts.marked_revoked")
+              : t("admin.users.toasts.marked_rejected")
+            : previous?.status === "approved"
+              ? t("admin.users.toasts.marked_revoked")
+              : t("admin.users.toasts.marked_pending"),
       );
+      onMembersChanged?.();
     } catch (e) {
       notify((e as Error).message);
     } finally {
@@ -182,6 +195,7 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
   };
 
   const remove = async (id: string) => {
+    const previous = all.find((row) => row.id === id);
     setBusyId(id);
     try {
       await api<{ success: true }>(`/admin/access-requests/${id}`, {
@@ -189,7 +203,12 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
       });
       result.setData((prev) => (prev || []).filter((row) => row.id !== id));
       setRemoveTarget(undefined);
-      notify(t("admin.users.toasts.removed"));
+      notify(
+        previous?.status === "approved"
+          ? t("admin.users.toasts.marked_revoked")
+          : t("admin.users.toasts.removed"),
+      );
+      onMembersChanged?.();
     } catch (e) {
       notify((e as Error).message);
     } finally {
