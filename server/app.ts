@@ -73,6 +73,7 @@ import type {
   TenantMember,
   User,
 } from "../shared/types";
+import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts";
 import {
   buildInsights,
   buildRoomReport,
@@ -180,11 +181,46 @@ async function mergedInbox(ctx: Context): Promise<ConversationSummary[]> {
     return rows.map((row) => messagingLocal.applyAdminUnreadFlag(row));
   return rows;
 }
-function conversationFrom(
+
+/** Digilist has no peer read receipts; track them in local SQLite. */
+function applyDigilistPeerReceipts(
+  thread: ConversationThread,
+  user: User,
+  opts: { opened?: boolean; sent?: boolean },
+): ConversationThread {
+  const id = thread.conversation?.id;
+  if (!id || id.startsWith("booking:")) return thread;
+  if (opts.opened) {
+    messagingLocal.clearDigilistPeerUnread(
+      id,
+      user.isAdmin ? "admin" : "customer",
+    );
+  }
+  if (opts.sent) {
+    messagingLocal.bumpDigilistPeerUnread(
+      id,
+      user.isAdmin ? "customer" : "admin",
+    );
+  }
+  const peerUnread = messagingLocal.digilistPeerUnreadForViewer(
+    id,
+    user.isAdmin,
+  );
+  return {
+    ...thread,
+    messages: annotateMessagesWithReadReceipts(
+      thread.messages,
+      peerUnread,
+      user.isAdmin,
+    ),
+  };
+}
+
+async function conversationFrom(
   ctx: Context,
   id: string,
   user: User,
-): Promise<ConversationThread> | ConversationThread {
+): Promise<ConversationThread> {
   if (isSupportConversationId(id)) {
     return messagingLocal.conversationThread(id, user);
   }
@@ -196,7 +232,10 @@ function conversationFrom(
     );
   // Opening a thread clears any admin forced-unread flag.
   if (user.isAdmin) messagingLocal.clearAdminUnreadFlag(id);
-  return ctx.provider.conversationThread(id, user);
+  const thread = await ctx.provider.conversationThread(id, user);
+  if (ctx.provider instanceof Digilist)
+    return applyDigilistPeerReceipts(thread, user, { opened: true });
+  return thread;
 }
 async function setConversationUnreadFrom(
   ctx: Context,
@@ -222,19 +261,23 @@ async function setConversationUnreadFrom(
     }
     messagingLocal.clearAdminUnreadFlag(id);
     await ctx.provider.markConversationRead(id, user);
+    messagingLocal.clearDigilistPeerUnread(
+      id,
+      user.isAdmin ? "admin" : "customer",
+    );
     return { success: true, unread: 0 };
   }
   const row = ctx.provider.setUnread(id, user, unread);
   return { success: true, unread: row.unread };
 }
-function sendConversationFrom(
+async function sendConversationFrom(
   ctx: Context,
   id: string,
   content: string,
   user: User,
   clientMessageId?: string,
   imageUrl?: string,
-): Promise<ConversationThread> | ConversationThread {
+): Promise<ConversationThread> {
   if (isSupportConversationId(id)) {
     return messagingLocal.sendConversationMessage(
       id,
@@ -250,13 +293,51 @@ function sendConversationFrom(
       "Samtalen ble ikke funnet.",
       "conversation_not_found",
     );
-  return ctx.provider.sendConversationMessage(
+  const thread = await ctx.provider.sendConversationMessage(
     id,
     content,
     user,
     clientMessageId,
     imageUrl,
   );
+  if (ctx.provider instanceof Digilist)
+    return applyDigilistPeerReceipts(thread, user, {
+      opened: true,
+      sent: true,
+    });
+  return thread;
+}
+async function digilistBookingThread(
+  ctx: Context,
+  bookingId: string,
+  user: User,
+): Promise<ConversationThread> {
+  const thread = await ctx.provider.bookingThread(bookingId, user);
+  if (ctx.provider instanceof Digilist)
+    return applyDigilistPeerReceipts(thread, user, { opened: true });
+  return thread;
+}
+async function digilistSendBookingMessage(
+  ctx: Context,
+  bookingId: string,
+  content: string,
+  user: User,
+  clientMessageId?: string,
+  imageUrl?: string,
+): Promise<ConversationThread> {
+  const thread = await ctx.provider.sendBookingMessage(
+    bookingId,
+    content,
+    user,
+    clientMessageId,
+    imageUrl,
+  );
+  if (ctx.provider instanceof Digilist)
+    return applyDigilistPeerReceipts(thread, user, {
+      opened: true,
+      sent: true,
+    });
+  return thread;
 }
 function deleteConversationFrom(
   ctx: Context,
@@ -976,7 +1057,7 @@ app.get("/api/bookings/:id", async (req, res) => {
 });
 app.get("/api/bookings/:id/messages", async (req, res) => {
   const ctx = await context(req, res, true);
-  res.json(await ctx.provider.bookingThread(String(req.params.id), ctx.user!));
+  res.json(await digilistBookingThread(ctx, String(req.params.id), ctx.user!));
 });
 app.post("/api/bookings/:id/messages", async (req, res) => {
   const ctx = await context(req, res, true);
@@ -987,7 +1068,8 @@ app.post("/api/bookings/:id/messages", async (req, res) => {
   res
     .status(201)
     .json(
-      await ctx.provider.sendBookingMessage(
+      await digilistSendBookingMessage(
+        ctx,
         String(req.params.id),
         body.content,
         ctx.user!,

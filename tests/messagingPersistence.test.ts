@@ -5,9 +5,10 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { DemoStore } from "../server/demo";
 import { MessagingLocalStore } from "../server/messagingLocal";
+import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts";
 import rooms from "../config/rooms.json";
 import { addDays, today } from "../shared/time";
-import type { BookingInput, Room, User } from "../shared/types";
+import type { BookingInput, Message, Room, User } from "../shared/types";
 
 const customer: User = {
   id: "persist-customer",
@@ -261,5 +262,88 @@ describe("message history survives reopening the database file", () => {
       "HDMI ligger klart",
     ]);
     second.db.close();
+  });
+
+  it("tracks Digilist peer-unread counters across reopen for read receipts", () => {
+    const { dir, path } = tempDb("digilist-peer");
+    dirs.push(dir);
+    const conversationId = "digilist_conv_1";
+
+    const first = new MessagingLocalStore(path);
+    first.bumpDigilistPeerUnread(conversationId, "customer");
+    first.bumpDigilistPeerUnread(conversationId, "customer");
+    expect(first.digilistPeerUnreadForViewer(conversationId, true)).toBe(2);
+    expect(first.digilistPeerUnreadForViewer(conversationId, false)).toBe(0);
+
+    first.bumpDigilistPeerUnread(conversationId, "admin");
+    expect(first.digilistPeerUnreadForViewer(conversationId, false)).toBe(1);
+    first.db.close();
+
+    const second = new MessagingLocalStore(path);
+    expect(second.digilistPeerUnreadForViewer(conversationId, true)).toBe(2);
+    expect(second.digilistPeerUnreadForViewer(conversationId, false)).toBe(1);
+
+    second.clearDigilistPeerUnread(conversationId, "customer");
+    expect(second.digilistPeerUnreadForViewer(conversationId, true)).toBe(0);
+    expect(second.digilistPeerUnreadForViewer(conversationId, false)).toBe(1);
+
+    second.clearDigilistPeerUnread(conversationId, "admin");
+    expect(second.digilistPeerUnreadForViewer(conversationId, false)).toBe(0);
+    second.db.close();
+  });
+
+  it("annotates Digilist messages with local peer-unread like support threads", () => {
+    const store = new MessagingLocalStore(":memory:");
+    const conversationId = "digilist_conv_annotate";
+    const messages: Message[] = [
+      {
+        id: "a1",
+        conversationId,
+        senderId: admin.id,
+        senderName: "Administrator",
+        fromAdmin: true,
+        content: "Hei",
+        createdAt: 1,
+      },
+      {
+        id: "a2",
+        conversationId,
+        senderId: admin.id,
+        senderName: "Administrator",
+        fromAdmin: true,
+        content: "Oppfølging",
+        createdAt: 2,
+      },
+      {
+        id: "c1",
+        conversationId,
+        senderId: customer.id,
+        senderName: customer.name,
+        fromAdmin: false,
+        content: "Takk",
+        createdAt: 3,
+      },
+    ];
+
+    store.bumpDigilistPeerUnread(conversationId, "customer");
+    store.bumpDigilistPeerUnread(conversationId, "customer");
+    const peerUnread = store.digilistPeerUnreadForViewer(conversationId, true);
+    const annotated = annotateMessagesWithReadReceipts(
+      messages,
+      peerUnread,
+      true,
+    );
+    expect(annotated.find((m) => m.id === "a1")?.readByPeer).toBe(false);
+    expect(annotated.find((m) => m.id === "a2")?.readByPeer).toBe(false);
+
+    store.clearDigilistPeerUnread(conversationId, "customer");
+    const afterOpen = annotateMessagesWithReadReceipts(
+      messages,
+      store.digilistPeerUnreadForViewer(conversationId, true),
+      true,
+    );
+    expect(afterOpen.find((m) => m.id === "a1")?.readByPeer).toBe(true);
+    expect(afterOpen.find((m) => m.id === "a2")?.readByPeer).toBe(true);
+    store.db.close();
   });
 });

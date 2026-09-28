@@ -4,3 +4,4 @@ dist
 src/design/digilist
 public/digilist-logo.svg
 package-lock.json
+.gitnexus
