@@ -3093,6 +3093,7 @@ a.login-option:hover {
   color: var(--ds-color-neutral-text-subtle);
 }
 .message-sent {
+  position: relative;
   display: inline-flex;
   align-items: center;
   color: var(--ds-color-accent-text-subtle);
@@ -3498,7 +3499,11 @@ a.login-option:hover {
   gap: 4px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: min(42vh, 22rem);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .customer-messages-thread-header h2 {
   margin: 0;
@@ -3553,6 +3558,7 @@ a.login-option:hover {
 }
 .customer-pane:has(.customer-messages-page) {
   height: calc(100dvh - var(--app-header-offset));
+  max-height: calc(100dvh - var(--app-header-offset));
   min-height: 0;
   overflow: hidden;
 }
@@ -3572,11 +3578,13 @@ a.login-option:hover {
 }
 .message-thread-fill {
   flex: 1;
-  min-height: 0;
+  min-height: 11rem;
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 0;
+  /* Keep long threads inside the pane so the page does not grow with messages. */
+  overflow: hidden;
 }
 .message-thread-fill .message-log {
   flex: 1;
@@ -3584,6 +3592,7 @@ a.login-option:hover {
   max-height: none;
   overflow: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 .message-thread-fill .message-composer {
   flex-direction: column;
@@ -3593,10 +3602,15 @@ a.login-option:hover {
 .message-thread-fill .message-composer-main {
   flex-direction: row;
   align-items: flex-end;
+  gap: 10px;
 }
 .message-thread-fill .message-composer-main .ds-field {
   flex: 1;
   min-width: 0;
+}
+.message-thread-fill .message-composer-actions {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 .message-thread-fill > .state {
   flex: 1;
@@ -3885,7 +3899,11 @@ a.login-option:hover {
   gap: 4px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: min(42vh, 22rem);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .admin-messages-thread-heading {
   display: flex;
@@ -3994,15 +4012,29 @@ a.login-option:hover {
   min-height: calc(100dvh - var(--app-header-offset));
   align-items: start;
 }
+.app-shell:has(.admin-messages),
+.app-shell:has(.customer-messages-page) {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+.admin-main:has(.admin-messages) {
+  min-height: 0;
+  overflow: hidden;
+}
 .admin-layout:has(.admin-messages) {
   align-items: stretch;
   height: calc(100dvh - var(--app-header-offset));
+  max-height: calc(100dvh - var(--app-header-offset));
   min-height: 0;
   overflow: hidden;
 }
 .admin-layout:has(.admin-messages[data-narrow="true"]) {
   grid-template-columns: minmax(0, 1fr);
   height: calc(
+    100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
+  );
+  max-height: calc(
     100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
   );
   min-height: 0;
@@ -4083,11 +4115,54 @@ a.login-option:hover {
   min-height: 0;
   height: 100%;
   padding-bottom: 24px;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 .admin-content:has(.admin-messages) .admin-heading {
   flex-shrink: 0;
   margin-bottom: 16px;
+}
+
+/* Laptop / MBA-class heights: keep list + composer inside the viewport. */
+@media (max-height: 960px) {
+  .admin-content:has(.admin-messages) {
+    padding-top: 18px;
+    padding-bottom: 12px;
+  }
+  .admin-content:has(.admin-messages) .admin-heading {
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .admin-content:has(.admin-messages) .admin-heading .muted {
+    display: none;
+  }
+  .admin-messages-toolbar {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .admin-messages-thread-header,
+  .customer-messages-thread-header {
+    padding: 12px 16px;
+  }
+  .admin-messages-thread .message-thread-fill,
+  .customer-messages-thread .message-thread-fill {
+    padding: 12px 16px 14px;
+    gap: 8px;
+  }
+  .customer-messages-heading p {
+    display: none;
+  }
+  .customer-messages-page {
+    gap: 12px;
+  }
+}
+
+@media (max-height: 760px) {
+  .admin-content:has(.admin-messages) .admin-heading h1 {
+    font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.25rem));
+  }
+  .message-thread-fill .message-composer-main .ds-input {
+    min-height: 2.75rem;
+  }
 }
 .admin-heading {
   display: flex;
@@ -6235,10 +6310,16 @@ button.admin-users-menu-trigger:disabled {
     height: calc(
       100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
     );
+    max-height: calc(
+      100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
+    );
     min-height: 0;
   }
   .customer-pane:has(.customer-messages-page) {
     height: calc(
+      100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
+    );
+    max-height: calc(
       100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
     );
   }
