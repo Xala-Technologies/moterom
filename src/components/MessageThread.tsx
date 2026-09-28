@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { Textarea } from "@digdir/designsystemet-react";
 import { Check, CheckCheck, ImagePlus, Send, X } from "lucide-react";
 import { api, post } from "../api";
@@ -155,8 +162,8 @@ export function MessageThread({
     }
   };
 
-  const send = async (e: FormEvent) => {
-    e.preventDefault();
+  const send = async (e?: FormEvent) => {
+    e?.preventDefault();
     if (!endpoint || busy) return;
     const content = draft.trim();
     if (!content && !pendingImage) return;
@@ -186,6 +193,32 @@ export function MessageThread({
       setBusy(false);
     }
   };
+
+  const onComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+    event.preventDefault();
+    if (busy || (!draft.trim() && !pendingImage)) return;
+    void send();
+  };
+
+  useEffect(() => {
+    if (!endpoint) return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      api<ConversationThread>(endpoint)
+        .then((value) => setThread(value))
+        .catch(() => {
+          /* keep current thread on soft refresh failure */
+        });
+    };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [endpoint]);
 
   const frame = fill ? "message-thread message-thread-fill" : "message-thread";
   if (!endpoint) return null;
@@ -343,7 +376,12 @@ export function MessageThread({
               value={draft}
               disabled={busy}
               onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onComposerKeyDown}
+              aria-describedby={`${composeId}-hint`}
             />
+            <p id={`${composeId}-hint`} className="caption">
+              {t("messages.compose_send_hint")}
+            </p>
           </Field>
           <div className="message-composer-actions">
             {canAttach ? (

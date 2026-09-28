@@ -348,6 +348,7 @@
     "intro": "Booking-samtaler og generelle spørsmål til byggets administrator.",
     "booking_intro": "Meldingen går til administratoren for bygget. Dere ser den samme samtalen.",
     "compose_label": "Melding",
+    "compose_send_hint": "Enter sender. Shift+Enter gir ny linje.",
     "send": "Send melding",
     "sent": "Sendt",
     "read": "Lest",

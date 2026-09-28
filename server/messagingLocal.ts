@@ -68,6 +68,11 @@ export class MessagingLocalStore {
        CREATE TABLE IF NOT EXISTS admin_unread_flags (
          id TEXT PRIMARY KEY,
          unread INTEGER NOT NULL
+       );
+       CREATE TABLE IF NOT EXISTS digilist_peer_unread (
+         id TEXT PRIMARY KEY,
+         admin_unread INTEGER NOT NULL DEFAULT 0,
+         customer_unread INTEGER NOT NULL DEFAULT 0
        );`,
     );
     // Existing installs created support_conversations before customer_unread.
@@ -346,6 +351,48 @@ export class MessagingLocalStore {
       ...row,
       unread: flag.unread ? Math.max(1, Number(row.unread) || 0) : 0,
     };
+  }
+
+  /**
+   * Digilist booking threads: local peer-unread counters for read receipts.
+   * `admin_unread` = customer's messages not yet opened by admin (peer for customer).
+   * `customer_unread` = admin's messages not yet opened by customer (peer for admin).
+   */
+  bumpDigilistPeerUnread(id: string, side: "admin" | "customer"): void {
+    const column = side === "admin" ? "admin_unread" : "customer_unread";
+    this.db
+      .prepare(
+        `INSERT INTO digilist_peer_unread (id, admin_unread, customer_unread)
+         VALUES (?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           ${column} = digilist_peer_unread.${column} + 1`,
+      )
+      .run(id, side === "admin" ? 1 : 0, side === "customer" ? 1 : 0);
+  }
+
+  clearDigilistPeerUnread(id: string, side: "admin" | "customer"): void {
+    const column = side === "admin" ? "admin_unread" : "customer_unread";
+    this.db
+      .prepare(
+        `INSERT INTO digilist_peer_unread (id, admin_unread, customer_unread)
+         VALUES (?, 0, 0)
+         ON CONFLICT(id) DO UPDATE SET ${column} = 0`,
+      )
+      .run(id);
+  }
+
+  /** Peer unread of the viewer's own messages (for readByPeer annotation). */
+  digilistPeerUnreadForViewer(id: string, viewerIsAdmin: boolean): number {
+    const row = this.db
+      .prepare(
+        `SELECT admin_unread, customer_unread FROM digilist_peer_unread WHERE id = ?`,
+      )
+      .get(id) as
+      { admin_unread?: number; customer_unread?: number } | undefined;
+    if (!row) return 0;
+    return viewerIsAdmin
+      ? Number(row.customer_unread || 0)
+      : Number(row.admin_unread || 0);
   }
 
   /** Support threads: set the viewer's unread counter (admin or customer). */
