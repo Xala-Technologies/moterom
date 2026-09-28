@@ -404,11 +404,19 @@ async function context(
       );
     // Digilist session token is the durable login. Access JWT mint failures
     // must not look like logout — that forced a new OTP despite rememberMe.
-    const live = await liveUser(session);
-    user = withPortalRole(
-      live,
-      adminEmails.has(live.email.trim().toLowerCase()),
-    );
+    let live = await liveUser(session);
+    const allowlisted = adminEmails.has(live.email.trim().toLowerCase());
+    // After Møterom approval, Digilist membership may appear while this
+    // session still lacks building context. Re-switch when we own a grant.
+    if (!live.isMember && (allowlisted || portalAccess.has(live.email))) {
+      try {
+        await setBuildingContext(session);
+        live = await liveUser(session);
+      } catch {
+        // Keep the portal grant path even if Digilist switch is not ready.
+      }
+    }
+    user = withPortalRole(live, allowlisted);
     try {
       if (await refreshAccess(session)) await writeSession(res, session);
     } catch (e) {

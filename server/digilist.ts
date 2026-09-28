@@ -364,7 +364,24 @@ export class Digilist {
       });
     }
     // Fallback when Digilist list is empty or unavailable for this session.
-    return Promise.all(inventory.map((definition) => this.room(definition.id)));
+    const rooms = await Promise.all(
+      inventory.map(async (definition) => {
+        try {
+          return await this.room(definition.id);
+        } catch (error) {
+          if (error instanceof AppError) throw error;
+          const text = error instanceof Error ? error.message : "";
+          if (/not an active member of this tenant/i.test(text))
+            throw new AppError(
+              403,
+              "Digilist-tilgangen til bygget mangler fortsatt. Logg ut og inn igjen, eller be administrator godkjenne tilgangen på nytt.",
+              "digilist_membership_required",
+            );
+          throw error;
+        }
+      }),
+    );
+    return rooms;
   }
   async rooms(): Promise<Room[]> {
     return (await this.allRooms()).filter((room) => room.portalPublished);
