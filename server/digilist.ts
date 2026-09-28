@@ -252,7 +252,8 @@ export async function action(
 /**
  * Map Digilist `/auth/me` fields to the portal User after switchTenant.
  * Admin access requires ADMIN_EMAILS plus a portal role (Digilist tenant role
- * seed and/or Brukere assignment). Membership is Digilist tenant membership.
+ * seed and/or Brukere assignment). Digilist tenant membership is still mapped
+ * here; Møterom portal entry is applied later via portalAccess.isPortalMember.
  */
 export function mapDigilistUser(
   raw: {
@@ -926,7 +927,15 @@ export class Digilist {
       })),
     );
   }
-  async ensureActiveBooker(email: string, name: string, user: User) {
+  /**
+   * Best-effort Digilist booker activation for the booking backend.
+   * Møterom portal grant is independent — callers must not block approve on this.
+   */
+  async ensureActiveBooker(
+    email: string,
+    name: string,
+    user: User,
+  ): Promise<boolean> {
     this.assertPortalAdmin(user);
     try {
       await mutate(this.c, "domain/tenantTeam:ensureActiveBooker", {
@@ -935,12 +944,9 @@ export class Digilist {
         email,
         name,
       });
+      return true;
     } catch {
-      throw new AppError(
-        409,
-        "Aktivt medlemskap må først bekreftes i Digilist. Forespørselen er fortsatt åpen.",
-        "membership_not_active",
-      );
+      return false;
     }
   }
   /** Revoke Digilist building membership (status → removed). */

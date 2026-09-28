@@ -1130,22 +1130,27 @@ app.patch("/api/admin/access-requests/:id", async (req, res) => {
   const status = accessRequestStatusSchema.parse(req.body?.status);
   const item = accessRequests.get(String(req.params.id));
   if (status === "approved") {
+    // Møterom owns the grant. Digilist booker sync is best-effort only.
+    portalAccess.grant(item.email, "approve");
     if (ctx.provider instanceof Digilist) {
       await ctx.provider.ensureActiveBooker(item.email, item.name, ctx.user!);
     }
-    portalAccess.grant(item.email, "approve");
   } else if (item.status === "approved") {
-    // Leaving approved must drop the Møterom grant (and Digilist when possible).
+    // Leaving approved drops the Møterom grant; Digilist revoke is best-effort.
     portalAccess.revoke(item.email);
     portalRoles.clear(item.email);
     if (ctx.provider instanceof Digilist) {
-      const members = await ctx.provider.members(ctx.user!);
-      const match = members.find(
-        (row) =>
-          row.email.trim().toLowerCase() === item.email.trim().toLowerCase(),
-      );
-      if (match && match.userId !== ctx.user!.id) {
-        await ctx.provider.removeMember(match.userId, ctx.user!);
+      try {
+        const members = await ctx.provider.members(ctx.user!);
+        const match = members.find(
+          (row) =>
+            row.email.trim().toLowerCase() === item.email.trim().toLowerCase(),
+        );
+        if (match && match.userId !== ctx.user!.id) {
+          await ctx.provider.removeMember(match.userId, ctx.user!);
+        }
+      } catch {
+        // Digilist may be unreachable or lack revoke rights; portal grant is gone.
       }
     }
   }
@@ -1155,18 +1160,22 @@ app.delete("/api/admin/access-requests/:id", async (req, res) => {
   const ctx = await requirePortalAdminContext(req, res);
   const id = String(req.params.id);
   const item = accessRequests.get(id);
-  // Removing an approved request also revokes Digilist membership when possible.
+  // Removing an approved request drops the Møterom grant; Digilist revoke is best-effort.
   if (item && item.status === "approved") {
     portalAccess.revoke(item.email);
     portalRoles.clear(item.email);
     if (ctx.provider instanceof Digilist) {
-      const members = await ctx.provider.members(ctx.user!);
-      const match = members.find(
-        (row) =>
-          row.email.trim().toLowerCase() === item.email.trim().toLowerCase(),
-      );
-      if (match && match.userId !== ctx.user!.id) {
-        await ctx.provider.removeMember(match.userId, ctx.user!);
+      try {
+        const members = await ctx.provider.members(ctx.user!);
+        const match = members.find(
+          (row) =>
+            row.email.trim().toLowerCase() === item.email.trim().toLowerCase(),
+        );
+        if (match && match.userId !== ctx.user!.id) {
+          await ctx.provider.removeMember(match.userId, ctx.user!);
+        }
+      } catch {
+        // Digilist may be unreachable or lack revoke rights; portal grant is gone.
       }
     }
   }

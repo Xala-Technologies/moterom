@@ -53,7 +53,7 @@ Test users on that tenant (Digilist user rows; OTP login still requires a real m
 | `skb.outsider@digilist.dev`      | —            | none       |
 | `skb.revoked@digilist.dev`       | support      | removed    |
 
-`wahidullah_rahmani@hotmail.com` and `burnerlbv12@gmail.com` are real portal bookers. The misspelling `hotmaiil.com` is not a mailbox. **Godkjenn tilgang** calls `domain/tenantTeam:ensureActiveBooker` (not `inviteMember`) to activate a `support` portal booker on DEV tenant `skb-moterom-test` and grants Møterom portal access. Seed `ensureUser`/`ensureMembership` remains a fallback when the live image cannot grant. Møterom Admin → Brukere hides `@digilist.dev` fixture accounts and duplicate emails; Digilist can still keep those rows for isolation tests.
+`wahidullah_rahmani@hotmail.com` and `burnerlbv12@gmail.com` are real portal bookers. The misspelling `hotmaiil.com` is not a mailbox. **Godkjenn tilgang** grants Møterom portal access immediately and best-effort calls `domain/tenantTeam:ensureActiveBooker` (not `inviteMember`) to sync a `support` portal booker on DEV tenant `skb-moterom-test`. Seed `ensureUser`/`ensureMembership` remains a fallback when Digilist cannot sync. Møterom Admin → Brukere hides `@digilist.dev` fixture accounts and duplicate emails; Digilist can still keep those rows for isolation tests.
 
 ## Production rollout (requires explicit approval)
 

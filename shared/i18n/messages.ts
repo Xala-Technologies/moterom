@@ -50,7 +50,7 @@ const nb: Record<string, string> = {
     "Tilgangsforespørsler brukes bare når portalen er begrenset til medlemmer.",
   already_building_member: "Du er allerede medlem av dette bygget.",
   membership_not_active:
-    "Aktivt medlemskap må først bekreftes i Digilist. Forespørselen er fortsatt åpen.",
+    "Tilgangen kunne ikke synkroniseres med bookingtjenesten. Prøv igjen, eller kontakt support.",
   room_setup_unavailable:
     "Rommet {{name}} er ikke tilgjengelig i byggets oppsett.",
   admin_building_required: "Du har ikke administratortilgang til dette bygget.",
@@ -178,7 +178,7 @@ const en: Record<string, string> = {
     "Access requests are only used when the portal is limited to members.",
   already_building_member: "You are already a member of this building.",
   membership_not_active:
-    "Active membership must first be confirmed in Digilist. The request remains open.",
+    "Access could not be synced with the booking service. Try again, or contact support.",
   room_setup_unavailable:
     "Room {{name}} is not available in the building setup.",
   admin_building_required:
