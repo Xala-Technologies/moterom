@@ -9,11 +9,15 @@ const TYPES: Record<string, string> = {
   "image/png": ".png",
 };
 
-/** Writable upload root for chat images; /tmp on Vercel. */
+/**
+ * Writable upload root for chat images.
+ * Prefer the durable `.data` volume (Docker mounts it for the node user).
+ * Vercel stays on /tmp; MESSAGE_UPLOAD_DIR overrides both.
+ */
 export function messageUploadDir() {
   if (process.env.MESSAGE_UPLOAD_DIR) return process.env.MESSAGE_UPLOAD_DIR;
   if (process.env.VERCEL) return "/tmp/message-images";
-  return join(process.cwd(), "public", "message-images");
+  return join(process.cwd(), ".data", "message-images");
 }
 
 export async function saveMessageImage(file: MessageImageFile) {
@@ -28,8 +32,17 @@ export async function saveMessageImage(file: MessageImageFile) {
       "invalid_image_size",
     );
   const dir = messageUploadDir();
-  await mkdir(dir, { recursive: true });
-  const name = `msg-${randomUUID()}${ext}`;
-  await writeFile(join(dir, name), buffer);
-  return `/message-images/${name}`;
+  try {
+    await mkdir(dir, { recursive: true });
+    const name = `msg-${randomUUID()}${ext}`;
+    await writeFile(join(dir, name), buffer);
+    return `/message-images/${name}`;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      503,
+      "Bildet kunne ikke lagres. Prøv igjen.",
+      "message_image_store_failed",
+    );
+  }
 }
