@@ -22,6 +22,7 @@ import { AppError } from "../shared/validation";
 import { canManagePortal } from "../shared/adminAccess";
 import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
+import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts";
 import { enrichBookingConversation } from "./conversationContext";
 export class DemoStore {
   db: DatabaseSync;
@@ -531,10 +532,26 @@ export class DemoStore {
     this.db.prepare("DELETE FROM blocks WHERE id = ?").run(id);
     this.audit(user, "block.removed", id);
   }
-  private conversations(): ConversationSummary[] {
-    return this.all<ConversationSummary>("conversations")
-      .map((c) => this.withContext(c))
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+  /** `unread` = admin inbox; optional `customerUnread` = customer inbox. */
+  private conversations(): Array<
+    ConversationSummary & { customerUnread?: number }
+  > {
+    return this.all<ConversationSummary & { customerUnread?: number }>(
+      "conversations",
+    ).sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  private presentConversation(
+    conversation: ConversationSummary & { customerUnread?: number },
+    forAdmin: boolean,
+  ): ConversationSummary {
+    const base = this.withContext(conversation);
+    return {
+      ...base,
+      unread: forAdmin
+        ? conversation.unread
+        : Number(conversation.customerUnread || 0),
+    };
   }
   private bookingById(id: string): Booking | undefined {
     return this.all<Booking>("bookings").find((b) => b.id === id);
@@ -561,22 +578,32 @@ export class DemoStore {
       .all(conversationId)
       .map((row) => JSON.parse(String(row.data)) as Message);
   }
-  private thread(conversation: ConversationSummary): ConversationThread {
+  private thread(
+    conversation: ConversationSummary & { customerUnread?: number },
+    forAdmin: boolean,
+  ): ConversationThread {
+    const peerUnread = forAdmin
+      ? Number(conversation.customerUnread || 0)
+      : Number(conversation.unread || 0);
     return {
-      conversation: this.withContext(conversation),
-      messages: this.messagesFor(conversation.id),
+      conversation: this.presentConversation(conversation, forAdmin),
+      messages: annotateMessagesWithReadReceipts(
+        this.messagesFor(conversation.id),
+        peerUnread,
+        forAdmin,
+      ),
     };
   }
   private conversationForBooking(
     booking: Booking,
     create: boolean,
-  ): ConversationSummary | null {
+  ): (ConversationSummary & { customerUnread?: number }) | null {
     const existing = this.conversations().find(
       (c) => c.bookingId === booking.id,
     );
     if (existing) return existing;
     if (!create) return null;
-    const conversation: ConversationSummary = {
+    const conversation: ConversationSummary & { customerUnread?: number } = {
       id: randomUUID(),
       kind: "booking",
       bookingId: booking.id,
@@ -586,25 +613,53 @@ export class DemoStore {
       preview: "",
       updatedAt: Date.now(),
       unread: 0,
+      customerUnread: 0,
       customerName: booking.name,
     };
     this.save("conversations", conversation);
-    return this.withContext(conversation);
+    return conversation;
   }
   inbox(user: User): ConversationSummary[] {
-    if (user.isAdmin) return this.conversations();
+    if (user.isAdmin)
+      return this.conversations().map((c) => this.presentConversation(c, true));
     const mine = new Set(this.bookings(user).bookings.map((b) => b.id));
-    return this.conversations().filter(
-      (c) => c.bookingId && mine.has(c.bookingId),
-    );
+    return this.conversations()
+      .filter((c) => c.bookingId && mine.has(c.bookingId))
+      .map((c) => this.presentConversation(c, false));
   }
   bookingThread(bookingId: string, user: User): ConversationThread {
     const booking = this.booking(bookingId, user);
     const conversation = this.conversationForBooking(booking, false);
-    return {
-      conversation: conversation ? this.withContext(conversation) : null,
-      messages: conversation ? this.messagesFor(conversation.id) : [],
-    };
+    if (
+      conversation &&
+      !user.isAdmin &&
+      (conversation.customerUnread || 0) > 0
+    ) {
+      conversation.customerUnread = 0;
+      this.save("conversations", conversation);
+    } else if (conversation && user.isAdmin && conversation.unread > 0) {
+      conversation.unread = 0;
+      this.save("conversations", conversation);
+    }
+    if (!conversation) {
+      // Stub so the composer can offer image attach before the first send.
+      return {
+        conversation: this.withContext({
+          id: `booking:${booking.id}`,
+          kind: "booking",
+          bookingId: booking.id,
+          roomId: booking.roomId,
+          roomName: booking.roomName,
+          subject: booking.roomName,
+          preview: "",
+          updatedAt: booking.startTime,
+          unread: 0,
+          customerName: booking.name,
+        }),
+        messages: [],
+      };
+    }
+    return this.thread(conversation, user.isAdmin);
   }
   conversationThread(id: string, user: User): ConversationThread {
     const conversation = this.conversations().find((c) => c.id === id);
@@ -623,7 +678,14 @@ export class DemoStore {
         );
       this.booking(conversation.bookingId, user);
     }
-    return this.thread(conversation);
+    if (user.isAdmin && conversation.unread > 0) {
+      conversation.unread = 0;
+      this.save("conversations", conversation);
+    } else if (!user.isAdmin && (conversation.customerUnread || 0) > 0) {
+      conversation.customerUnread = 0;
+      this.save("conversations", conversation);
+    }
+    return this.thread(conversation, user.isAdmin);
   }
   sendBookingMessage(
     bookingId: string,
@@ -665,7 +727,7 @@ export class DemoStore {
     );
   }
   private appendMessage(
-    conversation: ConversationSummary,
+    conversation: ConversationSummary & { customerUnread?: number },
     content: string,
     user: User,
     clientMessageId?: string,
@@ -678,7 +740,7 @@ export class DemoStore {
           (m as Message & { clientMessageId?: string }).clientMessageId ===
             clientMessageId,
       );
-      if (replayed) return this.thread(conversation);
+      if (replayed) return this.thread(conversation, user.isAdmin);
     }
     const text = content.trim();
     if (!text && !imageUrl)
@@ -704,10 +766,41 @@ export class DemoStore {
       .run(message.id, conversation.id, createdAt, JSON.stringify(message));
     conversation.preview = text || "Bilde";
     conversation.updatedAt = createdAt;
-    conversation.unread = user.isAdmin ? 0 : 1;
+    if (user.isAdmin)
+      conversation.customerUnread =
+        Number(conversation.customerUnread || 0) + 1;
+    else conversation.unread = Number(conversation.unread || 0) + 1;
     this.save("conversations", conversation);
     this.audit(user, "message.sent", conversation.id);
-    return this.thread(conversation);
+    return this.thread(conversation, user.isAdmin);
+  }
+
+  setUnread(id: string, user: User, unread: boolean): ConversationSummary {
+    const conversation = this.conversations().find((c) => c.id === id);
+    if (!conversation)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    if (!user.isAdmin) {
+      if (!conversation.bookingId)
+        throw new AppError(
+          404,
+          "Samtalen ble ikke funnet.",
+          "conversation_not_found",
+        );
+      this.booking(conversation.bookingId, user);
+      conversation.customerUnread = unread
+        ? Math.max(1, Number(conversation.customerUnread || 0))
+        : 0;
+    } else {
+      conversation.unread = unread
+        ? Math.max(1, Number(conversation.unread || 0))
+        : 0;
+    }
+    this.save("conversations", conversation);
+    return this.presentConversation(conversation, user.isAdmin);
   }
 
   deleteConversation(id: string, user: User): { success: true } {

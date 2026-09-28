@@ -9,6 +9,7 @@ import type {
   Message,
   User,
 } from "../shared/types";
+import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts";
 import { AppError } from "../shared/validation";
 
 const SUPPORT_PREFIX = "sup_";
@@ -63,21 +64,58 @@ export class MessagingLocalStore {
        CREATE TABLE IF NOT EXISTS hidden_conversations (
          id TEXT PRIMARY KEY,
          hidden INTEGER NOT NULL
+       );
+       CREATE TABLE IF NOT EXISTS admin_unread_flags (
+         id TEXT PRIMARY KEY,
+         unread INTEGER NOT NULL
        );`,
     );
+    // Existing installs created support_conversations before customer_unread.
+    try {
+      this.db.exec(
+        `ALTER TABLE support_conversations
+         ADD COLUMN customer_unread INTEGER NOT NULL DEFAULT 0`,
+      );
+    } catch {
+      /* column already present */
+    }
   }
 
-  private mapConversation(row: Record<string, unknown>): ConversationSummary {
+  /** Row storage: `unread` = admin inbox, `customer_unread` = customer inbox. */
+  private mapStored(row: Record<string, unknown>): {
+    id: string;
+    customerId: string;
+    customerName: string;
+    preview: string;
+    updatedAt: number;
+    adminUnread: number;
+    customerUnread: number;
+  } {
     return {
       id: String(row.id),
+      customerId: String(row.customer_id),
+      customerName: String(row.customer_name),
+      preview: String(row.preview || ""),
+      updatedAt: Number(row.updated),
+      adminUnread: Number(row.unread || 0),
+      customerUnread: Number(row.customer_unread || 0),
+    };
+  }
+
+  private presentConversation(
+    stored: ReturnType<MessagingLocalStore["mapStored"]>,
+    forAdmin: boolean,
+  ): ConversationSummary {
+    return {
+      id: stored.id,
       kind: "support",
       roomName: "",
       subject: SUPPORT_SUBJECT,
-      preview: String(row.preview || ""),
-      updatedAt: Number(row.updated),
-      unread: Number(row.unread || 0),
-      customerName: String(row.customer_name),
-      customerId: String(row.customer_id),
+      preview: stored.preview,
+      updatedAt: stored.updatedAt,
+      unread: forAdmin ? stored.adminUnread : stored.customerUnread,
+      customerName: stored.customerName,
+      customerId: stored.customerId,
       canAttachImages: true,
     };
   }
@@ -93,65 +131,88 @@ export class MessagingLocalStore {
       .map((row) => JSON.parse(String(row.data)) as Message);
   }
 
-  private getConversation(id: string): ConversationSummary | null {
+  private getStored(id: string) {
     const row = this.db
       .prepare(
-        `SELECT id, customer_id, customer_name, preview, updated, unread
+        `SELECT id, customer_id, customer_name, preview, updated, unread,
+                customer_unread
          FROM support_conversations WHERE id = ?`,
       )
       .get(id);
-    return row ? this.mapConversation(row as Record<string, unknown>) : null;
+    return row ? this.mapStored(row as Record<string, unknown>) : null;
   }
 
-  private getByCustomer(customerId: string): ConversationSummary | null {
+  private getStoredByCustomer(customerId: string) {
     const row = this.db
       .prepare(
-        `SELECT id, customer_id, customer_name, preview, updated, unread
+        `SELECT id, customer_id, customer_name, preview, updated, unread,
+                customer_unread
          FROM support_conversations WHERE customer_id = ?`,
       )
       .get(customerId);
-    return row ? this.mapConversation(row as Record<string, unknown>) : null;
+    return row ? this.mapStored(row as Record<string, unknown>) : null;
   }
 
-  private saveConversation(conversation: ConversationSummary): void {
+  private saveStored(
+    stored: ReturnType<MessagingLocalStore["mapStored"]>,
+  ): void {
     this.db
       .prepare(
         `INSERT INTO support_conversations
-         (id, customer_id, customer_name, preview, updated, unread)
-         VALUES (?, ?, ?, ?, ?, ?)
+         (id, customer_id, customer_name, preview, updated, unread, customer_unread)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            customer_name = excluded.customer_name,
            preview = excluded.preview,
            updated = excluded.updated,
-           unread = excluded.unread`,
+           unread = excluded.unread,
+           customer_unread = excluded.customer_unread`,
       )
       .run(
-        conversation.id,
-        conversation.customerId || "",
-        conversation.customerName,
-        conversation.preview,
-        conversation.updatedAt,
-        conversation.unread,
+        stored.id,
+        stored.customerId,
+        stored.customerName,
+        stored.preview,
+        stored.updatedAt,
+        stored.adminUnread,
+        stored.customerUnread,
       );
   }
 
-  private thread(conversation: ConversationSummary): ConversationThread {
-    return { conversation, messages: this.messagesFor(conversation.id) };
+  private thread(
+    stored: ReturnType<MessagingLocalStore["mapStored"]>,
+    forAdmin: boolean,
+  ): ConversationThread {
+    const peerUnread = forAdmin ? stored.customerUnread : stored.adminUnread;
+    return {
+      conversation: this.presentConversation(stored, forAdmin),
+      messages: annotateMessagesWithReadReceipts(
+        this.messagesFor(stored.id),
+        peerUnread,
+        forAdmin,
+      ),
+    };
   }
 
   inbox(user: User): ConversationSummary[] {
     if (user.isAdmin) {
       return this.db
         .prepare(
-          `SELECT id, customer_id, customer_name, preview, updated, unread
+          `SELECT id, customer_id, customer_name, preview, updated, unread,
+                  customer_unread
            FROM support_conversations
            ORDER BY updated DESC`,
         )
         .all()
-        .map((row) => this.mapConversation(row as Record<string, unknown>));
+        .map((row) =>
+          this.presentConversation(
+            this.mapStored(row as Record<string, unknown>),
+            true,
+          ),
+        );
     }
-    const mine = this.getByCustomer(user.id);
-    return mine ? [mine] : [];
+    const mine = this.getStoredByCustomer(user.id);
+    return mine ? [this.presentConversation(mine, false)] : [];
   }
 
   openSupport(
@@ -165,55 +226,55 @@ export class MessagingLocalStore {
         "Administratorer svarer i eksisterende samtaler.",
         "support_customer_only",
       );
-    let conversation = this.getByCustomer(user.id);
-    if (!conversation) {
-      conversation = {
+    let stored = this.getStoredByCustomer(user.id);
+    if (!stored) {
+      stored = {
         id: `${SUPPORT_PREFIX}${randomUUID()}`,
-        kind: "support",
-        roomName: "",
-        subject: SUPPORT_SUBJECT,
+        customerId: user.id,
+        customerName: user.name,
         preview: "",
         updatedAt: Date.now(),
-        unread: 0,
-        customerName: user.name,
-        customerId: user.id,
-        canAttachImages: true,
+        adminUnread: 0,
+        customerUnread: 0,
       };
-      this.saveConversation(conversation);
-    } else if (conversation.customerName !== user.name) {
-      conversation = { ...conversation, customerName: user.name };
-      this.saveConversation(conversation);
+      this.saveStored(stored);
+    } else if (stored.customerName !== user.name) {
+      stored = { ...stored, customerName: user.name };
+      this.saveStored(stored);
     }
     if (content?.trim()) {
       return this.appendMessage(
-        conversation,
+        stored.id,
         content.trim(),
         user,
         clientMessageId,
       );
     }
-    return this.thread(conversation);
+    return this.thread(stored, false);
   }
 
   conversationThread(id: string, user: User): ConversationThread {
-    const conversation = this.getConversation(id);
-    if (!conversation)
+    const stored = this.getStored(id);
+    if (!stored)
       throw new AppError(
         404,
         "Samtalen ble ikke funnet.",
         "conversation_not_found",
       );
-    if (!user.isAdmin && conversation.customerId !== user.id)
+    if (!user.isAdmin && stored.customerId !== user.id)
       throw new AppError(
         404,
         "Samtalen ble ikke funnet.",
         "conversation_not_found",
       );
-    if (user.isAdmin && conversation.unread > 0) {
-      conversation.unread = 0;
-      this.saveConversation(conversation);
+    if (user.isAdmin && stored.adminUnread > 0) {
+      stored.adminUnread = 0;
+      this.saveStored(stored);
+    } else if (!user.isAdmin && stored.customerUnread > 0) {
+      stored.customerUnread = 0;
+      this.saveStored(stored);
     }
-    return this.thread(conversation);
+    return this.thread(stored, user.isAdmin);
   }
 
   sendConversationMessage(
@@ -223,24 +284,13 @@ export class MessagingLocalStore {
     clientMessageId?: string,
     imageUrl?: string,
   ): ConversationThread {
-    const thread = this.conversationThread(id, user);
-    if (!thread.conversation)
-      throw new AppError(
-        404,
-        "Samtalen ble ikke funnet.",
-        "conversation_not_found",
-      );
-    return this.appendMessage(
-      thread.conversation,
-      content,
-      user,
-      clientMessageId,
-      imageUrl,
-    );
+    // Ensure access + mark the viewer's inbox read before appending.
+    this.conversationThread(id, user);
+    return this.appendMessage(id, content, user, clientMessageId, imageUrl);
   }
 
   deleteConversation(id: string): { success: true } {
-    const conversation = this.getConversation(id);
+    const conversation = this.getStored(id);
     if (!conversation)
       throw new AppError(
         404,
@@ -272,21 +322,78 @@ export class MessagingLocalStore {
     return Boolean(row);
   }
 
+  /** Digilist booking threads: admin-forced unread when Digilist has no mark-unread API. */
+  setAdminUnreadFlag(id: string, unread: boolean): void {
+    this.db
+      .prepare(
+        `INSERT INTO admin_unread_flags (id, unread)
+         VALUES (?, ?)
+         ON CONFLICT(id) DO UPDATE SET unread = excluded.unread`,
+      )
+      .run(id, unread ? 1 : 0);
+  }
+
+  clearAdminUnreadFlag(id: string): void {
+    this.db.prepare(`DELETE FROM admin_unread_flags WHERE id = ?`).run(id);
+  }
+
+  applyAdminUnreadFlag(row: ConversationSummary): ConversationSummary {
+    const flag = this.db
+      .prepare(`SELECT unread FROM admin_unread_flags WHERE id = ?`)
+      .get(row.id) as { unread?: number } | undefined;
+    if (!flag) return row;
+    return {
+      ...row,
+      unread: flag.unread ? Math.max(1, Number(row.unread) || 0) : 0,
+    };
+  }
+
+  /** Support threads: set the viewer's unread counter (admin or customer). */
+  setUnread(id: string, user: User, unread: boolean): ConversationSummary {
+    const stored = this.getStored(id);
+    if (!stored)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    if (!user.isAdmin && stored.customerId !== user.id)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
+    if (user.isAdmin)
+      stored.adminUnread = unread ? Math.max(1, stored.adminUnread) : 0;
+    else
+      stored.customerUnread = unread ? Math.max(1, stored.customerUnread) : 0;
+    this.saveStored(stored);
+    this.clearAdminUnreadFlag(id);
+    return this.presentConversation(stored, user.isAdmin);
+  }
+
   private appendMessage(
-    conversation: ConversationSummary,
+    conversationId: string,
     content: string,
     user: User,
     clientMessageId?: string,
     imageUrl?: string,
   ): ConversationThread {
+    const stored = this.getStored(conversationId);
+    if (!stored)
+      throw new AppError(
+        404,
+        "Samtalen ble ikke funnet.",
+        "conversation_not_found",
+      );
     if (clientMessageId) {
-      const replayed = this.messagesFor(conversation.id).find(
+      const replayed = this.messagesFor(stored.id).find(
         (m) =>
           m.id === clientMessageId ||
           (m as Message & { clientMessageId?: string }).clientMessageId ===
             clientMessageId,
       );
-      if (replayed) return this.thread(conversation);
+      if (replayed) return this.thread(stored, user.isAdmin);
     }
     const text = content.trim();
     if (!text && !imageUrl)
@@ -298,7 +405,7 @@ export class MessagingLocalStore {
     const createdAt = Date.now();
     const message: Message & { clientMessageId?: string } = {
       id: clientMessageId || randomUUID(),
-      conversationId: conversation.id,
+      conversationId: stored.id,
       senderId: user.id,
       senderName: user.isAdmin ? "Administrator" : user.name,
       fromAdmin: user.isAdmin,
@@ -312,12 +419,15 @@ export class MessagingLocalStore {
         `INSERT INTO support_messages (id, conversation_id, created, data)
          VALUES (?, ?, ?, ?)`,
       )
-      .run(message.id, conversation.id, createdAt, JSON.stringify(message));
-    conversation.preview = text || "Bilde";
-    conversation.updatedAt = createdAt;
-    conversation.unread = user.isAdmin ? 0 : 1;
-    this.saveConversation(conversation);
-    return this.thread(conversation);
+      .run(message.id, stored.id, createdAt, JSON.stringify(message));
+    stored.preview = text || "Bilde";
+    stored.updatedAt = createdAt;
+    // Counterparty inbox: admin replies bump the customer badge; customer
+    // messages bump the admin badge.
+    if (user.isAdmin) stored.customerUnread += 1;
+    else stored.adminUnread += 1;
+    this.saveStored(stored);
+    return this.thread(stored, user.isAdmin);
   }
 
   listAnnouncements(): Announcement[] {

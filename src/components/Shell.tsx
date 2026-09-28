@@ -19,9 +19,11 @@ import {
 import { Button } from "./ui";
 import { BrandMark } from "./BrandMark";
 import { useApp } from "../context";
-import { post } from "../api";
+import { post, useApi } from "../api";
 import { useI18nLocale, useT } from "../i18n";
 import { canManagePortal } from "../../shared/adminAccess";
+import type { ConversationSummary } from "../../shared/types";
+import { customerNavActive } from "../customerNavActive";
 export function Shell() {
   const { config, user, refresh, notify } = useApp();
   const { t } = useT();
@@ -32,6 +34,14 @@ export function Shell() {
     location.pathname === "/login" || location.pathname === "/auth/callback";
   const building = config?.buildingName || t("common.app_name");
   const portalAdmin = canManagePortal(user);
+  const customer = Boolean(user && !user.isAdmin && !login && !admin);
+  const inbox = useApi<ConversationSummary[]>(
+    customer && user ? "/messages" : null,
+  );
+  const unreadMessages = (inbox.data || []).reduce(
+    (sum, row) => sum + Math.max(0, Number(row.unread) || 0),
+    0,
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(() => {
     try {
@@ -147,8 +157,16 @@ export function Shell() {
     location.pathname.startsWith("/mine-bookinger") ||
     location.pathname.startsWith("/meldinger") ||
     location.pathname.startsWith("/booking/");
-  const customer = Boolean(user && !user.isAdmin && !login && !admin);
   const customerNav = customer && dashboardPath;
+  useEffect(() => {
+    if (!customer) return;
+    inbox.reload();
+  }, [customer, location.pathname, inbox.reload]);
+  useEffect(() => {
+    if (!customer) return;
+    const id = window.setInterval(() => inbox.reload(), 45000);
+    return () => window.clearInterval(id);
+  }, [customer, inbox.reload]);
   const dashboardClass = () => (dashboardPath ? "active" : undefined);
   const adminSections: {
     to: string;
@@ -401,10 +419,28 @@ export function Shell() {
               <nav aria-label={t("a11y.dashboard_nav")}>
                 {customerLinks.map((link) => {
                   const Icon = link.icon;
+                  const showUnread =
+                    link.to === "/meldinger" && unreadMessages > 0;
+                  const active = customerNavActive(link.to, location.pathname);
                   return (
-                    <NavLink key={link.to} to={link.to}>
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      className={active ? "active" : undefined}
+                      aria-current={active ? "page" : undefined}
+                      aria-label={
+                        showUnread
+                          ? t("messages.nav_unread", { count: unreadMessages })
+                          : undefined
+                      }
+                    >
                       <Icon size={19} />
                       {link.label}
+                      {showUnread ? (
+                        <span className="nav-count" aria-hidden="true">
+                          {unreadMessages > 99 ? "99+" : unreadMessages}
+                        </span>
+                      ) : null}
                     </NavLink>
                   );
                 })}

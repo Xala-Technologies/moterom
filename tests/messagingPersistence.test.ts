@@ -94,6 +94,72 @@ describe("message history survives reopening the database file", () => {
     second.db.close();
   });
 
+  it("counts admin replies as unread for the customer inbox badge", () => {
+    const store = new MessagingLocalStore(":memory:");
+    const opened = store.openSupport(customer, "Hei", randomUUID());
+    const id = opened.conversation!.id;
+    expect(store.inbox(customer)[0]?.unread).toBe(0);
+    expect(store.inbox(admin)[0]?.unread).toBe(1);
+
+    store.sendConversationMessage(id, "Svar 1", admin, randomUUID());
+    store.sendConversationMessage(id, "Svar 2", admin, randomUUID());
+    expect(store.inbox(customer)[0]?.unread).toBe(2);
+    expect(store.inbox(admin)[0]?.unread).toBe(0);
+
+    store.conversationThread(id, customer);
+    expect(store.inbox(customer)[0]?.unread).toBe(0);
+    store.db.close();
+  });
+
+  it("marks admin messages readByPeer after the customer opens the thread", () => {
+    const store = new MessagingLocalStore(":memory:");
+    const opened = store.openSupport(customer, "Hei", randomUUID());
+    const id = opened.conversation!.id;
+    const before = store.sendConversationMessage(
+      id,
+      "Svar",
+      admin,
+      randomUUID(),
+    );
+    const adminReply = before.messages.find((m) => m.fromAdmin);
+    expect(adminReply?.readByPeer).toBe(false);
+
+    store.conversationThread(id, customer);
+    const after = store.conversationThread(id, admin);
+    const readReply = after.messages.find((m) => m.id === adminReply?.id);
+    expect(readReply?.readByPeer).toBe(true);
+    store.db.close();
+  });
+
+  it("lets admins mark a support conversation read and unread", () => {
+    const store = new MessagingLocalStore(":memory:");
+    const opened = store.openSupport(customer, "Hei", randomUUID());
+    const id = opened.conversation!.id;
+    expect(store.inbox(admin)[0]?.unread).toBe(1);
+
+    expect(store.setUnread(id, admin, false).unread).toBe(0);
+    expect(store.inbox(admin)[0]?.unread).toBe(0);
+
+    expect(store.setUnread(id, admin, true).unread).toBe(1);
+    expect(store.inbox(admin)[0]?.unread).toBe(1);
+
+    store.setAdminUnreadFlag("booking-conv-1", true);
+    expect(
+      store.applyAdminUnreadFlag({
+        id: "booking-conv-1",
+        kind: "booking",
+        roomName: "Sauda 1",
+        subject: "Sauda 1",
+        preview: "Hei",
+        updatedAt: Date.now(),
+        unread: 0,
+        customerName: "Kari",
+      }).unread,
+    ).toBe(1);
+    store.clearAdminUnreadFlag("booking-conv-1");
+    store.db.close();
+  });
+
   it("stores an image-only support message with preview Bilde", () => {
     const { dir, path } = tempDb("support-image");
     dirs.push(dir);
