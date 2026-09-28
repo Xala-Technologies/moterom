@@ -377,11 +377,7 @@ export function MessageThread({
               disabled={busy}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onComposerKeyDown}
-              aria-describedby={`${composeId}-hint`}
             />
-            <p id={`${composeId}-hint`} className="caption">
-              {t("messages.compose_send_hint")}
-            </p>
           </Field>
           <div className="message-composer-actions">
             {canAttach ? (
