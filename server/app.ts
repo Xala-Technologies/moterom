@@ -1134,6 +1134,20 @@ app.patch("/api/admin/access-requests/:id", async (req, res) => {
       await ctx.provider.ensureActiveBooker(item.email, item.name, ctx.user!);
     }
     portalAccess.grant(item.email, "approve");
+  } else if (item.status === "approved" && status !== "approved") {
+    // Leaving approved must drop the Møterom grant (and Digilist when possible).
+    portalAccess.revoke(item.email);
+    portalRoles.clear(item.email);
+    if (ctx.provider instanceof Digilist) {
+      const members = await ctx.provider.members(ctx.user!);
+      const match = members.find(
+        (row) =>
+          row.email.trim().toLowerCase() === item.email.trim().toLowerCase(),
+      );
+      if (match && match.userId !== ctx.user!.id) {
+        await ctx.provider.removeMember(match.userId, ctx.user!);
+      }
+    }
   }
   res.json(accessRequests.updateStatus(String(req.params.id), status));
 });

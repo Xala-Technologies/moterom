@@ -598,6 +598,49 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
     expect(fallback.body.user.isMember).toBe(false);
   });
 
+  it("revokes portal grant when an approved request is rejected", async () => {
+    tenantMembers = [
+      {
+        userId: "outsider-1",
+        name: "Outsider",
+        email: outsider.email,
+        role: "support",
+        status: "active",
+      },
+    ];
+    const created = (
+      await request(app)
+        .post("/api/access-requests")
+        .set("Origin", origin)
+        .set("Cookie", await cookie("outsider"))
+        .send({
+          name: "Outsider",
+          email: outsider.email,
+          company: "Eksempel AS",
+        })
+        .expect(201)
+    ).body;
+    await request(app)
+      .patch(`/api/admin/access-requests/${created.id}`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .send({ status: "approved" })
+      .expect(200);
+    expect(portalAccessStore.has(outsider.email)).toBe(true);
+    await request(app)
+      .patch(`/api/admin/access-requests/${created.id}`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .send({ status: "rejected" })
+      .expect(200);
+    expect(portalAccessStore.has(outsider.email)).toBe(false);
+    expect(
+      mocks.mutation.mock.calls.some(
+        ([ref]) => getFunctionName(ref) === "domain/tenantTeam:removeMember",
+      ),
+    ).toBe(true);
+  });
+
   it("keeps the access request open when Digilist cannot activate the booker", async () => {
     const created = (
       await request(app)
