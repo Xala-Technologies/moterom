@@ -1198,7 +1198,7 @@ app.post("/api/admin/members/:userId/portal-access", async (req, res) => {
   if (target.status !== "active")
     throw new AppError(
       409,
-      "Personen må ha aktiv Digilist-tilgang før portaltilgang kan gis. Bruk Kontroller medlemskap på forespørselen.",
+      "Personen må ha aktiv Digilist-tilgang før portaltilgang kan gis. Bruk Godkjenn tilgang på forespørselen.",
       "digilist_membership_inactive",
     );
   portalAccess.grant(target.email, "admin");

@@ -49,9 +49,9 @@ Other Digilist accounts (even Digilist tenant admins) are not Møterom admins un
 
 Live mode requires `BOOKING_ACCESS=members`. Non-members can submit an access request to Møterom's local inbox. For signed-in requests, identity comes from the verified session.
 
-**Portal entry** requires both Digilist building membership (`/auth/me` tenant + role) **and** an explicit Møterom portal grant (SQLite `portal_access`, or `ADMIN_EMAILS`). Digilist tenant membership alone does not open Finn rom or bookings. Approving a request calls `ensureActiveBooker` and then writes the portal grant. **Gi tilgang** on Byggets medlemmer grants portal access for an already-active Digilist member. **Fjern tilgang** revokes Digilist membership and the portal grant.
+**Portal entry** requires both Digilist building membership (`/auth/me` tenant + role) **and** an explicit Møterom portal grant (SQLite `portal_access`, or `ADMIN_EMAILS`). Digilist tenant membership alone does not open Finn rom or bookings. **Godkjenn tilgang** on an access request calls `ensureActiveBooker` and then writes the portal grant. **Gi tilgang** on Byggets medlemmer grants portal access for an already-active Digilist member. **Fjern tilgang** revokes Digilist membership and the portal grant.
 
-Admin → **Brukere** reads Digilist members via `domain/tenantTeam:listMembers` and shows whether each person has portal access. Declining a pending request does not revoke Digilist membership. New members may need to sign in again to establish the building session context.
+Admin → **Brukere** reads Digilist members via `domain/tenantTeam:listMembers` and shows whether each person has portal access. Declining a pending request does not revoke Digilist membership; declining or removing an approved request does. New members may need to sign in again to establish the building session context.
 
 Membership write operations remain in Digilist. `tenantTeam:inviteMember` grants staff roles, hard-codes `appId: "backoffice"`, and emails `{appOrigin}/auth/magic-link`. Møterom does not call that mutation. Completing a live access request calls `tenantTeam:ensureActiveBooker`, which activates a `support` portal booker without a magic link. A later Digilist change can add a dedicated booking-only role that returns to `PUBLIC_ORIGIN`.
 
