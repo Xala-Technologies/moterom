@@ -136,6 +136,18 @@ export function removeLoginEmail(value: string) {
   return next;
 }
 
+/** Drop remembered email and device trust after portal access is denied. */
+export function forgetLoginIdentity(value: string) {
+  const email = normalizeEmail(value);
+  if (!email) return;
+  removeLoginEmail(email);
+  const map = readTrustMap("email");
+  if (map[email]) {
+    delete map[email];
+    writeTrustMap("email", map);
+  }
+}
+
 /** Mark email/phone trusted so the next login on this device can skip OTP. */
 export function trustLoginIdentifier(
   value: string,

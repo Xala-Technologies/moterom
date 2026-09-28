@@ -126,6 +126,8 @@ export interface TenantMember {
   status: "active" | "invited";
   /** Møterom portal role managed on Brukere. */
   portalRole?: "member" | "operations" | "full";
+  /** Explicit Møterom portal grant (or ADMIN_EMAILS / demo). */
+  portalGranted?: boolean;
 }
 export interface AccessRequest {
   id: string;

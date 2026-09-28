@@ -45,6 +45,12 @@ export class PortalRoleStore {
     return role;
   }
 
+  clear(email: string): void {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return;
+    this.db.prepare(`DELETE FROM portal_roles WHERE email = ?`).run(normalized);
+  }
+
   all(): Map<string, PortalRole> {
     const map = new Map<string, PortalRole>();
     for (const row of this.db

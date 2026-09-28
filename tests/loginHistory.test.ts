@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_TRUST_MS,
+  forgetLoginIdentity,
   isLoginIdentifierTrusted,
   readLoginEmails,
   rememberDeviceAfterLogin,
@@ -107,5 +108,22 @@ describe("login device trust", () => {
     expect(
       JSON.parse(localStorage.getItem("digilist_remembered_emails") || "[]"),
     ).toContain("kari@example.invalid");
+  });
+
+  it("forgets remembered email and device trust after access is denied", () => {
+    rememberLoginEmail("wahidullah_rahmani@hotmail.com");
+    trustLoginIdentifier(
+      "wahidullah_rahmani@hotmail.com",
+      "email",
+      REMEMBER_TRUST_MS,
+    );
+    forgetLoginIdentity("Wahidullah_Rahmani@hotmail.com");
+    expect(readLoginEmails()).not.toContain("wahidullah_rahmani@hotmail.com");
+    expect(
+      isLoginIdentifierTrusted("wahidullah_rahmani@hotmail.com", "email"),
+    ).toBe(false);
+    expect(
+      JSON.parse(localStorage.getItem("digilist_remembered_emails") || "[]"),
+    ).not.toContain("wahidullah_rahmani@hotmail.com");
   });
 });
