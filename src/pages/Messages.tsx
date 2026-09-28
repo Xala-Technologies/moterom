@@ -368,7 +368,7 @@ export function Messages() {
         </Empty>
       ) : (
         <div
-          className="customer-messages"
+          className="messages-desk customer-messages"
           data-narrow={narrow ? "true" : "false"}
           data-phone-pane={phoneThreadOpen ? "thread" : "list"}
         >
@@ -585,7 +585,7 @@ export function Messages() {
           >
             {showThreadPane && activeRow ? (
               <>
-                <header className="customer-messages-thread-header">
+                <header className="messages-desk-thread-header customer-messages-thread-header">
                   {narrow ? (
                     <Button
                       variant="tertiary"
