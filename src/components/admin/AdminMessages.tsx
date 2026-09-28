@@ -118,6 +118,11 @@ export function AdminMessages({
   const openRow = (id: string) => {
     setSelected(id);
     if (narrow) setPhoneThreadOpen(true);
+    result.setData((current) =>
+      (current || []).map((item) =>
+        item.id === id && item.unread > 0 ? { ...item, unread: 0 } : item,
+      ),
+    );
   };
 
   const setReadState = async (row: ConversationSummary, unread: boolean) => {
@@ -255,6 +260,7 @@ export function AdminMessages({
                           ? "admin-messages-row active"
                           : "admin-messages-row"
                       }
+                      data-unread={isUnread ? "true" : undefined}
                     >
                       <button
                         type="button"

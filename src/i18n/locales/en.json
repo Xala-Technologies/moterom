@@ -348,6 +348,7 @@
     "intro": "Booking conversations and general questions for the building administrator.",
     "booking_intro": "The message goes to the building administrator. You both see the same conversation.",
     "compose_label": "Message",
+    "compose_send_hint": "Enter sends. Shift+Enter for a new line.",
     "send": "Send message",
     "sent": "Sent",
     "read": "Read",
