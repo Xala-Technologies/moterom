@@ -14,6 +14,7 @@ process.env.BOOKING_ACCESS = "members";
 process.env.ADMIN_EMAILS = "admin@example.invalid";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
 process.env.PORTAL_ROLES_DB_PATH = ":memory:";
+process.env.PORTAL_ACCESS_DB_PATH = ":memory:";
 process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
@@ -37,7 +38,7 @@ vi.mock("../server/digilist", async (importOriginal) => ({
   refreshAccess: mocks.refreshAccess,
 }));
 
-const { app } = await import("../server/app");
+const { app, portalAccessStore } = await import("../server/app");
 const { writeSession } = await import("../server/session");
 const { inventory } = await import("../server/config");
 const origin = "http://localhost:4173";
@@ -121,6 +122,9 @@ beforeEach(() => {
   tenantMembers = [];
   conversations = [];
   messages = [];
+  for (const email of portalAccessStore.list()) portalAccessStore.revoke(email);
+  // Digilist membership alone is not enough — seed the usual booker grant.
+  portalAccessStore.grant(member.email, "admin");
   sources = inventory.map((room) => ({
     _id: `resource-${room.id}`,
     tenantId: "building-test",
@@ -278,6 +282,16 @@ beforeEach(() => {
           createdNewUser: true,
           activated: true,
         };
+      }
+      case "domain/tenantTeam:removeMember": {
+        const before = tenantMembers.length;
+        tenantMembers = tenantMembers.filter(
+          (row) => row.userId !== args.userId,
+        );
+        if (tenantMembers.length === before) {
+          throw new Error("membership not found");
+        }
+        return { success: true };
       }
       default:
         throw new Error(`Unexpected mutation ${getFunctionName(ref)}`);
@@ -563,6 +577,7 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
         ([ref]) => getFunctionName(ref) === "domain/tenantTeam:inviteMember",
       ),
     ).toBe(false);
+    expect(portalAccessStore.has(outsider.email)).toBe(true);
     // Inbox completion does not override the current Digilist session.
     await request(app)
       .get("/api/rooms")
@@ -672,5 +687,100 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       "burnerlbv12@gmail.com",
     ]);
     expect(body[1].userId).toBe("dup-active");
+  });
+
+  it("revokes Digilist building membership from Admin → Brukere", async () => {
+    tenantMembers = [
+      {
+        userId: admin.id,
+        name: "SKB DEV Admin",
+        email: admin.email,
+        role: "tenant_admin",
+        status: "active",
+      },
+      {
+        userId: "guest-user",
+        name: "Guest Booker",
+        email: "guest@example.invalid",
+        role: "support",
+        status: "active",
+      },
+    ];
+    portalAccessStore.grant("guest@example.invalid", "admin");
+    await request(app)
+      .delete("/api/admin/members/guest-user")
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(tenantMembers.map((row) => row.userId)).toEqual([admin.id]);
+    expect(portalAccessStore.has("guest@example.invalid")).toBe(false);
+    const call = mocks.mutation.mock.calls.find(
+      ([ref]) => getFunctionName(ref) === "domain/tenantTeam:removeMember",
+    );
+    expect(call?.[1]).toEqual({
+      tenantId: "building-test",
+      userId: "guest-user",
+      actorId: admin.id,
+    });
+  });
+
+  it("refuses self-revocation and customer callers on membership delete", async () => {
+    tenantMembers = [
+      {
+        userId: admin.id,
+        name: "Admin",
+        email: admin.email,
+        role: "tenant_admin",
+        status: "active",
+      },
+    ];
+    await request(app)
+      .delete(`/api/admin/members/${admin.id}`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .expect(409);
+    await request(app)
+      .delete("/api/admin/members/guest-user")
+      .set("Origin", origin)
+      .set("Cookie", await cookie())
+      .expect(403);
+  });
+
+  it("denies Digilist-only members until Møterom portal access is granted", async () => {
+    portalAccessStore.revoke(member.email);
+    await request(app)
+      .get("/api/rooms")
+      .set("Cookie", await cookie())
+      .expect(403);
+    const session = await request(app)
+      .get("/api/session")
+      .set("Cookie", await cookie())
+      .expect(200);
+    expect(session.body.user.isMember).toBe(false);
+
+    tenantMembers = [
+      {
+        userId: member.id,
+        name: member.name,
+        email: member.email,
+        role: "support",
+        status: "active",
+      },
+    ];
+    await request(app)
+      .post(`/api/admin/members/${member.id}/portal-access`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(portalAccessStore.has(member.email)).toBe(true);
+    const members = await request(app)
+      .get("/api/admin/members")
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(members.body[0].portalGranted).toBe(true);
+    await request(app)
+      .get("/api/rooms")
+      .set("Cookie", await cookie())
+      .expect(200);
   });
 });

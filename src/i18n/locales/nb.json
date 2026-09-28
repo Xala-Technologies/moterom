@@ -658,6 +658,7 @@
       "remove": "Fjern",
       "remove_title": "Fjern forespørsel",
       "remove_body": "{{name}} fjernes fra listen. Dette endrer ikke medlemskap i Digilist.",
+      "remove_body_approved": "{{name}} fjernes fra listen, og Digilist-tilgangen til bygget trekkes tilbake.",
       "remove_confirm": "Fjern forespørsel",
       "remove_cancel": "Avbryt",
       "actions_menu": "Handlinger for {{name}}"
@@ -771,9 +772,9 @@
     },
     "members": {
       "title": "Byggets medlemmer",
-      "caption": "Personer med tilgang til bygget. Forespørsler om ny tilgang ligger i innboksen under.",
+      "caption": "Digilist-medlemskap alene gir ikke tilgang hit. Gi portaltilgang eksplisitt, eller godkjenn en forespørsel. Forespørsler ligger i innboksen under.",
       "refresh": "Oppdater medlemmer",
-      "role": "Portalrolle",
+      "role": "Rolle",
       "role_administrator": "Administrator",
       "role_portal_admin": "Byggadministrator",
       "role_operations": "Saksbehandler",
@@ -782,7 +783,20 @@
       "role_saved": "Portalrollen er lagret.",
       "active": "Aktiv",
       "invited": "Invitert",
-      "empty": "Ingen medlemmer å vise."
+      "empty": "Ingen medlemmer å vise.",
+      "actions": "Handlinger",
+      "portal_access": "Portaltilgang",
+      "portal_granted": "Har tilgang",
+      "portal_digilist_only": "Kun Digilist",
+      "grant": "Gi tilgang",
+      "grant_needs_active": "Personen må ha aktiv Digilist-tilgang først.",
+      "granted": "Portaltilgang er gitt for {{email}}.",
+      "revoke": "Fjern tilgang",
+      "revoke_title": "Fjern tilgang",
+      "revoke_body": "{{name}} ({{email}}) mister Digilist-tilgang til bygget og portaltilgang her.",
+      "revoke_confirm": "Fjern tilgang",
+      "cannot_revoke_self": "Du kan ikke fjerne ditt eget medlemskap.",
+      "revoked": "Tilgangen for {{email}} er fjernet."
     },
     "room_image_url": "Bildeadresse",
     "room_image_url_hint": "Bruk en godkjent HTTPS-adresse. La feltet stå tomt for å bruke illustrasjonsbildet fra katalogen. Velg riktig bildetype."

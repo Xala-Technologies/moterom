@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useApp } from "../context";
 import { post } from "../api";
 import { Button, Loading } from "./ui";
 import { AccessRequestForm } from "./AccessRequestForm";
 import { useT } from "../i18n";
+import { forgetLoginIdentity } from "../loginHistory";
 
 /** Shared panel: signed in (or Digilist auth refused) but not a building member. */
 export function AccessPending({
@@ -12,9 +13,12 @@ export function AccessPending({
 }: {
   onLogout?: () => void;
 } = {}) {
-  const { refresh, notify } = useApp();
+  const { refresh, notify, user } = useApp();
   const { t } = useT();
   const [showForm, setShowForm] = useState(false);
+  useEffect(() => {
+    if (user?.email) forgetLoginIdentity(user.email);
+  }, [user?.email]);
   const logout = async () => {
     try {
       await post("/auth/logout");

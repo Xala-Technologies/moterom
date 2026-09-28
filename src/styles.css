@@ -5415,12 +5415,26 @@ button.admin-bl-menu-trigger:disabled {
   grid-template-columns:
     minmax(14rem, 1.8fr)
     minmax(7rem, 0.7fr)
-    minmax(6rem, 0.55fr);
+    minmax(6rem, 0.55fr)
+    minmax(7rem, auto);
 }
 .admin-members-role {
   margin: 0;
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-default);
+}
+.admin-members-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-members-access-label {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  color: var(--ds-color-neutral-text-subtle);
 }
 .admin-users-identity {
   display: flex;
@@ -5588,10 +5602,15 @@ button.admin-users-menu-trigger:disabled {
     grid-template-columns: 1.4fr auto;
     grid-template-areas:
       "identity status"
-      "role role";
+      "role role"
+      "actions actions";
   }
   .admin-members-role {
     grid-area: role;
+  }
+  .admin-members-actions {
+    grid-area: actions;
+    justify-content: flex-start;
   }
 }
 @media (max-width: 767px) {
@@ -5609,10 +5628,15 @@ button.admin-users-menu-trigger:disabled {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       "identity status"
-      "role role";
+      "role role"
+      "actions actions";
   }
   .admin-members-role {
     grid-area: role;
+  }
+  .admin-members-actions {
+    grid-area: actions;
+    justify-content: flex-start;
   }
 }
 .settings-rows {
