@@ -606,6 +606,48 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       .expect(200);
     expect(again.body.conversation.id).toBe(supportId);
   });
+  it("lets customers mark a support thread unread and shows peer read receipts", async () => {
+    const opened = await customer
+      .post("/api/messages/support")
+      .set("Origin", origin)
+      .send({
+        content: "Kan dere bekrefte mottak?",
+        clientMessageId: randomUUID(),
+      })
+      .expect(201);
+    const supportId = opened.body.conversation.id as string;
+    await administrator
+      .post(`/api/admin/messages/${supportId}`)
+      .set("Origin", origin)
+      .send({ content: "Mottatt." })
+      .expect(201);
+    const thread = await customer.get(`/api/messages/${supportId}`).expect(200);
+    const own = (
+      thread.body.messages as Array<{
+        fromAdmin: boolean;
+        readByPeer?: boolean;
+      }>
+    ).find((message) => !message.fromAdmin);
+    expect(own?.readByPeer).toBe(true);
+    const marked = await customer
+      .post(`/api/messages/${supportId}/read-state`)
+      .set("Origin", origin)
+      .send({ unread: true })
+      .expect(200);
+    expect(marked.body.unread).toBe(1);
+    const inbox = await customer.get("/api/messages").expect(200);
+    expect(
+      (inbox.body as Array<{ id: string; unread: number }>).find(
+        (row) => row.id === supportId,
+      )?.unread,
+    ).toBe(1);
+    const cleared = await customer
+      .post(`/api/messages/${supportId}/read-state`)
+      .set("Origin", origin)
+      .send({ unread: false })
+      .expect(200);
+    expect(cleared.body.unread).toBe(0);
+  });
   it("lets an administrator delete support and booking conversations", async () => {
     const opened = await customer
       .post("/api/messages/support")

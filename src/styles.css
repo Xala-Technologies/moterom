@@ -3390,11 +3390,25 @@ a.login-option:hover {
 .customer-messages-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 4px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 8px 8px 8px 0;
   border: 0;
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+  background: transparent;
+  color: inherit;
+  min-height: 44px;
+}
+.customer-messages-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 8px 6px 16px;
+  border: 0;
+  border-radius: 8px;
   background: transparent;
   text-align: start;
   cursor: pointer;
@@ -3405,16 +3419,26 @@ a.login-option:hover {
 .customer-messages-list li:last-child .customer-messages-row {
   border-bottom: 0;
 }
-.customer-messages-row:hover {
+.customer-messages-row:hover,
+.customer-messages-row:hover .customer-messages-row-main {
   background: var(--ds-color-neutral-background-tinted);
 }
 .customer-messages-row.active,
-.customer-messages-row.active:hover {
+.customer-messages-row.active:hover,
+.customer-messages-row.active .customer-messages-row-main,
+.customer-messages-row.active:hover .customer-messages-row-main {
   background: var(--ds-color-accent-background-tinted);
 }
-.customer-messages-row:focus-visible {
+.customer-messages-row-main:focus-visible {
   outline: 2px solid var(--ds-color-accent-base-default);
   outline-offset: -2px;
+}
+.messages-desk-read-toggle {
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: var(--ds-touch-target-min, 44px);
+  min-height: var(--ds-touch-target-min, 44px);
+  margin-right: 4px;
 }
 .customer-messages-avatar {
   flex: 0 0 44px;
@@ -3820,13 +3844,6 @@ a.login-option:hover {
 .admin-messages-row-main:focus-visible {
   outline: 2px solid var(--ds-color-accent-base-default);
   outline-offset: -2px;
-}
-.admin-messages-read-toggle {
-  flex: 0 0 auto;
-  align-self: center;
-  min-width: var(--ds-touch-target-min, 44px);
-  min-height: var(--ds-touch-target-min, 44px);
-  margin-right: 4px;
 }
 .admin-messages-row[data-unread="true"] .admin-messages-row-top strong {
   font-weight: var(--ds-font-weight-semibold, 600);

@@ -69,6 +69,10 @@ export class MessagingLocalStore {
          id TEXT PRIMARY KEY,
          unread INTEGER NOT NULL
        );
+       CREATE TABLE IF NOT EXISTS customer_unread_flags (
+         id TEXT PRIMARY KEY,
+         unread INTEGER NOT NULL
+       );
        CREATE TABLE IF NOT EXISTS digilist_peer_unread (
          id TEXT PRIMARY KEY,
          admin_unread INTEGER NOT NULL DEFAULT 0,
@@ -327,30 +331,49 @@ export class MessagingLocalStore {
     return Boolean(row);
   }
 
-  /** Digilist booking threads: admin-forced unread when Digilist has no mark-unread API. */
-  setAdminUnreadFlag(id: string, unread: boolean): void {
+  /** Digilist booking threads: forced unread when Digilist has no mark-unread API. */
+  setForcedUnreadFlag(id: string, forAdmin: boolean, unread: boolean): void {
+    const table = forAdmin ? "admin_unread_flags" : "customer_unread_flags";
     this.db
       .prepare(
-        `INSERT INTO admin_unread_flags (id, unread)
+        `INSERT INTO ${table} (id, unread)
          VALUES (?, ?)
          ON CONFLICT(id) DO UPDATE SET unread = excluded.unread`,
       )
       .run(id, unread ? 1 : 0);
   }
 
-  clearAdminUnreadFlag(id: string): void {
-    this.db.prepare(`DELETE FROM admin_unread_flags WHERE id = ?`).run(id);
+  clearForcedUnreadFlag(id: string, forAdmin: boolean): void {
+    const table = forAdmin ? "admin_unread_flags" : "customer_unread_flags";
+    this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
   }
 
-  applyAdminUnreadFlag(row: ConversationSummary): ConversationSummary {
+  applyForcedUnreadFlag(
+    row: ConversationSummary,
+    forAdmin: boolean,
+  ): ConversationSummary {
+    const table = forAdmin ? "admin_unread_flags" : "customer_unread_flags";
     const flag = this.db
-      .prepare(`SELECT unread FROM admin_unread_flags WHERE id = ?`)
+      .prepare(`SELECT unread FROM ${table} WHERE id = ?`)
       .get(row.id) as { unread?: number } | undefined;
     if (!flag) return row;
     return {
       ...row,
       unread: flag.unread ? Math.max(1, Number(row.unread) || 0) : 0,
     };
+  }
+
+  /** @deprecated Prefer setForcedUnreadFlag(id, true, unread). */
+  setAdminUnreadFlag(id: string, unread: boolean): void {
+    this.setForcedUnreadFlag(id, true, unread);
+  }
+
+  clearAdminUnreadFlag(id: string): void {
+    this.clearForcedUnreadFlag(id, true);
+  }
+
+  applyAdminUnreadFlag(row: ConversationSummary): ConversationSummary {
+    return this.applyForcedUnreadFlag(row, true);
   }
 
   /**
@@ -415,7 +438,7 @@ export class MessagingLocalStore {
     else
       stored.customerUnread = unread ? Math.max(1, stored.customerUnread) : 0;
     this.saveStored(stored);
-    this.clearAdminUnreadFlag(id);
+    this.clearForcedUnreadFlag(id, user.isAdmin);
     return this.presentConversation(stored, user.isAdmin);
   }
 
