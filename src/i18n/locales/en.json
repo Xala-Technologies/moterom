@@ -622,7 +622,7 @@
     "settings_rule_payment": "Payment",
     "settings_rule_payment_value": "Free. No payment or invoice.",
     "users": {
-      "caption": "The inbox is access requests. Building members are listed above. Approve activates a Digilist booker and grants portal access here. Declining a pending request does not change Digilist. Declining or removing an approved request revokes access.",
+      "caption": "The inbox is access requests. Building members are listed above. Approve access here in Møterom — the person can use the portal. Declining a pending request does not change access. Declining or removing an approved request revokes access.",
       "loading": "Loading requests …",
       "filter_aria": "Filter requests",
       "filter_pending": "Pending",
@@ -647,9 +647,9 @@
       "mark_rejected": "Decline",
       "mark_pending": "Reset",
       "toasts": {
-        "marked_approved": "Access granted. The person is activated as a Digilist booker and can use this portal.",
+        "marked_approved": "Access granted. The person can use the portal.",
         "marked_rejected": "Request declined.",
-        "marked_revoked": "Access was revoked in Digilist and in this portal.",
+        "marked_revoked": "Access was revoked.",
         "marked_pending": "Request set back to pending.",
         "marked_approved_demo": "Access approved in demo.",
         "removed": "Request removed."
@@ -659,7 +659,7 @@
       "remove": "Remove",
       "remove_title": "Remove request",
       "remove_body": "{{name}} is removed from the list. This does not change Digilist membership.",
-      "remove_body_approved": "{{name}} is removed from the list, and Digilist building access is revoked.",
+      "remove_body_approved": "{{name}} is removed from the list, and portal access is revoked.",
       "remove_confirm": "Remove request",
       "remove_cancel": "Cancel",
       "actions_menu": "Actions for {{name}}"
@@ -773,7 +773,7 @@
     },
     "members": {
       "title": "Building members",
-      "caption": "Digilist membership alone does not open this portal. Grant portal access explicitly, or approve a request. Requests are in the inbox below.",
+      "caption": "Portal access is managed here in Møterom. Approve requests in the inbox below, or grant access to people in the list. Digilist membership alone does not open the portal.",
       "refresh": "Refresh members",
       "role": "Role",
       "role_administrator": "Administrator",
@@ -794,7 +794,7 @@
       "granted": "Portal access granted for {{email}}.",
       "revoke": "Revoke access",
       "revoke_title": "Revoke access",
-      "revoke_body": "{{name}} ({{email}}) will lose Digilist building membership and portal access here.",
+      "revoke_body": "{{name}} ({{email}}) will lose portal access here. Digilist membership is removed when possible.",
       "revoke_confirm": "Revoke access",
       "cannot_revoke_self": "You cannot revoke your own membership.",
       "revoked": "Access for {{email}} has been revoked."
