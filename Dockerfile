@@ -15,7 +15,7 @@ COPY --from=build /app/server ./server
 COPY --from=build /app/shared ./shared
 COPY --from=build /app/config ./config
 COPY --from=build /app/assets ./assets
-RUN mkdir .data && chown node:node .data
+RUN mkdir -p .data/message-images && chown -R node:node .data
 USER node
 EXPOSE 4173
 CMD ["node", "--import", "tsx", "server/index.ts"]

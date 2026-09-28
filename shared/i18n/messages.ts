@@ -71,6 +71,7 @@ const nb: Record<string, string> = {
   invalid_image_size: "Bildet må være mellom 32 byte og 2 MB.",
   message_images_unsupported:
     "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
+  message_image_store_failed: "Bildet kunne ikke lagres. Prøv igjen.",
   room_name_required: "Skriv inn et romnavn.",
   room_create_failed: "Rommet kunne ikke opprettes i Digilist.",
   room_delete_failed: "Rommet kunne ikke slettes i Digilist.",
@@ -204,6 +205,7 @@ const en: Record<string, string> = {
   invalid_image_size: "The image must be between 32 bytes and 2 MB.",
   message_images_unsupported:
     "Image messages are not available for booking conversations yet. Use a general enquiry, or send a text message.",
+  message_image_store_failed: "The image could not be stored. Try again.",
   room_name_required: "Enter a room name.",
   room_create_failed: "The room could not be created in Digilist.",
   room_delete_failed: "The room could not be deleted in Digilist.",
