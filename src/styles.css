@@ -3303,26 +3303,6 @@ a.login-option:hover {
   font-weight: var(--ds-font-weight-semibold, 600);
   width: fit-content;
 }
-.customer-messages {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  display: grid;
-  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
-  gap: 16px;
-}
-.customer-messages-list,
-.customer-messages-thread {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--ds-color-neutral-border-subtle);
-  border-radius: 12px;
-  background: var(--ds-color-neutral-background-default);
-  overflow: hidden;
-}
 .customer-messages-list-head {
   padding: 16px 18px;
   border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
@@ -3493,18 +3473,6 @@ a.login-option:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.customer-messages-thread-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
-  flex-shrink: 1;
-  min-height: 0;
-  max-height: min(42vh, 22rem);
-  overflow: auto;
-  overscroll-behavior: contain;
-}
 .customer-messages-thread-header h2 {
   margin: 0;
   font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
@@ -3520,9 +3488,6 @@ a.login-option:hover {
   align-self: flex-start;
   margin-bottom: 4px;
 }
-.customer-messages-thread .message-thread-fill {
-  padding: 16px 20px 20px;
-}
 .customer-messages-thread-empty {
   flex: 1;
   display: flex;
@@ -3531,17 +3496,76 @@ a.login-option:hover {
   padding: 32px 24px;
   text-align: center;
 }
-.customer-messages[data-narrow="true"] {
+.customer-pane:has(.messages-desk) {
+  height: calc(100dvh - var(--app-header-offset));
+  max-height: calc(100dvh - var(--app-header-offset));
+  min-height: 0;
+  overflow: hidden;
+}
+.customer-pane:has(.messages-desk) .page-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.customer-pane:has(.messages-desk) .customer-messages-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Shared customer + admin messages desk (viewport-locked two-pane shell). */
+.messages-desk {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+  gap: 16px;
+}
+.messages-desk > section {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: 12px;
+  background: var(--ds-color-neutral-background-default);
+  overflow: hidden;
+}
+.messages-desk-thread-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: min(42vh, 22rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.messages-desk .message-thread-fill {
+  padding: 16px 20px 20px;
+}
+.messages-desk[data-narrow="true"] {
   grid-template-columns: minmax(0, 1fr);
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
 }
-.customer-messages[data-narrow="true"][data-phone-pane="list"]
-  .customer-messages-thread,
-.customer-messages[data-narrow="true"][data-phone-pane="thread"]
-  .customer-messages-list {
+.messages-desk[data-narrow="true"][data-phone-pane="list"]
+  > section:last-of-type,
+.messages-desk[data-narrow="true"][data-phone-pane="thread"]
+  > section:first-of-type {
   display: none;
 }
-.customer-messages[data-narrow="true"] .message-thread-fill .message-composer {
+.messages-desk[data-narrow="true"] .message-thread-fill .message-composer {
   flex-direction: column;
   align-items: stretch;
   position: sticky;
@@ -3550,31 +3574,9 @@ a.login-option:hover {
   padding-top: 8px;
   background: var(--ds-color-neutral-background-default);
 }
-.customer-messages[data-narrow="true"]
-  .message-thread-fill
-  .message-composer-main {
+.messages-desk[data-narrow="true"] .message-thread-fill .message-composer-main {
   flex-direction: column;
   align-items: stretch;
-}
-.customer-pane:has(.customer-messages-page) {
-  height: calc(100dvh - var(--app-header-offset));
-  max-height: calc(100dvh - var(--app-header-offset));
-  min-height: 0;
-  overflow: hidden;
-}
-.customer-pane:has(.customer-messages-page) .page-main {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-.customer-pane:has(.customer-messages-page) .customer-messages-page {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 .message-thread-fill {
   flex: 1;
@@ -3733,26 +3735,6 @@ a.login-option:hover {
   gap: 10px;
   justify-content: flex-end;
 }
-.admin-messages {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  display: grid;
-  grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr);
-  gap: 16px;
-}
-.admin-messages-list,
-.admin-messages-thread {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--ds-color-neutral-border-subtle);
-  border-radius: 12px;
-  background: var(--ds-color-neutral-background-default);
-  overflow: hidden;
-}
 .admin-messages-toolbar {
   display: flex;
   flex-direction: column;
@@ -3893,18 +3875,6 @@ a.login-option:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.admin-messages-thread-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--ds-color-neutral-border-subtle);
-  flex-shrink: 1;
-  min-height: 0;
-  max-height: min(42vh, 22rem);
-  overflow: auto;
-  overscroll-behavior: contain;
-}
 .admin-messages-thread-heading {
   display: flex;
   align-items: flex-start;
@@ -3929,9 +3899,6 @@ a.login-option:hover {
   align-self: flex-start;
   margin-bottom: 4px;
 }
-.admin-messages-thread .message-thread-fill {
-  padding: 16px 20px 20px;
-}
 .admin-messages-thread-empty {
   flex: 1;
   display: flex;
@@ -3939,33 +3906,6 @@ a.login-option:hover {
   justify-content: center;
   padding: 32px 24px;
   text-align: center;
-}
-.admin-messages[data-narrow="true"] {
-  grid-template-columns: minmax(0, 1fr);
-  min-height: 0;
-  width: 100%;
-  max-width: 100%;
-}
-.admin-messages[data-narrow="true"][data-phone-pane="list"]
-  .admin-messages-thread,
-.admin-messages[data-narrow="true"][data-phone-pane="thread"]
-  .admin-messages-list {
-  display: none;
-}
-.admin-messages[data-narrow="true"] .message-thread-fill .message-composer {
-  flex-direction: column;
-  align-items: stretch;
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  padding-top: 8px;
-  background: var(--ds-color-neutral-background-default);
-}
-.admin-messages[data-narrow="true"]
-  .message-thread-fill
-  .message-composer-main {
-  flex-direction: column;
-  align-items: stretch;
 }
 .info-message {
   background: var(--ds-color-info-background-tinted);
@@ -4012,24 +3952,23 @@ a.login-option:hover {
   min-height: calc(100dvh - var(--app-header-offset));
   align-items: start;
 }
-.app-shell:has(.admin-messages),
-.app-shell:has(.customer-messages-page) {
+.app-shell:has(.messages-desk) {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
 }
-.admin-main:has(.admin-messages) {
+.admin-main:has(.messages-desk) {
   min-height: 0;
   overflow: hidden;
 }
-.admin-layout:has(.admin-messages) {
+.admin-layout:has(.messages-desk) {
   align-items: stretch;
   height: calc(100dvh - var(--app-header-offset));
   max-height: calc(100dvh - var(--app-header-offset));
   min-height: 0;
   overflow: hidden;
 }
-.admin-layout:has(.admin-messages[data-narrow="true"]) {
+.admin-layout:has(.messages-desk[data-narrow="true"]) {
   grid-template-columns: minmax(0, 1fr);
   height: calc(
     100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
@@ -4107,7 +4046,7 @@ a.login-option:hover {
   padding: 30px 32px 55px;
   min-width: 0;
 }
-.admin-content:has(.admin-messages) {
+.admin-content:has(.messages-desk) {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -4117,34 +4056,33 @@ a.login-option:hover {
   padding-bottom: 24px;
   overflow: hidden;
 }
-.admin-content:has(.admin-messages) .admin-heading {
+.admin-content:has(.messages-desk) .admin-heading {
   flex-shrink: 0;
   margin-bottom: 16px;
 }
 
 /* Laptop / MBA-class heights: keep list + composer inside the viewport. */
 @media (max-height: 960px) {
-  .admin-content:has(.admin-messages) {
+  .admin-content:has(.messages-desk) {
     padding-top: 18px;
     padding-bottom: 12px;
   }
-  .admin-content:has(.admin-messages) .admin-heading {
+  .admin-content:has(.messages-desk) .admin-heading {
     margin-bottom: 10px;
     align-items: center;
   }
-  .admin-content:has(.admin-messages) .admin-heading .muted {
+  .admin-content:has(.messages-desk) .admin-heading .muted {
     display: none;
   }
-  .admin-messages-toolbar {
+  .messages-desk .admin-messages-toolbar,
+  .messages-desk .customer-messages-toolbar {
     padding: 12px 14px;
     gap: 8px;
   }
-  .admin-messages-thread-header,
-  .customer-messages-thread-header {
+  .messages-desk-thread-header {
     padding: 12px 16px;
   }
-  .admin-messages-thread .message-thread-fill,
-  .customer-messages-thread .message-thread-fill {
+  .messages-desk .message-thread-fill {
     padding: 12px 16px 14px;
     gap: 8px;
   }
@@ -4157,7 +4095,7 @@ a.login-option:hover {
 }
 
 @media (max-height: 760px) {
-  .admin-content:has(.admin-messages) .admin-heading h1 {
+  .admin-content:has(.messages-desk) .admin-heading h1 {
     font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.25rem));
   }
   .message-thread-fill .message-composer-main .ds-input {
@@ -5922,7 +5860,7 @@ button.admin-users-menu-trigger:disabled {
   .admin-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .admin-layout:has(.admin-messages) {
+  .admin-layout:has(.messages-desk) {
     grid-template-rows: auto 1fr;
     grid-template-columns: minmax(0, 1fr);
   }
@@ -6191,14 +6129,6 @@ button.admin-users-menu-trigger:disabled {
   .message-inbox {
     grid-template-columns: 1fr;
   }
-  .customer-messages {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-  .customer-messages[data-phone-pane="list"] .customer-messages-thread,
-  .customer-messages[data-phone-pane="thread"] .customer-messages-list {
-    display: none;
-  }
   .customer-messages-heading {
     align-items: stretch;
     flex-direction: column;
@@ -6210,19 +6140,19 @@ button.admin-users-menu-trigger:disabled {
     flex: 1;
     justify-content: center;
   }
-  .customer-messages-thread .message-thread-fill {
-    padding: 16px 16px 20px;
-  }
-  .customer-messages-thread-header {
-    padding: 14px 16px;
-  }
-  .admin-messages {
+  .messages-desk {
     grid-template-columns: 1fr;
     min-height: 0;
   }
-  .admin-messages[data-phone-pane="list"] .admin-messages-thread,
-  .admin-messages[data-phone-pane="thread"] .admin-messages-list {
+  .messages-desk[data-phone-pane="list"] > section:last-of-type,
+  .messages-desk[data-phone-pane="thread"] > section:first-of-type {
     display: none;
+  }
+  .messages-desk .message-thread-fill {
+    padding: 16px 16px 20px;
+  }
+  .messages-desk-thread-header {
+    padding: 14px 16px;
   }
   .message-thread-fill .message-composer {
     flex-direction: column;
@@ -6236,12 +6166,6 @@ button.admin-users-menu-trigger:disabled {
   .message-thread-fill .message-composer-main {
     flex-direction: column;
     align-items: stretch;
-  }
-  .admin-messages-thread .message-thread-fill {
-    padding: 16px 16px 20px;
-  }
-  .admin-messages-thread-header {
-    padding: 14px 16px;
   }
   .admin-messages-thread-heading {
     flex-wrap: wrap;
@@ -6306,7 +6230,7 @@ button.admin-users-menu-trigger:disabled {
   .admin-content {
     padding: 24px 18px 35px;
   }
-  .admin-layout:has(.admin-messages) {
+  .admin-layout:has(.messages-desk) {
     height: calc(
       100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
     );
@@ -6315,7 +6239,7 @@ button.admin-users-menu-trigger:disabled {
     );
     min-height: 0;
   }
-  .customer-pane:has(.customer-messages-page) {
+  .customer-pane:has(.messages-desk) {
     height: calc(
       100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
     );
@@ -6323,7 +6247,7 @@ button.admin-users-menu-trigger:disabled {
       100dvh - var(--app-header-offset) - var(--app-mobile-nav-offset)
     );
   }
-  .admin-content:has(.admin-messages) {
+  .admin-content:has(.messages-desk) {
     padding: 24px 18px 16px;
   }
   .admin-heading {

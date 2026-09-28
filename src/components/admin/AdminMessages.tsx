@@ -192,7 +192,7 @@ export function AdminMessages({
   return (
     <>
       <div
-        className="admin-messages"
+        className="messages-desk admin-messages"
         data-narrow={narrow ? "true" : "false"}
         data-phone-pane={phoneThreadOpen ? "thread" : "list"}
       >
@@ -333,7 +333,7 @@ export function AdminMessages({
         >
           {showThread && activeRow ? (
             <>
-              <header className="admin-messages-thread-header">
+              <header className="messages-desk-thread-header admin-messages-thread-header">
                 {narrow ? (
                   <Button
                     variant="tertiary"
