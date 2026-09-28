@@ -1134,7 +1134,7 @@ app.patch("/api/admin/access-requests/:id", async (req, res) => {
       await ctx.provider.ensureActiveBooker(item.email, item.name, ctx.user!);
     }
     portalAccess.grant(item.email, "approve");
-  } else if (item.status === "approved" && status !== "approved") {
+  } else if (item.status === "approved") {
     // Leaving approved must drop the Møterom grant (and Digilist when possible).
     portalAccess.revoke(item.email);
     portalRoles.clear(item.email);
