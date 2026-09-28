@@ -370,7 +370,14 @@ export function AdminAccessRequests({ result }: { result: ApiResult }) {
             setRemoveTarget(undefined);
           }}
         >
-          <p>{t("admin.users.remove_body", { name: removeTarget.name })}</p>
+          <p>
+            {t(
+              removeTarget.status === "approved"
+                ? "admin.users.remove_body_approved"
+                : "admin.users.remove_body",
+              { name: removeTarget.name },
+            )}
+          </p>
           <div className="modal-actions">
             <Button
               variant="secondary"

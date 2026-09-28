@@ -943,6 +943,31 @@ export class Digilist {
       );
     }
   }
+  /** Revoke Digilist building membership (status → removed). */
+  async removeMember(userId: string, user: User): Promise<{ success: true }> {
+    this.assertPortalAdmin(user);
+    if (userId === user.id)
+      throw new AppError(
+        409,
+        "Du kan ikke fjerne ditt eget medlemskap.",
+        "cannot_remove_self",
+      );
+    try {
+      await mutate(this.c, "domain/tenantTeam:removeMember", {
+        tenantId,
+        userId,
+        actorId: user.id,
+      });
+      return { success: true };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(
+        409,
+        "Medlemskapet kunne ikke fjernes i Digilist. Krever Digilist byggadministrator, eller fjern personen i Digilist dashboard.",
+        "membership_revoke_failed",
+      );
+    }
+  }
   async updateRoom(
     id: string,
     patch: {

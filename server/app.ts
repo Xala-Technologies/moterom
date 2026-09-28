@@ -21,6 +21,7 @@ import {
 import { DemoStore } from "./demo";
 import { AccessRequestStore } from "./accessRequests";
 import { PortalRoleStore } from "./portalRoles";
+import { isPortalMember, PortalAccessStore } from "./portalAccess";
 import { MessagingLocalStore, isSupportConversationId } from "./messagingLocal";
 import { saveMessageImage } from "./messageImage";
 import {
@@ -92,33 +93,52 @@ const accessRequests = new AccessRequestStore(
 const portalRoles = new PortalRoleStore(
   process.env.PORTAL_ROLES_DB_PATH || ".data/portal_roles.sqlite",
 );
+const portalAccess = new PortalAccessStore(
+  process.env.PORTAL_ACCESS_DB_PATH || ".data/portal_access.sqlite",
+);
+// Keep approved inbox rows as portal grants across deploys.
+for (const row of accessRequests.list()) {
+  if (row.status === "approved") portalAccess.grant(row.email, "backfill");
+}
 const messagingLocal = new MessagingLocalStore(
   process.env.MESSAGING_LOCAL_DB_PATH || ".data/messaging_local.sqlite",
 );
 
 function withPortalRole(user: User, allowlisted: boolean): User {
+  const isMember = isPortalMember({
+    digilistMember: user.isMember,
+    allowlisted,
+    granted: portalAccess.has(user.email),
+    demo: config.mode === "demo",
+  });
   const caps = resolvePortalCapabilities({
     email: user.email,
-    isMember: user.isMember,
+    isMember,
     allowlisted,
     tenantRole: user.tenantRole,
     assigned: portalRoles.get(user.email),
   });
-  return { ...user, ...caps };
+  return { ...user, isMember, ...caps };
 }
 
 function attachPortalRoles(members: TenantMember[]): TenantMember[] {
   return members.map((member) => {
+    const email = member.email.trim().toLowerCase();
+    const allowlisted = adminEmails.has(email) || config.mode === "demo";
+    const portalGranted =
+      allowlisted || portalAccess.has(email) || config.mode === "demo";
     const caps = resolvePortalCapabilities({
       email: member.email,
-      isMember: true,
-      allowlisted:
-        adminEmails.has(member.email.trim().toLowerCase()) ||
-        config.mode === "demo",
+      isMember: portalGranted,
+      allowlisted,
       tenantRole: member.role,
       assigned: portalRoles.get(member.email),
     });
-    return { ...member, portalRole: caps.portalRole ?? "member" };
+    return {
+      ...member,
+      portalRole: caps.portalRole ?? "member",
+      portalGranted,
+    };
   });
 }
 
@@ -254,6 +274,8 @@ function deleteConversationFrom(
   return ctx.provider.deleteConversation(id, user);
 }
 export const app = express();
+/** Exposed for tests that seed Møterom portal grants. */
+export const portalAccessStore = portalAccess;
 app.disable("x-powered-by");
 app.use(
   helmet({
@@ -1106,15 +1128,35 @@ app.get("/api/admin/access-requests", async (req, res) => {
 app.patch("/api/admin/access-requests/:id", async (req, res) => {
   const ctx = await requirePortalAdminContext(req, res);
   const status = accessRequestStatusSchema.parse(req.body?.status);
-  if (status === "approved" && ctx.provider instanceof Digilist) {
-    const item = accessRequests.get(String(req.params.id));
-    await ctx.provider.ensureActiveBooker(item.email, item.name, ctx.user!);
+  const item = accessRequests.get(String(req.params.id));
+  if (status === "approved") {
+    if (ctx.provider instanceof Digilist) {
+      await ctx.provider.ensureActiveBooker(item.email, item.name, ctx.user!);
+    }
+    portalAccess.grant(item.email, "approve");
   }
   res.json(accessRequests.updateStatus(String(req.params.id), status));
 });
 app.delete("/api/admin/access-requests/:id", async (req, res) => {
-  await requirePortalAdminContext(req, res);
-  accessRequests.remove(String(req.params.id));
+  const ctx = await requirePortalAdminContext(req, res);
+  const id = String(req.params.id);
+  const item = accessRequests.get(id);
+  // Removing an approved request also revokes Digilist membership when possible.
+  if (item && item.status === "approved") {
+    portalAccess.revoke(item.email);
+    portalRoles.clear(item.email);
+    if (ctx.provider instanceof Digilist) {
+      const members = await ctx.provider.members(ctx.user!);
+      const match = members.find(
+        (row) =>
+          row.email.trim().toLowerCase() === item.email.trim().toLowerCase(),
+      );
+      if (match && match.userId !== ctx.user!.id) {
+        await ctx.provider.removeMember(match.userId, ctx.user!);
+      }
+    }
+  }
+  accessRequests.remove(id);
   res.json({ success: true });
 });
 app.get("/api/admin/members", async (req, res) => {
@@ -1124,6 +1166,60 @@ app.get("/api/admin/members", async (req, res) => {
     return;
   }
   res.json(demoMembers());
+});
+app.post("/api/admin/members/:userId/portal-access", async (req, res) => {
+  const ctx = await requirePortalAdminContext(req, res);
+  const userId = String(req.params.userId);
+  if (!(ctx.provider instanceof Digilist)) {
+    throw new AppError(
+      409,
+      "I demo gis Digilist-tilgang ikke. Bruk live-modus.",
+      "demo_membership_immutable",
+    );
+  }
+  const members = await ctx.provider.members(ctx.user!);
+  const target = members.find((row) => row.userId === userId);
+  if (!target)
+    throw new AppError(404, "Medlemmet ble ikke funnet.", "member_not_found");
+  if (target.status !== "active")
+    throw new AppError(
+      409,
+      "Personen må ha aktiv Digilist-tilgang før portaltilgang kan gis. Bruk Kontroller medlemskap på forespørselen.",
+      "digilist_membership_inactive",
+    );
+  portalAccess.grant(target.email, "admin");
+  res.json({
+    success: true as const,
+    email: target.email,
+    portalGranted: true,
+  });
+});
+app.delete("/api/admin/members/:userId", async (req, res) => {
+  const ctx = await requirePortalAdminContext(req, res);
+  const userId = String(req.params.userId);
+  if (userId === ctx.user!.id)
+    throw new AppError(
+      409,
+      "Du kan ikke fjerne ditt eget medlemskap.",
+      "cannot_remove_self",
+    );
+  if (ctx.provider instanceof Digilist) {
+    const members = await ctx.provider.members(ctx.user!);
+    const target = members.find((row) => row.userId === userId);
+    if (!target)
+      throw new AppError(404, "Medlemmet ble ikke funnet.", "member_not_found");
+    await ctx.provider.removeMember(userId, ctx.user!);
+    portalAccess.revoke(target.email);
+    portalRoles.clear(target.email);
+    res.json({ success: true as const, email: target.email });
+    return;
+  }
+  // Demo has no Digilist membership store to revoke.
+  throw new AppError(
+    409,
+    "I demo fjernes ikke Digilist-medlemskap. Bruk live-modus eller Digilist dashboard.",
+    "demo_membership_immutable",
+  );
 });
 app.patch("/api/admin/members/portal-role", async (req, res) => {
   const ctx = await requirePortalAdminContext(req, res);

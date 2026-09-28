@@ -22,6 +22,7 @@ import { ApiError, post } from "../api";
 import { useT } from "../i18n";
 import {
   DEFAULT_TRUST_MS,
+  forgetLoginIdentity,
   isLoginIdentifierTrusted,
   readLoginEmails,
   rememberDeviceAfterLogin,
@@ -102,14 +103,18 @@ export function Login() {
 
   const done = async (destination = returnTo) => {
     const next = await refresh();
-    // Trust the Digilist account email so a later email login can skip OTP.
     if (next?.email) {
-      trustLoginIdentifier(
-        next.email,
-        "email",
-        stayLoggedIn ? REMEMBER_TRUST_MS : DEFAULT_TRUST_MS,
-      );
-      rememberLoginEmail(next.email);
+      // Revoked Digilist members must not keep a one-tap / trusted shortcut.
+      if (config?.access === "members" && !next.isMember) {
+        forgetLoginIdentity(next.email);
+      } else {
+        trustLoginIdentifier(
+          next.email,
+          "email",
+          stayLoggedIn ? REMEMBER_TRUST_MS : DEFAULT_TRUST_MS,
+        );
+        rememberLoginEmail(next.email);
+      }
       setEmailHistory(readLoginEmails());
     }
     if (config?.access === "members" && next && !next.isMember) return;
