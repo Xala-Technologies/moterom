@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 import { isPortalMember, PortalAccessStore } from "../server/portalAccess";
 
 describe("isPortalMember", () => {
-  it("requires Digilist membership and a Møterom grant", () => {
+  it("grants live portal entry from a Møterom grant without Digilist membership", () => {
+    expect(
+      isPortalMember({
+        digilistMember: false,
+        allowlisted: false,
+        granted: true,
+      }),
+    ).toBe(true);
     expect(
       isPortalMember({
         digilistMember: true,
@@ -17,19 +24,12 @@ describe("isPortalMember", () => {
         granted: true,
       }),
     ).toBe(true);
+  });
+
+  it("treats ADMIN_EMAILS as an implicit grant without Digilist membership", () => {
     expect(
       isPortalMember({
         digilistMember: false,
-        allowlisted: false,
-        granted: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("treats ADMIN_EMAILS as an implicit grant when Digilist membership exists", () => {
-    expect(
-      isPortalMember({
-        digilistMember: true,
         allowlisted: true,
         granted: false,
       }),
@@ -45,6 +45,14 @@ describe("isPortalMember", () => {
         demo: true,
       }),
     ).toBe(true);
+    expect(
+      isPortalMember({
+        digilistMember: false,
+        allowlisted: false,
+        granted: true,
+        demo: true,
+      }),
+    ).toBe(false);
   });
 });
 

@@ -546,7 +546,7 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
     expect(inbox.body[0].canAttachImages).toBe(true);
   });
 
-  it("activates a Digilist portal booker when completing an access request", async () => {
+  it("grants Møterom portal access when completing an access request", async () => {
     const created = (
       await request(app)
         .post("/api/access-requests")
@@ -578,24 +578,55 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       ),
     ).toBe(false);
     expect(portalAccessStore.has(outsider.email)).toBe(true);
-    // Inbox completion does not override the current Digilist session.
+    // Møterom grant alone opens the portal after Digilist sign-in.
     await request(app)
       .get("/api/rooms")
       .set("Cookie", await cookie("outsider"))
-      .expect(403);
+      .expect(200);
     const session = await request(app)
       .get("/api/session")
       .set("Cookie", await cookie("outsider"))
       .expect(200);
-    expect(session.body.user.isMember).toBe(false);
-    mocks.refreshAccess.mockRejectedValue(
-      new AppError(503, "temporary failure"),
-    );
-    const fallback = await request(app)
-      .get("/api/session")
+    expect(session.body.user.isMember).toBe(true);
+  });
+
+  it("still approves when Digilist booker sync fails", async () => {
+    mocks.mutation.mockImplementation(async (ref) => {
+      if (getFunctionName(ref) === "domain/tenantTeam:ensureActiveBooker") {
+        throw new Error("digilist unavailable");
+      }
+      throw new Error(`Unexpected mutation ${getFunctionName(ref)}`);
+    });
+    const created = (
+      await request(app)
+        .post("/api/access-requests")
+        .set("Origin", origin)
+        .set("Cookie", await cookie("outsider"))
+        .send({
+          name: "Outsider",
+          email: outsider.email,
+          company: "Eksempel AS",
+        })
+        .expect(201)
+    ).body;
+    await request(app)
+      .patch(`/api/admin/access-requests/${created.id}`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .send({ status: "approved" })
+      .expect(200);
+    expect(portalAccessStore.has(outsider.email)).toBe(true);
+    const listed = await request(app)
+      .get("/api/admin/access-requests")
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(
+      listed.body.find((row: { id: string }) => row.id === created.id)?.status,
+    ).toBe("approved");
+    await request(app)
+      .get("/api/rooms")
       .set("Cookie", await cookie("outsider"))
       .expect(200);
-    expect(fallback.body.user.isMember).toBe(false);
   });
 
   it("revokes portal grant when an approved request is rejected", async () => {
@@ -639,37 +670,6 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
         ([ref]) => getFunctionName(ref) === "domain/tenantTeam:removeMember",
       ),
     ).toBe(true);
-  });
-
-  it("keeps the access request open when Digilist cannot activate the booker", async () => {
-    const created = (
-      await request(app)
-        .post("/api/access-requests")
-        .set("Origin", origin)
-        .set("Cookie", await cookie("outsider"))
-        .send({
-          name: "Outsider",
-          email: outsider.email,
-          company: "Eksempel AS",
-        })
-        .expect(201)
-    ).body;
-    mocks.mutation.mockImplementationOnce(async () => {
-      throw new Error("activation failed");
-    });
-    await request(app)
-      .patch(`/api/admin/access-requests/${created.id}`)
-      .set("Origin", origin)
-      .set("Cookie", await cookie("admin"))
-      .send({ status: "approved" })
-      .expect(409);
-    const rows = await request(app)
-      .get("/api/admin/access-requests")
-      .set("Cookie", await cookie("admin"))
-      .expect(200);
-    expect(
-      rows.body.find((row: { id: string }) => row.id === created.id).status,
-    ).toBe("pending");
   });
 
   it("pins the member list to the building and denies customers and anonymous callers", async () => {

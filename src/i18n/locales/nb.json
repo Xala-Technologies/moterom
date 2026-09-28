@@ -622,7 +622,7 @@
     "settings_rule_payment": "Betaling",
     "settings_rule_payment_value": "Gratis. Ingen betaling eller faktura.",
     "users": {
-      "caption": "Innboksen er forespørsler om tilgang. Byggets medlemmer vises i listen over. Godkjenn aktiverer Digilist-booker og gir portaltilgang her. Avslag på en ventende forespørsel endrer ikke Digilist. Avslag eller fjerning av en godkjent forespørsel trekker tilgangen tilbake.",
+      "caption": "Innboksen er forespørsler om tilgang. Byggets medlemmer vises i listen over. Godkjenn tilgang her i Møterom — personen får bruke portalen. Avslag på en ventende forespørsel endrer ikke tilgangen. Avslag eller fjerning av en godkjent forespørsel trekker tilgangen tilbake.",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -647,9 +647,9 @@
       "mark_rejected": "Avslå",
       "mark_pending": "Tilbakestill",
       "toasts": {
-        "marked_approved": "Tilgang er gitt. Personen er aktivert som booker i Digilist og kan bruke portalen.",
+        "marked_approved": "Tilgang er gitt. Personen kan bruke portalen.",
         "marked_rejected": "Forespørselen er avslått.",
-        "marked_revoked": "Tilgangen er trukket tilbake i Digilist og i denne portalen.",
+        "marked_revoked": "Tilgangen er trukket tilbake.",
         "marked_pending": "Forespørselen er satt tilbake til venter.",
         "marked_approved_demo": "Tilgang er godkjent i demo.",
         "removed": "Forespørselen er fjernet."
@@ -659,7 +659,7 @@
       "remove": "Fjern",
       "remove_title": "Fjern forespørsel",
       "remove_body": "{{name}} fjernes fra listen. Dette endrer ikke medlemskap i Digilist.",
-      "remove_body_approved": "{{name}} fjernes fra listen, og Digilist-tilgangen til bygget trekkes tilbake.",
+      "remove_body_approved": "{{name}} fjernes fra listen, og portaltilgangen trekkes tilbake.",
       "remove_confirm": "Fjern forespørsel",
       "remove_cancel": "Avbryt",
       "actions_menu": "Handlinger for {{name}}"
@@ -773,7 +773,7 @@
     },
     "members": {
       "title": "Byggets medlemmer",
-      "caption": "Digilist-medlemskap alene gir ikke tilgang hit. Gi portaltilgang eksplisitt, eller godkjenn en forespørsel. Forespørsler ligger i innboksen under.",
+      "caption": "Portaltilgang styres her i Møterom. Godkjenn forespørsler i innboksen under, eller gi tilgang til personer i listen. Digilist-medlemskap alene åpner ikke portalen.",
       "refresh": "Oppdater medlemmer",
       "role": "Rolle",
       "role_administrator": "Administrator",
@@ -794,7 +794,7 @@
       "granted": "Portaltilgang er gitt for {{email}}.",
       "revoke": "Fjern tilgang",
       "revoke_title": "Fjern tilgang",
-      "revoke_body": "{{name}} ({{email}}) mister Digilist-tilgang til bygget og portaltilgang her.",
+      "revoke_body": "{{name}} ({{email}}) mister portaltilgangen her. Digilist-tilgang fjernes når det er mulig.",
       "revoke_confirm": "Fjern tilgang",
       "cannot_revoke_self": "Du kan ikke fjerne ditt eget medlemskap.",
       "revoked": "Tilgangen for {{email}} er fjernet."
