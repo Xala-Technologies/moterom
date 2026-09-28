@@ -543,6 +543,8 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       .get(`/api/bookings/${mine!.id}/messages`)
       .expect(200);
     expect(empty.body.messages).toEqual([]);
+    expect(empty.body.conversation?.canAttachImages).toBe(true);
+    expect(empty.body.conversation?.bookingId).toBe(mine!.id);
     const sent = await customer
       .post(`/api/bookings/${mine!.id}/messages`)
       .set("Origin", origin)

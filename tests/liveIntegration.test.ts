@@ -498,6 +498,40 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       .expect(403);
   });
 
+  it("attaches a BFF-hosted image on a Digilist booking message", async () => {
+    const created = await submit(
+      { ...input(), quoteToken: await quote() },
+      randomUUID(),
+      201,
+    );
+    const png = Buffer.alloc(64, 0x41).toString("base64");
+    const sent = await request(app)
+      .post(`/api/bookings/${created.body.id}/messages`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie())
+      .send({
+        content: "Se bilde",
+        clientMessageId: randomUUID(),
+        imageFile: {
+          filename: "note.png",
+          contentType: "image/png",
+          data: png,
+        },
+      })
+      .expect(201);
+    expect(sent.body.conversation?.canAttachImages).toBe(true);
+    expect(sent.body.messages.at(-1)?.content).toBe("Se bilde");
+    expect(sent.body.messages.at(-1)?.imageUrl).toMatch(
+      /^\/message-images\/msg-.+\.png$/,
+    );
+    const inbox = await request(app)
+      .get("/api/admin/messages")
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(inbox.body[0].preview).toBe("Se bilde");
+    expect(inbox.body[0].canAttachImages).toBe(true);
+  });
+
   it("activates a Digilist portal booker when completing an access request", async () => {
     const created = (
       await request(app)

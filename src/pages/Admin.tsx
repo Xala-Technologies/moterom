@@ -614,6 +614,7 @@ export function Admin() {
                         bookings={pendingPreview}
                         rooms={rooms}
                         busy={busy}
+                        pageSize={0}
                         onOpen={(b) =>
                           openEvent({
                             ...b,
@@ -865,10 +866,26 @@ export function Admin() {
                   visibleRooms.map((room) => {
                     const copy = roomCopy(room, locale);
                     const published = room.portalPublished !== false;
+                    const openEdit = () => {
+                      setEditRoom({ ...room });
+                      setError(undefined);
+                    };
                     return (
                       <article
                         className={`admin-room${published ? "" : " is-hidden"}`}
                         key={room.id}
+                        role="link"
+                        tabIndex={0}
+                        aria-label={t("admin.edit_room_card", {
+                          name: room.name,
+                        })}
+                        onClick={openEdit}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openEdit();
+                          }
+                        }}
                       >
                         <div className="admin-room-media">
                           <RoomPhoto room={room} />
@@ -894,14 +911,12 @@ export function Admin() {
                               : t("admin.direct_booking")}
                           </span>
                         </div>
-                        <div className="admin-room-actions">
-                          <Button
-                            variant="secondary"
-                            onClick={() => {
-                              setEditRoom({ ...room });
-                              setError(undefined);
-                            }}
-                          >
+                        <div
+                          className="admin-room-actions"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <Button variant="secondary" onClick={openEdit}>
                             {t("admin.edit")}
                           </Button>
                           {published ? (

@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, MessageCircle, Search, Trash2 } from "lucide-react";
-import { api, useApi } from "../../api";
+import {
+  ChevronLeft,
+  Mail,
+  MailOpen,
+  MessageCircle,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { api, post, useApi } from "../../api";
 import { useApp } from "../../context";
 import { Button, Empty, ErrorState, Input, Loading, Modal } from "../ui";
 import { MessageThread } from "../MessageThread";
@@ -43,6 +50,7 @@ export function AdminMessages({
   const [announceError, setAnnounceError] = useState<Error>();
   const [deleteTarget, setDeleteTarget] = useState<ConversationSummary>();
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [readBusyId, setReadBusyId] = useState<string>();
   const announceWasOpen = useRef(false);
   const [narrow, setNarrow] = useState(
     () =>
@@ -82,8 +90,8 @@ export function AdminMessages({
     });
   }, [narrow, query, result.data, unreadOnly]);
 
-  if (result.loading) return <Loading />;
-  if (result.error)
+  if (result.loading && !result.data) return <Loading />;
+  if (result.error && !result.data)
     return <ErrorState error={result.error} retry={result.reload} />;
 
   const rows = result.data || [];
@@ -110,6 +118,26 @@ export function AdminMessages({
   const openRow = (id: string) => {
     setSelected(id);
     if (narrow) setPhoneThreadOpen(true);
+  };
+
+  const setReadState = async (row: ConversationSummary, unread: boolean) => {
+    if (readBusyId) return;
+    setReadBusyId(row.id);
+    try {
+      const next = await post<{ success: true; unread: number }>(
+        `/admin/messages/${row.id}/read-state`,
+        { unread },
+      );
+      result.setData((current) =>
+        (current || []).map((item) =>
+          item.id === row.id ? { ...item, unread: next.unread } : item,
+        ),
+      );
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setReadBusyId(undefined);
+    }
   };
 
   const deleteConversation = async (row: ConversationSummary) => {
@@ -218,46 +246,75 @@ export function AdminMessages({
               {filtered.map((row) => {
                 const name =
                   row.customerName || t("messages.customer_fallback");
+                const isUnread = row.unread > 0;
                 return (
                   <li key={row.id}>
-                    <button
-                      type="button"
+                    <div
                       className={
                         row.id === active
                           ? "admin-messages-row active"
                           : "admin-messages-row"
                       }
-                      aria-current={row.id === active ? "true" : undefined}
-                      onClick={() => openRow(row.id)}
                     >
-                      <span className="admin-users-avatar" aria-hidden="true">
-                        {messageInitials(name)}
-                      </span>
-                      <span className="admin-messages-row-body">
-                        <span className="admin-messages-row-top">
-                          <strong>{name}</strong>
-                          <time
-                            dateTime={new Date(row.updatedAt).toISOString()}
-                          >
-                            {displayDate(row.updatedAt)}{" "}
-                            {shortTime(row.updatedAt)}
-                          </time>
+                      <button
+                        type="button"
+                        className="admin-messages-row-main"
+                        aria-current={row.id === active ? "true" : undefined}
+                        onClick={() => openRow(row.id)}
+                      >
+                        <span className="admin-users-avatar" aria-hidden="true">
+                          {messageInitials(name)}
                         </span>
-                        <span className="admin-messages-row-meta">
-                          {rowMeta(row, supportLabel)}
+                        <span className="admin-messages-row-body">
+                          <span className="admin-messages-row-top">
+                            <strong>{name}</strong>
+                            <time
+                              dateTime={new Date(row.updatedAt).toISOString()}
+                            >
+                              {displayDate(row.updatedAt)}{" "}
+                              {shortTime(row.updatedAt)}
+                            </time>
+                          </span>
+                          <span className="admin-messages-row-meta">
+                            {rowMeta(row, supportLabel)}
+                          </span>
+                          {row.preview ? (
+                            <span className="admin-messages-row-preview">
+                              {row.preview}
+                            </span>
+                          ) : null}
+                          {isUnread ? (
+                            <span className="admin-messages-row-unread">
+                              {t("messages.unread", { count: row.unread })}
+                            </span>
+                          ) : null}
                         </span>
-                        {row.preview ? (
-                          <span className="admin-messages-row-preview">
-                            {row.preview}
-                          </span>
-                        ) : null}
-                        {row.unread > 0 ? (
-                          <span className="admin-messages-row-unread">
-                            {t("messages.unread", { count: row.unread })}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="tertiary"
+                        data-size="sm"
+                        className="admin-messages-read-toggle"
+                        disabled={readBusyId === row.id}
+                        aria-label={
+                          isUnread
+                            ? t("messages.mark_read")
+                            : t("messages.mark_unread")
+                        }
+                        title={
+                          isUnread
+                            ? t("messages.mark_read")
+                            : t("messages.mark_unread")
+                        }
+                        onClick={() => void setReadState(row, !isUnread)}
+                      >
+                        {isUnread ? (
+                          <MailOpen size={16} aria-hidden="true" />
+                        ) : (
+                          <Mail size={16} aria-hidden="true" />
+                        )}
+                      </Button>
+                    </div>
                   </li>
                 );
               })}

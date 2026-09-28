@@ -50,10 +50,15 @@ export function MessageContextCard({
 
   const room = roomFromContext(conversation);
   const ctx = conversation.context;
+  const roomName = ctx?.roomName || conversation.roomName;
   const capacityLabel =
     locale === "en"
       ? ctx?.capacityLabelEn || ctx?.capacityLabel
       : ctx?.capacityLabel || ctx?.capacityLabelEn;
+  const whenLabel =
+    ctx?.startTime && ctx?.endTime
+      ? `${displayDate(ctx.startTime)} ${shortTime(ctx.startTime)}–${shortTime(ctx.endTime)}`
+      : null;
   const bookingHref = ctx?.bookingId
     ? admin
       ? `/admin/bookings?q=${encodeURIComponent(ctx.reference || ctx.bookingId)}`
@@ -68,20 +73,35 @@ export function MessageContextCard({
         </div>
       ) : null}
       <div className="message-context-body">
-        <strong>{ctx?.roomName || conversation.roomName}</strong>
-        {capacityLabel ? <p className="muted">{capacityLabel}</p> : null}
-        {ctx?.startTime && ctx?.endTime ? (
-          <p>
-            {displayDate(ctx.startTime)} {shortTime(ctx.startTime)}–
-            {shortTime(ctx.endTime)}
-          </p>
-        ) : null}
-        {ctx?.status ? <Status status={ctx.status} /> : null}
-        {ctx?.reference ? (
-          <p className="muted">
-            {t("messages.booking_reference", { reference: ctx.reference })}
-          </p>
-        ) : null}
+        <strong>{roomName}</strong>
+        <dl className="message-context-meta">
+          {capacityLabel ? (
+            <>
+              <dt>{t("messages.context_capacity")}</dt>
+              <dd>{capacityLabel}</dd>
+            </>
+          ) : null}
+          {whenLabel ? (
+            <>
+              <dt>{t("messages.context_when")}</dt>
+              <dd>{whenLabel}</dd>
+            </>
+          ) : null}
+          {ctx?.status ? (
+            <>
+              <dt>{t("messages.context_status")}</dt>
+              <dd>
+                <Status status={ctx.status} />
+              </dd>
+            </>
+          ) : null}
+          {ctx?.reference ? (
+            <>
+              <dt>{t("messages.context_reference")}</dt>
+              <dd>{ctx.reference}</dd>
+            </>
+          ) : null}
+        </dl>
         {bookingHref ? (
           <Link className="text-link" to={bookingHref}>
             {t("messages.open_booking")}

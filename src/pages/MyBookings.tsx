@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Link,
   Navigate,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -11,6 +12,8 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Download,
   Edit3,
@@ -76,21 +79,36 @@ function matchesStatus(booking: Booking, status: string) {
   return booking.status === status;
 }
 
+const PAGE_SIZE = 10;
+
+function groupBookingsByDate(bookings: Booking[]) {
+  return bookings.reduce<{ date: string; items: Booking[] }[]>(
+    (list, booking) => {
+      const date = osloDateFromMs(booking.startTime);
+      const current = list.at(-1);
+      if (current?.date === date) current.items.push(booking);
+      else list.push({ date, items: [booking] });
+      return list;
+    },
+    [],
+  );
+}
+
 /** Digilist-style personal bookings dashboard (minside pattern) for this building. */
 export function MyBookings() {
   const { user, loading } = useApp();
   const { t } = useT();
+  const navigate = useNavigate();
   const { displayDate, shortTime, money } = useFormatters();
   const { locale } = useI18nLocale();
   const [tab, setTab] = useState<"upcoming" | "history">("upcoming");
   const [query, setQuery] = useState("");
   const [roomId, setRoomId] = useState("all");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(0);
   const result = useApi<{ bookings: Booking[]; truncated: boolean }>(
     user ? "/bookings" : null,
   );
-  if (loading) return <Loading />;
-  if (!user) return <Navigate replace to="/login?returnTo=/mine-bookinger" />;
   const all = result.data?.bookings || [];
   const truncated = Boolean(result.data?.truncated);
   const upcomingCount = all.filter((booking) => isOpenBooking(booking)).length;
@@ -117,16 +135,25 @@ export function MyBookings() {
             .includes(needle),
     )
     .sort(tab === "upcoming" ? compareUpcoming : compareHistory);
-  const groups = bookings.reduce<{ date: string; items: Booking[] }[]>(
-    (list, booking) => {
-      const date = osloDateFromMs(booking.startTime);
-      const current = list.at(-1);
-      if (current?.date === date) current.items.push(booking);
-      else list.push({ date, items: [booking] });
-      return list;
-    },
-    [],
-  );
+  const listKey = `${tab}|${roomId}|${status}|${needle}|${bookings.map((booking) => booking.id).join(",")}`;
+  const paginate = bookings.length > PAGE_SIZE;
+  const pageCount = paginate ? Math.ceil(bookings.length / PAGE_SIZE) : 1;
+  useEffect(() => {
+    setPage(0);
+  }, [listKey]);
+  useEffect(() => {
+    if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount]);
+  if (loading) return <Loading />;
+  if (!user) return <Navigate replace to="/login?returnTo=/mine-bookinger" />;
+  const safePage = Math.min(page, pageCount - 1);
+  const start = paginate ? safePage * PAGE_SIZE : 0;
+  const end = paginate ? start + PAGE_SIZE : bookings.length;
+  const visibleBookings = bookings.slice(start, end);
+  const groups = groupBookingsByDate(visibleBookings);
+  const from = bookings.length === 0 ? 0 : start + 1;
+  const to = Math.min(end, bookings.length);
+  const showNextHighlight = tab === "upcoming" && safePage === 0;
   return (
     <div className="container">
       <div className="page-heading">
@@ -248,77 +275,141 @@ export function MyBookings() {
               {groups.map((group, groupIndex) => (
                 <section className="booking-day" key={group.date}>
                   <h2 className="booking-day-heading">
-                    {groupIndex === 0 && tab === "upcoming"
+                    {groupIndex === 0 && showNextHighlight
                       ? t("dashboard.next_day", {
                           date: displayDate(group.items[0].startTime, true),
                         })
                       : displayDate(group.items[0].startTime, true)}
                   </h2>
-                  {group.items.map((b, i) => (
-                    <article
-                      className={`booking-row ${groupIndex === 0 && i === 0 && tab === "upcoming" ? "next-booking" : ""}`}
-                      key={b.id}
-                    >
-                      <div className="booking-date">
-                        <span>
-                          {new Intl.DateTimeFormat(undefined, {
-                            timeZone: "Europe/Oslo",
-                            month: "short",
-                          }).format(b.startTime)}
-                        </span>
-                        <strong>
-                          {new Intl.DateTimeFormat(undefined, {
-                            timeZone: "Europe/Oslo",
-                            day: "numeric",
-                          }).format(b.startTime)}
-                        </strong>
-                      </div>
-                      <div className="booking-main">
-                        <Status status={b.status} />
-                        <h3>
-                          <Link to={`/booking/${b.id}`}>{b.roomName}</Link>
-                        </h3>
-                        <p>{b.title || b.reference}</p>
-                      </div>
-                      <div className="booking-time">
-                        <strong>
-                          {shortTime(b.startTime)}–{shortTime(b.endTime)}
-                        </strong>
-                        {typeof b.people === "number" && b.people > 0 ? (
+                  {group.items.map((b, i) => {
+                    const openBooking = () => navigate(`/booking/${b.id}`);
+                    return (
+                      <article
+                        className={`booking-row${groupIndex === 0 && i === 0 && showNextHighlight ? " next-booking" : ""}`}
+                        key={b.id}
+                        role="link"
+                        tabIndex={0}
+                        aria-label={t("dashboard.open_booking", {
+                          room: b.roomName,
+                        })}
+                        onClick={openBooking}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openBooking();
+                          }
+                        }}
+                      >
+                        <div className="booking-date">
                           <span>
-                            {t("booking.participants")}: {b.people}
+                            {new Intl.DateTimeFormat(undefined, {
+                              timeZone: "Europe/Oslo",
+                              month: "short",
+                            }).format(b.startTime)}
                           </span>
-                        ) : null}
-                      </div>
-                      <div className="booking-actions">
-                        <Link
-                          className="ds-button"
-                          data-variant="secondary"
-                          data-size="sm"
-                          to={`/booking/${b.id}`}
+                          <strong>
+                            {new Intl.DateTimeFormat(undefined, {
+                              timeZone: "Europe/Oslo",
+                              day: "numeric",
+                            }).format(b.startTime)}
+                          </strong>
+                        </div>
+                        <div className="booking-main">
+                          <Status status={b.status} />
+                          <h3>{b.roomName}</h3>
+                          <p>{b.title || b.reference}</p>
+                        </div>
+                        <div className="booking-time">
+                          <strong>
+                            {shortTime(b.startTime)}–{shortTime(b.endTime)}
+                          </strong>
+                          {typeof b.people === "number" && b.people > 0 ? (
+                            <span>
+                              {t("booking.participants")}: {b.people}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div
+                          className="booking-actions"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
                         >
-                          {t("dashboard.view_booking")}
-                          <ArrowRight size={16} />
-                        </Link>
-                        <Link
-                          className="ds-button"
-                          data-size="sm"
-                          to={`/booking/${b.id}#meldinger`}
-                        >
-                          {t("messages.send")}
-                          <MessageCircle size={16} />
-                        </Link>
-                        {typeof b.totalPrice === "number" &&
-                        b.totalPrice > 0 ? (
-                          <span className="caption">
-                            {money(b.totalPrice, b.currency)}
-                          </span>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
+                          <Link
+                            className="ds-button"
+                            data-variant="secondary"
+                            data-size="sm"
+                            to={`/booking/${b.id}`}
+                          >
+                            {t("dashboard.view_booking")}
+                            <ArrowRight size={16} />
+                          </Link>
+                          <Link
+                            className="ds-button"
+                            data-size="sm"
+                            to={`/booking/${b.id}#meldinger`}
+                          >
+                            {t("messages.send")}
+                            <MessageCircle size={16} />
+                          </Link>
+                          {typeof b.totalPrice === "number" &&
+                          b.totalPrice > 0 ? (
+                            <span className="caption">
+                              {money(b.totalPrice, b.currency)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </section>
               ))}
+              {paginate ? (
+                <nav
+                  className="booking-list-pagination"
+                  aria-label={t("dashboard.pagination_aria")}
+                >
+                  <p
+                    className="booking-list-pagination-status"
+                    aria-live="polite"
+                  >
+                    {t("dashboard.page_status", {
+                      from,
+                      to,
+                      total: bookings.length,
+                    })}
+                  </p>
+                  <div className="booking-list-pagination-actions">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-size="sm"
+                      disabled={safePage <= 0}
+                      aria-label={t("dashboard.previous")}
+                      onClick={() =>
+                        setPage((current) => Math.max(0, current - 1))
+                      }
+                    >
+                      <ChevronLeft size={16} aria-hidden="true" />
+                      {t("dashboard.previous")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-size="sm"
+                      disabled={safePage >= pageCount - 1}
+                      aria-label={t("dashboard.next")}
+                      onClick={() =>
+                        setPage((current) =>
+                          Math.min(pageCount - 1, current + 1),
+                        )
+                      }
+                    >
+                      {t("dashboard.next")}
+                      <ChevronRight size={16} aria-hidden="true" />
+                    </Button>
+                  </div>
+                </nav>
+              ) : null}
             </div>
           ) : (
             <Empty
@@ -425,12 +516,12 @@ export function BookingDetail() {
     <div className="container booking-detail-container">
       <Link
         className="back-link"
-        to={params.get("fra") === "admin" ? "/admin" : "/"}
+        to={params.get("fra") === "admin" ? "/admin" : "/mine-bookinger"}
       >
         <ArrowLeft size={17} />
         {params.get("fra") === "admin"
           ? t("admin.back_to_overview")
-          : t("common.find_rooms")}
+          : t("booking.back_to_bookings")}
       </Link>
       {params.has("ny") && (
         <div className="confirmation-banner" role="status">

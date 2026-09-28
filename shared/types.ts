@@ -266,7 +266,7 @@ export interface ConversationSummary {
   customerName: string;
   customerId?: string;
   context?: ConversationContext;
-  /** Local/demo threads can store images; Digilist booking threads cannot. */
+  /** When true, the composer offers image attach (demo, support, Digilist booking via BFF-hosted files). */
   canAttachImages?: boolean;
 }
 export interface Message {
@@ -278,6 +278,8 @@ export interface Message {
   content: string;
   imageUrl?: string;
   createdAt: number;
+  /** Present on thread responses for the viewer's own messages. */
+  readByPeer?: boolean;
 }
 export interface ConversationThread {
   conversation: ConversationSummary | null;
