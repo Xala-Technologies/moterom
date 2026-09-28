@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Textarea } from "@digdir/designsystemet-react";
-import { Check, ImagePlus, Send, X } from "lucide-react";
+import { Check, CheckCheck, ImagePlus, Send, X } from "lucide-react";
 import { api, post } from "../api";
 import { useApp } from "../context";
-import { Button, ErrorState, Field, Label, Loading } from "./ui";
+import { Button, ErrorState, Field, Label, Loading, Modal } from "./ui";
 import type { ConversationThread, Message } from "../../shared/types";
 import { useFormatters, useT } from "../i18n";
 import { messageDayKey, messageInitials } from "./messageIdentity";
@@ -73,8 +73,10 @@ export function MessageThread({
   const [loading, setLoading] = useState(Boolean(endpoint));
   const [draft, setDraft] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage>();
+  const [previewImageUrl, setPreviewImageUrl] = useState<string>();
   const [busy, setBusy] = useState(false);
   const log = useRef<HTMLDivElement>(null);
+  const previousEndpoint = useRef<string | null | undefined>(undefined);
   const fileRef = useRef<HTMLInputElement>(null);
   const composeId = useId();
   const fileId = useId();
@@ -90,6 +92,7 @@ export function MessageThread({
   useEffect(() => {
     setDraft("");
     clearPendingImage();
+    setPreviewImageUrl(undefined);
     if (!endpoint) {
       setThread(undefined);
       setLoading(false);
@@ -112,8 +115,15 @@ export function MessageThread({
   }, [endpoint]);
 
   useEffect(() => {
-    log.current?.scrollTo(0, log.current.scrollHeight);
-  }, [thread?.messages.length]);
+    const el = log.current;
+    if (!el) return;
+    const endpointChanged = previousEndpoint.current !== endpoint;
+    previousEndpoint.current = endpoint;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    // Pin to bottom for a new thread, or when the user is already near it —
+    // avoids jumping the open composer when the inbox soft-reloads.
+    if (endpointChanged || distance < 96) el.scrollTop = el.scrollHeight;
+  }, [thread?.messages.length, endpoint]);
 
   useEffect(() => {
     return () => {
@@ -228,18 +238,18 @@ export function MessageThread({
                       <strong>{m.senderName}</strong>
                     </header>
                     {m.imageUrl ? (
-                      <a
+                      <button
+                        type="button"
                         className="message-image-link"
-                        href={m.imageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        onClick={() => setPreviewImageUrl(m.imageUrl)}
+                        aria-label={t("messages.image_open")}
                       >
                         <img
                           className="message-image"
                           src={m.imageUrl}
                           alt={t("messages.image_alt")}
                         />
-                      </a>
+                      </button>
                     ) : null}
                     {m.content ? (
                       <p className="preserve-lines">{m.content}</p>
@@ -250,12 +260,22 @@ export function MessageThread({
                       </time>
                       {own ? (
                         <span
-                          className="message-sent"
-                          title={t("messages.sent")}
+                          className={`message-sent${m.readByPeer ? " is-read" : ""}`}
+                          title={
+                            m.readByPeer
+                              ? t("messages.read")
+                              : t("messages.sent")
+                          }
                         >
-                          <Check size={14} aria-hidden="true" />
+                          {m.readByPeer ? (
+                            <CheckCheck size={14} aria-hidden="true" />
+                          ) : (
+                            <Check size={14} aria-hidden="true" />
+                          )}
                           <span className="visually-hidden">
-                            {t("messages.sent")}
+                            {m.readByPeer
+                              ? t("messages.read")
+                              : t("messages.sent")}
                           </span>
                         </span>
                       ) : null}
@@ -268,6 +288,30 @@ export function MessageThread({
         )}
       </div>
       {error && <ErrorState error={error} />}
+      {previewImageUrl ? (
+        <Modal
+          title={t("messages.image_viewer_title")}
+          wide
+          close={() => setPreviewImageUrl(undefined)}
+        >
+          <div className="message-image-viewer">
+            <img
+              src={previewImageUrl}
+              alt={t("messages.image_alt")}
+              className="message-image-viewer-img"
+            />
+          </div>
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPreviewImageUrl(undefined)}
+            >
+              {t("common.close")}
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
       <form className="message-composer" onSubmit={send}>
         {pendingImage ? (
           <div className="message-attach-preview">
@@ -327,7 +371,12 @@ export function MessageThread({
                 </Button>
               </>
             ) : null}
-            <Button type="submit" disabled={busy || !canSend}>
+            <Button
+              type="submit"
+              className="message-send-button"
+              disabled={busy || !canSend}
+              aria-busy={busy || undefined}
+            >
               <Send size={16} />
               {busy ? t("common.sending") : t("messages.send")}
             </Button>

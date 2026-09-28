@@ -24,6 +24,15 @@ describe("postLoginPath", () => {
     );
   });
 
+  it("does not land admins on a previous customer inbox or bookings URL", () => {
+    expect(postLoginPath("/meldinger", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/mine-bookinger", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/booking/abc123", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/ny-booking?rom=sauda-1", { isAdmin: true })).toBe(
+      "/ny-booking?rom=sauda-1",
+    );
+  });
+
   it("rejects open redirects", () => {
     expect(postLoginPath("//evil.example", { isAdmin: false })).toBe("/");
     expect(postLoginPath("https://evil.example", { isAdmin: false })).toBe("/");

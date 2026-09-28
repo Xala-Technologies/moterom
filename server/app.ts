@@ -14,6 +14,7 @@ import {
   production,
   floorplanPath,
   httpUrl,
+  convexUrl,
   origin,
   adminEmails,
 } from "./config";
@@ -151,7 +152,13 @@ async function mergedInbox(ctx: Context): Promise<ConversationSummary[]> {
     (row) => !messagingLocal.isHidden(row.id),
   );
   const support = messagingLocal.inbox(ctx.user!);
-  return [...booking, ...support].sort((a, b) => b.updatedAt - a.updatedAt);
+  const rows = [...booking, ...support].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
+  // Admin list may force-unread Digilist booking threads (no Digilist API).
+  if (ctx.user?.isAdmin)
+    return rows.map((row) => messagingLocal.applyAdminUnreadFlag(row));
+  return rows;
 }
 function conversationFrom(
   ctx: Context,
@@ -167,7 +174,38 @@ function conversationFrom(
       "Samtalen ble ikke funnet.",
       "conversation_not_found",
     );
+  // Opening a thread clears any admin forced-unread flag.
+  if (user.isAdmin) messagingLocal.clearAdminUnreadFlag(id);
   return ctx.provider.conversationThread(id, user);
+}
+async function setConversationUnreadFrom(
+  ctx: Context,
+  id: string,
+  user: User,
+  unread: boolean,
+): Promise<{ success: true; unread: number }> {
+  if (isSupportConversationId(id)) {
+    const row = messagingLocal.setUnread(id, user, unread);
+    return { success: true, unread: row.unread };
+  }
+  if (messagingLocal.isHidden(id))
+    throw new AppError(
+      404,
+      "Samtalen ble ikke funnet.",
+      "conversation_not_found",
+    );
+  if (ctx.provider instanceof Digilist) {
+    await ctx.provider.assertConversationAccess(id, user);
+    if (unread) {
+      messagingLocal.setAdminUnreadFlag(id, true);
+      return { success: true, unread: 1 };
+    }
+    messagingLocal.clearAdminUnreadFlag(id);
+    await ctx.provider.markConversationRead(id, user);
+    return { success: true, unread: 0 };
+  }
+  const row = ctx.provider.setUnread(id, user, unread);
+  return { success: true, unread: row.unread };
 }
 function sendConversationFrom(
   ctx: Context,
@@ -548,6 +586,52 @@ app.post("/api/auth/request", async (req, res) => {
   const data = await rest("/auth/email/request", "POST", { email });
   res.json({ verificationId: z.string().parse(data.verificationId) });
 });
+/**
+ * Digilist trusted-device login (client enforces the trust window). Same
+ * Convex action Digilist SPA uses to skip OTP on a remembered device.
+ * REST email OTP uses appId "mobile"; keep that for session continuity.
+ */
+app.post("/api/auth/trusted", async (req, res) => {
+  requireDigilistHttp();
+  if (!convexUrl)
+    throw new AppError(
+      503,
+      "Digilist-innlogging er ikke konfigurert for denne installasjonen.",
+      "digilist_auth_unavailable",
+    );
+  const email = z.email().max(254).parse(req.body.email).toLowerCase().trim();
+  const rememberMe = z
+    .boolean()
+    .optional()
+    .default(true)
+    .parse(req.body.rememberMe);
+  const result = z
+    .object({
+      success: z.boolean(),
+      sessionToken: z.string().optional(),
+      error: z.string().optional(),
+      requiresMfa: z.boolean().optional(),
+      mfaChallengeId: z.string().optional(),
+    })
+    .parse(
+      await action(client(), "auth/emailCode:trustedEmailLogin", {
+        email,
+        appId: "mobile",
+      }),
+    );
+  if (result.requiresMfa && result.mfaChallengeId)
+    return res.json({ mfaChallengeId: result.mfaChallengeId });
+  if (!result.success || !result.sessionToken)
+    throw new AppError(
+      401,
+      result.error || "Logg inn med engangskode.",
+      "trusted_login_unavailable",
+    );
+  const session: Session = { token: result.sessionToken, rememberMe };
+  await setBuildingContext(session);
+  await writeSession(res, session);
+  res.json({ success: true });
+});
 app.post("/api/auth/verify", async (req, res) => {
   requireDigilistHttp();
   const body = z
@@ -867,12 +951,6 @@ app.get("/api/bookings/:id/messages", async (req, res) => {
 app.post("/api/bookings/:id/messages", async (req, res) => {
   const ctx = await context(req, res, true);
   const body = messageCreateSchema.parse(req.body);
-  if (body.imageFile && ctx.provider instanceof Digilist)
-    throw new AppError(
-      400,
-      "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
-      "message_images_unsupported",
-    );
   const imageUrl = body.imageFile
     ? await saveMessageImage(body.imageFile)
     : undefined;
@@ -909,16 +987,6 @@ app.post("/api/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true);
   const body = messageCreateSchema.parse(req.body);
   const id = String(req.params.id);
-  if (
-    body.imageFile &&
-    !isSupportConversationId(id) &&
-    ctx.provider instanceof Digilist
-  )
-    throw new AppError(
-      400,
-      "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
-      "message_images_unsupported",
-    );
   const imageUrl = body.imageFile
     ? await saveMessageImage(body.imageFile)
     : undefined;
@@ -1105,16 +1173,6 @@ app.post("/api/admin/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true, true);
   const body = messageCreateSchema.parse(req.body);
   const id = String(req.params.id);
-  if (
-    body.imageFile &&
-    !isSupportConversationId(id) &&
-    ctx.provider instanceof Digilist
-  )
-    throw new AppError(
-      400,
-      "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
-      "message_images_unsupported",
-    );
   const imageUrl = body.imageFile
     ? await saveMessageImage(body.imageFile)
     : undefined;
@@ -1134,6 +1192,18 @@ app.post("/api/admin/messages/:id", async (req, res) => {
 app.delete("/api/admin/messages/:id", async (req, res) => {
   const ctx = await context(req, res, true, true);
   res.json(await deleteConversationFrom(ctx, String(req.params.id), ctx.user!));
+});
+app.post("/api/admin/messages/:id/read-state", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  const unread = z.boolean().parse(req.body?.unread);
+  res.json(
+    await setConversationUnreadFrom(
+      ctx,
+      String(req.params.id),
+      ctx.user!,
+      unread,
+    ),
+  );
 });
 app.get("/api/admin/announcements", async (req, res) => {
   await context(req, res, true, true);

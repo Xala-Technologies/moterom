@@ -30,6 +30,11 @@ import type {
 } from "../shared/types";
 import { interval } from "../shared/time";
 import { AppError } from "../shared/validation";
+import {
+  embedMessageImage,
+  extractMessageImage,
+  previewWithoutMessageImage,
+} from "../shared/messageImageEmbed";
 import { enrichBookingConversation } from "./conversationContext";
 import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
@@ -1308,6 +1313,7 @@ export class Digilist {
     );
     const id = str(raw._id, str(raw.id));
     if (!id) return null;
+    const rawPreview = str(raw.lastMessagePreview, str(raw.preview));
     const base: ConversationSummary = {
       id: str(raw._id, str(raw.id)),
       kind: "booking",
@@ -1315,13 +1321,14 @@ export class Digilist {
       roomId: room?.id,
       roomName,
       subject: str(raw.displaySubject, str(raw.subject, roomName || "Melding")),
-      preview: str(raw.lastMessagePreview, str(raw.preview)),
+      preview: previewWithoutMessageImage(rawPreview),
       updatedAt: Number(
         raw.lastMessageAt ?? raw.updatedAt ?? raw._creationTime ?? Date.now(),
       ),
       unread: Number(raw.unreadCount ?? raw.unread ?? 0),
       customerName: str(raw.userName),
-      canAttachImages: false,
+      // Images are stored on the Møterom BFF and referenced from Digilist text.
+      canAttachImages: true,
     };
     if (room) {
       base.context = {
@@ -1354,13 +1361,15 @@ export class Digilist {
     }
   }
   private mapMessage(raw: Row, conversationId: string): Message {
+    const parsed = extractMessageImage(str(raw.content));
     return {
       id: str(raw._id, str(raw.id)),
       conversationId,
       senderId: str(raw.senderId),
       senderName: str(raw.senderName, str(raw.senderType, "Ukjent")),
       fromAdmin: str(raw.senderType) === "admin",
-      content: str(raw.content),
+      content: parsed.content,
+      ...(parsed.imageUrl ? { imageUrl: parsed.imageUrl } : {}),
       createdAt: Number(raw._creationTime ?? raw.createdAt ?? Date.now()),
     };
   }
@@ -1412,7 +1421,7 @@ export class Digilist {
     bookingId: string,
     user: User,
   ): Promise<ConversationThread> {
-    await this.booking(bookingId, user);
+    const booking = await this.booking(bookingId, user);
     try {
       const raw = row(
         await query(this.c, "domain/messaging:getConversationByBooking", {
@@ -1422,7 +1431,29 @@ export class Digilist {
         }),
       );
       const id = str(raw._id, str(raw.id));
-      if (!id) return { conversation: null, messages: [] };
+      if (!id) {
+        const rooms = await this.allRooms();
+        return {
+          conversation: enrichBookingConversation(
+            {
+              id: `booking:${bookingId}`,
+              kind: "booking",
+              bookingId,
+              roomId: booking.roomId,
+              roomName: booking.roomName,
+              subject: booking.roomName,
+              preview: "",
+              updatedAt: booking.startTime,
+              unread: 0,
+              customerName: booking.name || user.name,
+              canAttachImages: true,
+            },
+            booking,
+            rooms,
+          ),
+          messages: [],
+        };
+      }
       try {
         await mutate(this.c, "domain/messaging:markMessagesAsRead", {
           conversationId: id,
@@ -1475,14 +1506,7 @@ export class Digilist {
           );
         await this.booking(bookingId, user);
       }
-      try {
-        await mutate(this.c, "domain/messaging:markMessagesAsRead", {
-          conversationId: id,
-          userId: user.id,
-        });
-      } catch {
-        /* unread is optional */
-      }
+      await this.markConversationRead(id, user);
       return {
         conversation: await this.enrichConversation(
           this.mapConversation(raw, await this.allRooms()),
@@ -1495,6 +1519,67 @@ export class Digilist {
       this.messagingFailure(error);
     }
   }
+
+  /** Digilist has mark-as-read only; Motером stores forced unread locally. */
+  async markConversationRead(id: string, user: User): Promise<void> {
+    try {
+      await mutate(this.c, "domain/messaging:markMessagesAsRead", {
+        conversationId: id,
+        userId: user.id,
+      });
+    } catch {
+      /* unread is optional */
+    }
+  }
+
+  /** Access check without marking the thread read. */
+  async assertConversationAccess(id: string, user: User): Promise<void> {
+    try {
+      const raw = row(
+        await query(this.c, "domain/messaging:getConversation", {
+          actorId: user.id,
+          id,
+        }),
+      );
+      if (!str(raw._id, str(raw.id)))
+        throw new AppError(
+          404,
+          "Samtalen ble ikke funnet.",
+          "conversation_not_found",
+        );
+      if (raw.tenantId && str(raw.tenantId) !== tenantId)
+        throw new AppError(
+          404,
+          "Samtalen ble ikke funnet.",
+          "conversation_not_found",
+        );
+      if (!user.isAdmin) {
+        const bookingId = str(raw.bookingId);
+        if (!bookingId)
+          throw new AppError(
+            404,
+            "Samtalen ble ikke funnet.",
+            "conversation_not_found",
+          );
+        await this.booking(bookingId, user);
+      }
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      this.messagingFailure(error);
+    }
+  }
+  private digilistMessageContent(content: string, imageUrl?: string): string {
+    if (!imageUrl) return content;
+    try {
+      return embedMessageImage(content, imageUrl);
+    } catch {
+      throw new AppError(
+        400,
+        "Bildet kunne ikke legges ved meldingen.",
+        "invalid_image_type",
+      );
+    }
+  }
   async sendBookingMessage(
     bookingId: string,
     content: string,
@@ -1502,14 +1587,15 @@ export class Digilist {
     clientMessageId?: string,
     imageUrl?: string,
   ): Promise<ConversationThread> {
-    if (imageUrl)
-      throw new AppError(
-        400,
-        "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
-        "message_images_unsupported",
-      );
     const booking = await this.booking(bookingId, user);
     const room = await this.room(booking.roomId);
+    const packed = this.digilistMessageContent(content, imageUrl);
+    if (!packed.trim())
+      throw new AppError(
+        400,
+        "Skriv en melding eller legg ved et bilde.",
+        "validation_failed",
+      );
     try {
       const created = row(
         await mutate(
@@ -1536,7 +1622,7 @@ export class Digilist {
         senderId: user.id,
         senderType: user.isAdmin ? "admin" : "user",
         visibility: "public",
-        content,
+        content: packed,
         ...(clientMessageId ? { clientMessageId } : {}),
       });
       return this.bookingThread(bookingId, user);
@@ -1552,11 +1638,12 @@ export class Digilist {
     clientMessageId?: string,
     imageUrl?: string,
   ): Promise<ConversationThread> {
-    if (imageUrl)
+    const packed = this.digilistMessageContent(content, imageUrl);
+    if (!packed.trim())
       throw new AppError(
         400,
-        "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
-        "message_images_unsupported",
+        "Skriv en melding eller legg ved et bilde.",
+        "validation_failed",
       );
     await this.conversationThread(id, user);
     try {
@@ -1566,7 +1653,7 @@ export class Digilist {
         senderId: user.id,
         senderType: user.isAdmin ? "admin" : "user",
         visibility: "public",
-        content,
+        content: packed,
         ...(clientMessageId ? { clientMessageId } : {}),
       });
       return this.conversationThread(id, user);

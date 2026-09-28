@@ -54,18 +54,26 @@ export function useApi<T>(path: string | null) {
   const [loading, setLoading] = useState(Boolean(path));
   const [revision, setRevision] = useState(0);
   const current = useRef(path);
+  const previousPath = useRef<string | null | undefined>(undefined);
   current.current = path;
   useEffect(() => {
     if (!path) {
+      previousPath.current = path;
       setData(undefined);
       setLoading(false);
       setError(undefined);
       return;
     }
+    const pathChanged = previousPath.current !== path;
+    previousPath.current = path;
     const abort = new AbortController();
-    setLoading(true);
+    // Soft reload (same path): keep showing the last response so send/reply
+    // does not unmount the open thread and jump the layout.
+    if (pathChanged) {
+      setData(undefined);
+      setLoading(true);
+    }
     setError(undefined);
-    setData(undefined);
     api<T>(path, { signal: abort.signal })
       .then((value) => {
         if (!abort.signal.aborted && current.current === path) setData(value);

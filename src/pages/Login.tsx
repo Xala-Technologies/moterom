@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Mail,
@@ -15,9 +15,20 @@ import {
 } from "../components/RequireAuth";
 import { AccessRequestForm } from "../components/AccessRequestForm";
 import { BrandMark } from "../components/BrandMark";
+import { LoginEmailField } from "../components/LoginEmailField";
+import { LoginOtpBoxes } from "../components/LoginOtpBoxes";
 import { useApp } from "../context";
 import { ApiError, post } from "../api";
 import { useT } from "../i18n";
+import {
+  DEFAULT_TRUST_MS,
+  isLoginIdentifierTrusted,
+  readLoginEmails,
+  rememberDeviceAfterLogin,
+  rememberLoginEmail,
+  REMEMBER_TRUST_MS,
+  trustLoginIdentifier,
+} from "../loginHistory";
 import { postLoginPath } from "../postLoginPath";
 
 type Method = "menu" | "email" | "sms" | "request";
@@ -43,7 +54,13 @@ export function Login() {
 
   const [method, setMethod] = useState<Method>("menu");
   const [step, setStep] = useState<Step>("form");
-  const [email, setEmail] = useState("");
+  const [emailHistory, setEmailHistory] = useState<string[]>(() =>
+    typeof localStorage === "undefined" ? [] : readLoginEmails(),
+  );
+  const [email, setEmail] = useState(
+    () =>
+      (typeof localStorage === "undefined" ? [] : readLoginEmails())[0] ?? "",
+  );
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [verification, setVerification] = useState("");
@@ -53,6 +70,8 @@ export function Login() {
   const [slide, setSlide] = useState(0);
   const [panelPaused, setPanelPaused] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
+  /** Prevents double auto-submit when autofill fills all six digits at once. */
+  const otpAutoSubmitted = useRef(false);
   const membersOnly =
     error instanceof ApiError && error.code === "members_only_access";
 
@@ -83,6 +102,16 @@ export function Login() {
 
   const done = async (destination = returnTo) => {
     const next = await refresh();
+    // Trust the Digilist account email so a later email login can skip OTP.
+    if (next?.email) {
+      trustLoginIdentifier(
+        next.email,
+        "email",
+        stayLoggedIn ? REMEMBER_TRUST_MS : DEFAULT_TRUST_MS,
+      );
+      rememberLoginEmail(next.email);
+      setEmailHistory(readLoginEmails());
+    }
     if (config?.access === "members" && next && !next.isMember) return;
     nav(postLoginPath(destination, next), { replace: true });
   };
@@ -96,13 +125,54 @@ export function Login() {
     setError(undefined);
   };
 
-  const requestEmail = async () => {
+  const requestEmail = async (opts?: {
+    forceCode?: boolean;
+    forEmail?: string;
+  }) => {
+    const target = (opts?.forEmail ?? email).trim();
+    if (!target) return;
+    setEmail(target);
+    rememberLoginEmail(target);
+    setEmailHistory(readLoginEmails());
+    // Digilist parity: trusted device skips OTP (client-enforced window).
+    if (!opts?.forceCode && isLoginIdentifierTrusted(target, "email")) {
+      try {
+        const trusted = await post<{
+          success?: boolean;
+          mfaChallengeId?: string;
+        }>("/auth/trusted", {
+          email: target,
+          rememberMe: stayLoggedIn,
+        });
+        if (trusted.mfaChallengeId) {
+          setMfa(trusted.mfaChallengeId);
+          setStep("mfa");
+          setCode("");
+          otpAutoSubmitted.current = false;
+          return;
+        }
+        rememberDeviceAfterLogin({ email: target, stayLoggedIn });
+        await done();
+        return;
+      } catch {
+        // Fall through to email OTP when Digilist rejects trusted login.
+      }
+    }
     const r = await post<{ verificationId: string }>("/auth/request", {
-      email,
+      email: target,
     });
     setVerification(r.verificationId);
     setStep("code");
     setCode("");
+    otpAutoSubmitted.current = false;
+  };
+
+  const continueWithRememberedEmail = (saved: string) => {
+    setError(undefined);
+    setMethod("email");
+    setStep("form");
+    setEmail(saved);
+    void run(() => requestEmail({ forEmail: saved }));
   };
 
   const requestSms = async () => {
@@ -112,6 +182,7 @@ export function Login() {
     setVerification(r.verificationId);
     setStep("code");
     setCode("");
+    otpAutoSubmitted.current = false;
   };
 
   const demoSignIn = async (role: "customer" | "admin") => {
@@ -119,39 +190,52 @@ export function Login() {
     await done("/");
   };
 
-  const verifyEmail = async () => {
+  const verifyEmail = async (otp = code) => {
     const r = await post<{ mfaChallengeId?: string }>("/auth/verify", {
       email,
       verificationId: verification,
-      code,
+      code: otp,
       rememberMe: stayLoggedIn,
     });
     if (r.mfaChallengeId) {
       setMfa(r.mfaChallengeId);
       setStep("mfa");
       setCode("");
-    } else await done();
+      otpAutoSubmitted.current = false;
+    } else {
+      rememberDeviceAfterLogin({ email, stayLoggedIn });
+      await done();
+    }
   };
 
-  const verifySms = async () => {
+  const verifySms = async (otp = code) => {
     const r = await post<{ mfaChallengeId?: string }>("/auth/sms/verify", {
       phoneNumber: phone,
       verificationId: verification,
-      code,
+      code: otp,
       rememberMe: stayLoggedIn,
     });
     if (r.mfaChallengeId) {
       setMfa(r.mfaChallengeId);
       setStep("mfa");
       setCode("");
-    } else await done();
+      otpAutoSubmitted.current = false;
+    } else {
+      rememberDeviceAfterLogin({ phone, stayLoggedIn });
+      await done();
+    }
   };
 
-  const verifyMfa = async () => {
+  const verifyMfa = async (otp = code) => {
     await post("/auth/mfa", {
       challengeId: mfa,
-      code,
+      code: otp,
       rememberMe: stayLoggedIn,
+    });
+    rememberDeviceAfterLogin({
+      email: method === "email" ? email : undefined,
+      phone: method === "sms" ? phone : undefined,
+      stayLoggedIn,
     });
     await done();
   };
@@ -162,21 +246,50 @@ export function Login() {
     try {
       await task();
     } catch (err) {
+      otpAutoSubmitted.current = false;
       setError(err as Error);
       setBusy(false);
     }
   };
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submitOtp = async (otp: string) => {
+    if (otp.length !== 6 || otpAutoSubmitted.current) return;
+    otpAutoSubmitted.current = true;
     setBusy(true);
     setError(undefined);
     try {
-      if (step === "mfa") await verifyMfa();
-      else if (method === "email" && step === "form") await requestEmail();
-      else if (method === "email" && step === "code") await verifyEmail();
+      if (step === "mfa") await verifyMfa(otp);
+      else if (method === "email") await verifyEmail(otp);
+      else if (method === "sms") await verifySms(otp);
+    } catch (err) {
+      otpAutoSubmitted.current = false;
+      setError(err as Error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onOtpChange = (raw: string, length = 6) => {
+    const digits = raw.replace(/\D/g, "").slice(0, length);
+    setCode(digits);
+    if (digits.length < length) {
+      otpAutoSubmitted.current = false;
+      return;
+    }
+    void submitOtp(digits);
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (step === "code" || step === "mfa") {
+      await submitOtp(code.replace(/\D/g, "").slice(0, 6));
+      return;
+    }
+    setBusy(true);
+    setError(undefined);
+    try {
+      if (method === "email" && step === "form") await requestEmail();
       else if (method === "sms" && step === "form") await requestSms();
-      else if (method === "sms" && step === "code") await verifySms();
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -188,7 +301,7 @@ export function Login() {
     setBusy(true);
     setError(undefined);
     try {
-      if (method === "email") await requestEmail();
+      if (method === "email") await requestEmail({ forceCode: true });
       else if (method === "sms") await requestSms();
     } catch (err) {
       setError(err as Error);
@@ -235,6 +348,43 @@ export function Login() {
 
               {method === "menu" && (
                 <div className="login-options">
+                  {digilistAuth && emailHistory.length > 0 ? (
+                    <div
+                      className="login-remembered"
+                      aria-label={t("auth.email_recent")}
+                    >
+                      <p className="login-remembered-heading">
+                        {t("auth.email_recent")}
+                      </p>
+                      <ul className="login-remembered-list">
+                        {emailHistory.map((saved) => (
+                          <li key={saved}>
+                            <button
+                              type="button"
+                              className="login-remembered-email"
+                              disabled={busy}
+                              onClick={() => continueWithRememberedEmail(saved)}
+                            >
+                              <span
+                                className="login-remembered-avatar"
+                                aria-hidden="true"
+                              >
+                                <Mail size={16} strokeWidth={1.75} />
+                              </span>
+                              <span className="login-remembered-text">
+                                {saved}
+                              </span>
+                              <ArrowRight
+                                className="login-remembered-arrow"
+                                size={16}
+                                aria-hidden="true"
+                              />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   {digilistAuth ? (
                     <>
                       <button
@@ -396,19 +546,18 @@ export function Login() {
                         {t("auth.email_login_title")}
                       </h1>
                       <p className="muted">{t("auth.email_form_subtitle")}</p>
-                      <Field>
-                        <Label>{t("auth.email_address")}</Label>
-                        <Input
-                          aria-label={t("auth.email_address")}
-                          autoComplete="email"
-                          type="email"
-                          placeholder={t("auth.email_placeholder")}
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          autoFocus
-                          required
-                        />
-                      </Field>
+                      <LoginEmailField
+                        label={t("auth.email_address")}
+                        placeholder={t("auth.email_placeholder")}
+                        recentLabel={t("auth.email_recent")}
+                        value={email}
+                        suggestions={emailHistory}
+                        onChange={setEmail}
+                        onPick={(saved) =>
+                          void run(() => requestEmail({ forEmail: saved }))
+                        }
+                        disabled={busy}
+                      />
                       <Button
                         className="full-width login-submit"
                         type="submit"
@@ -473,20 +622,14 @@ export function Login() {
                           : t("auth.code_verification_prefix")}{" "}
                         <strong>{method === "sms" ? phone : email}</strong>
                       </p>
-                      <Field>
-                        <Label>{t("auth.one_time_code")}</Label>
-                        <Input
-                          aria-label={t("auth.one_time_code")}
-                          autoComplete="one-time-code"
-                          inputMode="numeric"
-                          pattern="[0-9]{6}"
-                          maxLength={6}
-                          value={code}
-                          onChange={(e) => setCode(e.target.value)}
-                          autoFocus
-                          required
-                        />
-                      </Field>
+                      <LoginOtpBoxes
+                        id="login-otp-code"
+                        label={t("auth.one_time_code")}
+                        value={code}
+                        onChange={onOtpChange}
+                        disabled={busy}
+                        error={Boolean(error)}
+                      />
                       <label className="consent login-stay-logged-in">
                         <input
                           type="checkbox"
@@ -538,17 +681,14 @@ export function Login() {
                         {t("auth.mfa_title")}
                       </h1>
                       <p className="muted">{t("auth.mfa_subtitle")}</p>
-                      <Field>
-                        <Label>{t("auth.mfa_code_label")}</Label>
-                        <Input
-                          aria-label={t("auth.mfa_code_label")}
-                          autoComplete="one-time-code"
-                          value={code}
-                          onChange={(e) => setCode(e.target.value)}
-                          autoFocus
-                          required
-                        />
-                      </Field>
+                      <LoginOtpBoxes
+                        id="login-otp-mfa"
+                        label={t("auth.mfa_code_label")}
+                        value={code}
+                        onChange={onOtpChange}
+                        disabled={busy}
+                        error={Boolean(error)}
+                      />
                       <label className="consent login-stay-logged-in">
                         <input
                           type="checkbox"
@@ -560,7 +700,7 @@ export function Login() {
                       <Button
                         className="full-width login-submit"
                         type="submit"
-                        disabled={busy || !code.trim()}
+                        disabled={busy || code.length !== 6}
                       >
                         {busy ? t("auth.verifying") : t("auth.mfa_submit")}
                         {!busy ? <ArrowRight size={18} /> : null}
