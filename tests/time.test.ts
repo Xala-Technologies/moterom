@@ -46,10 +46,25 @@ describe("Oslo booking intervals", () => {
       interval({ date: "2027-01-15", start: "10:00", end: "09:00" }),
     ).toThrow();
   });
-  it("suggests one-hour slots from 08:00 to 17:00", () => {
+  it("suggests one-hour slots from 08:00 to 17:00 by default", () => {
     expect(suggestedSlots()[0]).toEqual({ start: "08:00", end: "09:00" });
     expect(suggestedSlots().at(-1)).toEqual({ start: "16:00", end: "17:00" });
     expect(suggestedSlots()).toHaveLength(9);
+  });
+  it("suggests one-hour slots inside a custom opening window", () => {
+    expect(suggestedSlots("09:00", "15:00")).toEqual([
+      { start: "09:00", end: "10:00" },
+      { start: "10:00", end: "11:00" },
+      { start: "11:00", end: "12:00" },
+      { start: "12:00", end: "13:00" },
+      { start: "13:00", end: "14:00" },
+      { start: "14:00", end: "15:00" },
+    ]);
+    expect(suggestedSlots("08:30", "17:00")[0]).toEqual({
+      start: "09:00",
+      end: "10:00",
+    });
+    expect(suggestedSlots("10:00", "10:00")).toEqual([]);
   });
   it("allows adjacent reservations but detects partial overlap", () => {
     const a = { startTime: 10, endTime: 20 };
