@@ -3126,34 +3126,45 @@ a.login-option:hover {
   width: 100%;
   min-width: 0;
 }
+.message-composer-input .ds-input {
+  min-height: 3rem;
+  padding-block: 0.85rem;
+  padding-inline: 1rem 3.25rem;
+  border-radius: 1.5rem;
+  resize: none;
+  field-sizing: content;
+}
 .message-composer-input.has-attach .ds-input {
-  padding-inline-end: 3rem;
-  padding-block-end: 2.75rem;
+  padding-inline-end: 5.75rem;
+}
+.message-composer-input .message-attach-button,
+.message-composer-input .message-send-button {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--ds-color-neutral-background-tinted);
+  color: var(--ds-color-neutral-text-default);
+}
+.message-composer-input .message-send-button {
+  right: 8px;
 }
 .message-composer-input .message-attach-button {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  z-index: 1;
-  background: var(--ds-color-neutral-background-default);
+  right: 3.15rem;
 }
-.message-composer-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.message-send-button {
-  min-width: 9.5rem;
-  justify-content: center;
+.message-composer-input .message-send-button:disabled {
+  opacity: 0.45;
 }
 .message-attach-button,
-.message-attach-remove {
+.message-attach-remove,
+.message-send-button {
   flex: 0 0 auto;
   min-width: var(--ds-touch-target-min, 44px);
   min-height: var(--ds-touch-target-min, 44px);
   padding-inline: 0;
   aspect-ratio: 1;
+  justify-content: center;
 }
 .message-attach-input {
   position: absolute;
@@ -3642,17 +3653,13 @@ a.login-option:hover {
   flex-shrink: 0;
 }
 .message-thread-fill .message-composer-main {
-  flex-direction: row;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
 }
 .message-thread-fill .message-composer-main .ds-field {
   flex: 1;
   min-width: 0;
-}
-.message-thread-fill .message-composer-actions {
-  flex-shrink: 0;
-  flex-wrap: nowrap;
 }
 .message-thread-fill > .state {
   flex: 1;
