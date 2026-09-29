@@ -348,6 +348,8 @@
     "intro": "Booking-samtaler og generelle spørsmål til byggets administrator.",
     "booking_intro": "Meldingen går til administratoren for bygget. Dere ser den samme samtalen.",
     "compose_label": "Melding",
+    "compose_placeholder_admin": "Skriv svar til kunde…",
+    "compose_placeholder_customer": "Skriv melding…",
     "send": "Send melding",
     "sent": "Sendt",
     "read": "Lest",

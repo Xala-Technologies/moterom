@@ -368,7 +368,9 @@ export function MessageThread({
         ) : null}
         <div className="message-composer-main">
           <Field>
-            <Label htmlFor={composeId}>{t("messages.compose_label")}</Label>
+            <span className="visually-hidden">
+              <Label htmlFor={composeId}>{t("messages.compose_label")}</Label>
+            </span>
             <div
               className={
                 canAttach
@@ -378,10 +380,15 @@ export function MessageThread({
             >
               <Textarea
                 id={composeId}
-                rows={2}
+                rows={1}
                 maxLength={4000}
                 value={draft}
                 disabled={busy}
+                placeholder={
+                  viewerIsAdmin
+                    ? t("messages.compose_placeholder_admin")
+                    : t("messages.compose_placeholder_customer")
+                }
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={onComposerKeyDown}
               />
@@ -410,19 +417,20 @@ export function MessageThread({
                   </Button>
                 </>
               ) : null}
+              <Button
+                type="submit"
+                variant="tertiary"
+                data-size="sm"
+                className="message-send-button"
+                disabled={busy || !canSend}
+                aria-busy={busy || undefined}
+                aria-label={busy ? t("common.sending") : t("messages.send")}
+                title={busy ? t("common.sending") : t("messages.send")}
+              >
+                <Send size={18} aria-hidden="true" />
+              </Button>
             </div>
           </Field>
-          <div className="message-composer-actions">
-            <Button
-              type="submit"
-              className="message-send-button"
-              disabled={busy || !canSend}
-              aria-busy={busy || undefined}
-            >
-              <Send size={16} />
-              {busy ? t("common.sending") : t("messages.send")}
-            </Button>
-          </div>
         </div>
       </form>
     </div>
