@@ -410,6 +410,16 @@ export class Digilist {
   async rooms(): Promise<Room[]> {
     return (await this.allRooms()).filter((room) => room.portalPublished);
   }
+  /**
+   * Admin writes must resolve drafts that Digilist getBySlug omits.
+   * Prefer tenant list (includes draft tenant_portal rooms), then slug lookup.
+   */
+  private async resolveAdminRoom(id: string): Promise<Room> {
+    const listed = await this.allRooms();
+    const match = listed.find((room) => room.id === id || room.slug === id);
+    if (match) return match;
+    return this.room(id);
+  }
   async room(id: string): Promise<Room> {
     const definition = inventory.find(
       (item) => item.id === id || item.slug === id,
@@ -1033,7 +1043,7 @@ export class Digilist {
     user: User,
   ) {
     this.assertPortalAdmin(user);
-    const room = await this.room(id);
+    const room = await this.resolveAdminRoom(id);
     const source = this.sources.get(id);
     const image = patch.image?.trim();
     const liveImage = liveResourceImageUrl(image);
@@ -1106,7 +1116,7 @@ export class Digilist {
   }
   async setRoomPortalPublished(id: string, published: boolean, user: User) {
     this.assertPortalAdmin(user);
-    const room = await this.room(id);
+    const room = await this.resolveAdminRoom(id);
     if (!room.sourceId)
       throw new AppError(
         503,
@@ -1126,12 +1136,14 @@ export class Digilist {
       });
     }
     this.roomRequests.delete(id);
+    this.roomRequests.delete(room.id);
     this.roomRequests.delete(room.slug);
-    return this.room(id);
+    this.sources.delete(room.id);
+    return this.resolveAdminRoom(id);
   }
   async deleteRoom(id: string, user: User): Promise<void> {
     this.assertPortalAdmin(user);
-    const room = await this.room(id);
+    const room = await this.resolveAdminRoom(id);
     if (room.portalPublished)
       throw new AppError(
         409,

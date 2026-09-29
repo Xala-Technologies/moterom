@@ -192,6 +192,49 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       status: "published",
     });
   });
+  it("publishes a draft that Digilist getBySlug does not return", async () => {
+    const draft = {
+      ...source,
+      _id: "draft-source",
+      slug: "nytt-rom-xyz",
+      name: "Nytt rom",
+      capacity: 10,
+      status: "draft",
+      requiresApproval: false,
+      bookingConfig: { approvalRequired: false },
+    };
+    let listed = draft;
+    mocks.query.mockImplementation(async (ref) => {
+      const name = getFunctionName(ref);
+      if (name === "domain/resources:list") return [listed];
+      if (name === "domain/resources:getBySlug") return {};
+      return { valid: true };
+    });
+    mocks.mutation.mockImplementation(async (ref, args) => {
+      if (
+        getFunctionName(ref) === "domain/resources:update" &&
+        args.status === "published"
+      ) {
+        listed = { ...draft, status: "published" };
+        return listed;
+      }
+      return {};
+    });
+    const published = await new Digilist().setRoomPortalPublished(
+      "nytt-rom-xyz",
+      true,
+      user,
+    );
+    expect(getFunctionName(mocks.mutation.mock.calls[0][0])).toBe(
+      "domain/resources:update",
+    );
+    expect(mocks.mutation.mock.calls[0][1]).toMatchObject({
+      id: "draft-source",
+      updatedBy: user.id,
+      status: "published",
+    });
+    expect(published.portalPublished).toBe(true);
+  });
   it("archives draft rooms through Digilist update", async () => {
     mocks.query.mockResolvedValue({ ...source, status: "draft" });
     await new Digilist().deleteRoom(inventory[0].id, user);
