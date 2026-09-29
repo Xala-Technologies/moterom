@@ -373,6 +373,8 @@ export class DemoStore {
       imageKind?: "illustrative" | "actual";
       amenities?: string[];
       arrivalInfo?: string;
+      openTime?: string;
+      closeTime?: string;
     },
     user: User,
   ) {
@@ -391,6 +393,8 @@ export class DemoStore {
         : undefined,
       amenities: patch.amenities ?? current.amenities ?? [],
       arrivalInfo: patch.arrivalInfo?.trim() || undefined,
+      openTime: patch.openTime?.trim() || current.openTime || "08:00",
+      closeTime: patch.closeTime?.trim() || current.closeTime || "17:00",
       capacityLabel:
         patch.capacityLabel !== undefined
           ? patch.capacityLabel.trim() || `${patch.capacity} personer`
@@ -464,6 +468,8 @@ export class DemoStore {
       arrivalInfo?: string;
       image?: string;
       imageKind?: "illustrative" | "actual";
+      openTime?: string;
+      closeTime?: string;
     },
     user: User,
   ): Room {
@@ -491,6 +497,8 @@ export class DemoStore {
       imageKind: image
         ? (input.imageKind ?? "illustrative")
         : input.imageKind || "illustrative",
+      openTime: input.openTime?.trim() || "08:00",
+      closeTime: input.closeTime?.trim() || "17:00",
     };
     this.save("rooms", room);
     this.audit(user, "room.created", id);

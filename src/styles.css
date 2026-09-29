@@ -921,7 +921,7 @@ a.brand {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 36px;
-  align-items: start;
+  align-items: stretch;
 }
 @media (min-width: 1280px) {
   .rooms-grid {
@@ -1019,6 +1019,11 @@ a.brand {
 .room-card h2 {
   margin: 8px 0 10px;
   font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(1.3em * 2);
 }
 .room-card h2 a {
   color: inherit;
@@ -1038,13 +1043,18 @@ a.brand {
   margin-top: 14px;
   font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
   color: var(--ds-color-neutral-text-default);
-  min-height: 44px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(1.5em * 2);
 }
 .amenities {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
+  min-height: 30px;
 }
 .amenities span {
   padding: 4px 9px;
@@ -1102,7 +1112,7 @@ a.brand {
   text-decoration: none;
 }
 .room-schedule {
-  margin-top: 18px;
+  margin-top: auto;
   padding-top: 18px;
   border-top: 1px solid var(--ds-color-neutral-border-subtle);
   display: flex;
@@ -1501,6 +1511,17 @@ a.brand {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+.room-edit-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.room-edit-hours > .eyebrow {
+  margin: 0;
+}
+.room-edit-hours > .caption {
+  margin: 0;
 }
 .room-edit-actions {
   grid-column: 1 / -1;
@@ -6158,7 +6179,7 @@ button.admin-users-menu-trigger:disabled {
     height: 180px;
   }
   .room-description {
-    min-height: 64px;
+    min-height: calc(1.5em * 2);
   }
   .month-days button {
     min-height: 44px;

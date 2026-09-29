@@ -75,13 +75,14 @@ export function RoomCard({
           {copy.capacityLabel}
         </p>
         <p className="room-description">{copy.description}</p>
-        {room.amenities.length > 0 && (
-          <div className="amenities">
-            {room.amenities.slice(0, 3).map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-        )}
+        <div
+          className="amenities"
+          aria-hidden={room.amenities.length === 0 ? true : undefined}
+        >
+          {room.amenities.slice(0, 3).map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
         {showSchedule ? (
           <RoomCardSchedule
             roomId={room.id}

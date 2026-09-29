@@ -2,6 +2,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Camera, Image } from "lucide-react";
 import { Textarea } from "@digdir/designsystemet-react";
 import type { Room } from "../../../shared/types";
+import {
+  DEFAULT_CLOSE_TIME,
+  DEFAULT_OPEN_TIME,
+} from "../../../shared/openingHours";
 import { RoomPhoto } from "../RoomPhoto";
 import { useT } from "../../i18n";
 import { Button, ErrorState, Field, Input, Label } from "../ui";
@@ -30,6 +34,8 @@ export type RoomEditPayload = {
   image?: string;
   amenities: string[];
   arrivalInfo: string;
+  openTime: string;
+  closeTime: string;
   imageFile?: RoomImageFile;
 };
 
@@ -68,6 +74,8 @@ export function RoomEditForm({
   const amenitiesId = useId();
   const arrivalId = useId();
   const fileId = useId();
+  const openTimeId = useId();
+  const closeTimeId = useId();
   const [amenitiesText, setAmenitiesText] = useState(() =>
     room.amenities.join("\n"),
   );
@@ -147,6 +155,8 @@ export function RoomEditForm({
             .filter(Boolean)
             .slice(0, 20),
           arrivalInfo: current.arrivalInfo || "",
+          openTime: current.openTime || DEFAULT_OPEN_TIME,
+          closeTime: current.closeTime || DEFAULT_CLOSE_TIME,
           ...(imageFile ? { imageFile } : {}),
         });
       }}
@@ -312,6 +322,44 @@ export function RoomEditForm({
               }
             />
           </Field>
+        </div>
+        <div className="room-edit-hours">
+          <span className="eyebrow">{t("admin.room_hours")}</span>
+          <p className="caption">{t("admin.room_hours_caption")}</p>
+          <div className="room-edit-pair">
+            <Field>
+              <Label htmlFor={openTimeId}>{t("common.time_from")}</Label>
+              <Input
+                id={openTimeId}
+                type="time"
+                required
+                step={900}
+                value={room.openTime || DEFAULT_OPEN_TIME}
+                onChange={(event) =>
+                  onChange({
+                    ...roomRef.current,
+                    openTime: event.target.value,
+                  })
+                }
+              />
+            </Field>
+            <Field>
+              <Label htmlFor={closeTimeId}>{t("common.time_to")}</Label>
+              <Input
+                id={closeTimeId}
+                type="time"
+                required
+                step={900}
+                value={room.closeTime || DEFAULT_CLOSE_TIME}
+                onChange={(event) =>
+                  onChange({
+                    ...roomRef.current,
+                    closeTime: event.target.value,
+                  })
+                }
+              />
+            </Field>
+          </div>
         </div>
         <div className="room-edit-pair">
           <Field>
