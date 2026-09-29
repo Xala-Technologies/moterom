@@ -76,6 +76,9 @@ const nb: Record<string, string> = {
   room_image_store_failed: "Bildet kunne ikke lagres. Prøv igjen.",
   room_name_required: "Skriv inn et romnavn.",
   room_create_failed: "Rommet kunne ikke opprettes i Digilist.",
+  room_publish_failed: "Rommet kunne ikke publiseres i Digilist.",
+  venue_limit_reached:
+    "Byggets Digilist-plan har nådd grensen for publiserte markedsplass-lokaler. Private portalrom skal ikke telle — kontakt Digilist hvis dette fortsetter.",
   room_delete_failed: "Rommet kunne ikke slettes i Digilist.",
   room_delete_published: "Sett rommet som utkast før du sletter det.",
   room_delete_seed: "Byggets standardrom kan ikke slettes her.",
@@ -211,6 +214,9 @@ const en: Record<string, string> = {
   room_image_store_failed: "The image could not be stored. Try again.",
   room_name_required: "Enter a room name.",
   room_create_failed: "The room could not be created in Digilist.",
+  room_publish_failed: "The room could not be published in Digilist.",
+  venue_limit_reached:
+    "This building’s Digilist plan has reached its published marketplace venue limit. Private portal rooms should not count — contact Digilist if this continues.",
   room_delete_failed: "The room could not be deleted in Digilist.",
   room_delete_published: "Save the room as a draft before deleting it.",
   room_delete_seed: "Building catalogue rooms cannot be deleted here.",
