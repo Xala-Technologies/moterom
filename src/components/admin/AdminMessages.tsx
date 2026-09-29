@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ChevronLeft,
   Mail,
@@ -14,7 +15,8 @@ import { MessageThread } from "../MessageThread";
 import { MessageContextCard } from "../MessageContextCard";
 import { messageInitials } from "../messageIdentity";
 import { AnnouncementForm, publishAnnouncement } from "./AnnouncementForm";
-import type { ConversationSummary } from "../../../shared/types";
+import { findConversation } from "../../customerMessageInbox";
+import type { Booking, ConversationSummary } from "../../../shared/types";
 import { useFormatters, useT } from "../../i18n";
 
 function rowMeta(row: ConversationSummary, supportLabel: string): string {
@@ -31,6 +33,41 @@ function matchesQuery(row: ConversationSummary, query: string): boolean {
     .includes(q);
 }
 
+function adminThreadEndpoint(row: ConversationSummary): string {
+  if (row.kind === "booking" && row.bookingId) {
+    return `/bookings/${encodeURIComponent(row.bookingId)}/messages`;
+  }
+  return `/admin/messages/${encodeURIComponent(row.id)}`;
+}
+
+function bookingFocusRow(
+  booking: Booking,
+  emptyPreview: string,
+): ConversationSummary {
+  return {
+    id: `booking:${booking.id}`,
+    kind: "booking",
+    bookingId: booking.id,
+    roomId: booking.roomId,
+    roomName: booking.roomName,
+    subject: booking.roomName,
+    preview: emptyPreview,
+    updatedAt: booking.startTime,
+    unread: 0,
+    customerName: booking.name,
+    canAttachImages: true,
+    context: {
+      roomId: booking.roomId,
+      roomName: booking.roomName,
+      bookingId: booking.id,
+      reference: booking.reference,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      status: booking.status,
+    },
+  };
+}
+
 export function AdminMessages({
   announceOpen,
   onAnnounceOpenChange,
@@ -41,7 +78,12 @@ export function AdminMessages({
   const { t } = useT();
   const { notify, config } = useApp();
   const { displayDate, shortTime } = useFormatters();
+  const [params, setParams] = useSearchParams();
+  const bookingFocusId = params.get("booking")?.trim() || undefined;
   const result = useApi<ConversationSummary[]>("/admin/messages");
+  const focusBooking = useApi<Booking>(
+    bookingFocusId ? `/bookings/${encodeURIComponent(bookingFocusId)}` : null,
+  );
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -52,11 +94,14 @@ export function AdminMessages({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [readBusyId, setReadBusyId] = useState<string>();
   const announceWasOpen = useRef(false);
+  const appliedBookingFocus = useRef<string | undefined>(undefined);
   const [narrow, setNarrow] = useState(
     () =>
       typeof window !== "undefined" &&
       window.matchMedia("(max-width: 767px)").matches,
   );
+  const emptyPreview = t("messages.list_empty_preview");
+  const [pinnedBooking, setPinnedBooking] = useState<ConversationSummary>();
 
   useEffect(() => {
     if (announceOpen && !announceWasOpen.current) setAnnounceError(undefined);
@@ -75,33 +120,104 @@ export function AdminMessages({
     return () => media.removeEventListener("change", update);
   }, []);
 
+  const inboxRows = result.data || [];
+  useEffect(() => {
+    if (!pinnedBooking?.bookingId) return;
+    if (findConversation(inboxRows, pinnedBooking.bookingId)) {
+      setPinnedBooking(undefined);
+    }
+  }, [inboxRows, pinnedBooking]);
+
+  const rows =
+    pinnedBooking &&
+    pinnedBooking.bookingId &&
+    !findConversation(inboxRows, pinnedBooking.bookingId)
+      ? [pinnedBooking, ...inboxRows]
+      : inboxRows;
+
   useEffect(() => {
     if (!result.data) return;
+    if (bookingFocusId) return;
+    const list =
+      pinnedBooking &&
+      pinnedBooking.bookingId &&
+      !findConversation(result.data, pinnedBooking.bookingId)
+        ? [pinnedBooking, ...result.data]
+        : result.data;
     setSelected((current) => {
-      const stillThere =
-        current && result.data!.some((row) => row.id === current);
-      if (stillThere) return current;
+      if (current && findConversation(list, current)) return current;
       if (narrow) return undefined;
-      const first = result.data!.find((row) => {
+      const first = list.find((row) => {
         if (unreadOnly && row.unread <= 0) return false;
         return matchesQuery(row, query);
       });
       return first?.id;
     });
-  }, [narrow, query, result.data, unreadOnly]);
+  }, [bookingFocusId, narrow, pinnedBooking, query, result.data, unreadOnly]);
+
+  useEffect(() => {
+    if (!bookingFocusId || !result.data) return;
+    if (appliedBookingFocus.current === bookingFocusId) return;
+    const existing = findConversation(inboxRows, bookingFocusId);
+    if (existing) {
+      appliedBookingFocus.current = bookingFocusId;
+      setSelected(existing.id);
+      setPhoneThreadOpen(true);
+      setUnreadOnly(false);
+      setPinnedBooking(undefined);
+      const next = new URLSearchParams(params);
+      next.delete("booking");
+      setParams(next, { replace: true });
+      return;
+    }
+    if (focusBooking.loading) return;
+    if (focusBooking.error || !focusBooking.data) {
+      if (focusBooking.error) notify(focusBooking.error.message);
+      appliedBookingFocus.current = bookingFocusId;
+      const next = new URLSearchParams(params);
+      next.delete("booking");
+      setParams(next, { replace: true });
+      return;
+    }
+    const stub = bookingFocusRow(focusBooking.data, emptyPreview);
+    appliedBookingFocus.current = bookingFocusId;
+    setPinnedBooking(stub);
+    setSelected(stub.id);
+    setPhoneThreadOpen(true);
+    setUnreadOnly(false);
+    const next = new URLSearchParams(params);
+    next.delete("booking");
+    setParams(next, { replace: true });
+  }, [
+    bookingFocusId,
+    emptyPreview,
+    focusBooking.data,
+    focusBooking.error,
+    focusBooking.loading,
+    inboxRows,
+    notify,
+    params,
+    result.data,
+    setParams,
+  ]);
 
   if (result.loading && !result.data) return <Loading />;
   if (result.error && !result.data)
     return <ErrorState error={result.error} retry={result.reload} />;
+  if (
+    bookingFocusId &&
+    focusBooking.loading &&
+    !findConversation(inboxRows, bookingFocusId) &&
+    !pinnedBooking
+  )
+    return <Loading />;
 
-  const rows = result.data || [];
   const unreadCount = rows.filter((row) => row.unread > 0).length;
   const filtered = rows.filter((row) => {
     if (unreadOnly && row.unread <= 0) return false;
     return matchesQuery(row, query);
   });
-  const selectedKnown =
-    selected && rows.some((row) => row.id === selected) ? selected : undefined;
+  const selectedKnown = findConversation(rows, selected)?.id;
   const active = selectedKnown
     ? narrow
       ? phoneThreadOpen
@@ -111,9 +227,12 @@ export function AdminMessages({
     : narrow
       ? undefined
       : filtered[0]?.id;
-  const activeRow = rows.find((row) => row.id === active);
+  const activeRow = findConversation(rows, active);
   const showThread = Boolean(active) && (!narrow || phoneThreadOpen);
   const supportLabel = t("messages.kind_support");
+  const canDeleteActive = Boolean(
+    activeRow && !String(activeRow.id).startsWith("booking:"),
+  );
 
   const openRow = (id: string) => {
     setSelected(id);
@@ -296,30 +415,32 @@ export function AdminMessages({
                           ) : null}
                         </span>
                       </button>
-                      <Button
-                        type="button"
-                        variant="tertiary"
-                        data-size="sm"
-                        className="messages-desk-read-toggle"
-                        disabled={readBusyId === row.id}
-                        aria-label={
-                          isUnread
-                            ? t("messages.mark_read")
-                            : t("messages.mark_unread")
-                        }
-                        title={
-                          isUnread
-                            ? t("messages.mark_read")
-                            : t("messages.mark_unread")
-                        }
-                        onClick={() => void setReadState(row, !isUnread)}
-                      >
-                        {isUnread ? (
-                          <MailOpen size={16} aria-hidden="true" />
-                        ) : (
-                          <Mail size={16} aria-hidden="true" />
-                        )}
-                      </Button>
+                      {String(row.id).startsWith("booking:") ? null : (
+                        <Button
+                          type="button"
+                          variant="tertiary"
+                          data-size="sm"
+                          className="messages-desk-read-toggle"
+                          disabled={readBusyId === row.id}
+                          aria-label={
+                            isUnread
+                              ? t("messages.mark_read")
+                              : t("messages.mark_unread")
+                          }
+                          title={
+                            isUnread
+                              ? t("messages.mark_read")
+                              : t("messages.mark_unread")
+                          }
+                          onClick={() => void setReadState(row, !isUnread)}
+                        >
+                          {isUnread ? (
+                            <MailOpen size={16} aria-hidden="true" />
+                          ) : (
+                            <Mail size={16} aria-hidden="true" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </li>
                 );
@@ -357,22 +478,24 @@ export function AdminMessages({
                       {shortTime(activeRow.updatedAt)}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    data-size="sm"
-                    data-color="danger"
-                    onClick={() => setDeleteTarget(activeRow)}
-                  >
-                    <Trash2 size={16} />
-                    {t("messages.delete")}
-                  </Button>
+                  {canDeleteActive ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-size="sm"
+                      data-color="danger"
+                      onClick={() => setDeleteTarget(activeRow)}
+                    >
+                      <Trash2 size={16} />
+                      {t("messages.delete")}
+                    </Button>
+                  ) : null}
                 </div>
                 <MessageContextCard conversation={activeRow} admin />
               </header>
               <MessageThread
                 fill
-                endpoint={`/admin/messages/${activeRow.id}`}
+                endpoint={adminThreadEndpoint(activeRow)}
                 emptyHint={t("messages.empty_thread")}
                 onSent={result.reload}
               />
