@@ -224,18 +224,6 @@ export function Shell() {
       label: t("messages.nav"),
     },
   ];
-  const footer = (
-    <footer className="app-footer">
-      <span>
-        {building} <span aria-hidden>·</span>{" "}
-        {t("common.powered_by_digilist_footer")}
-      </span>
-      <span>{config?.address || t("common.default_timezone_note")}</span>
-      {config?.contactEmail && (
-        <a href={`mailto:${config.contactEmail}`}>{t("common.contact_us")}</a>
-      )}
-    </footer>
-  );
   return (
     <div
       className={
@@ -450,14 +438,12 @@ export function Shell() {
               <div className="page-main">
                 <Outlet />
               </div>
-              {footer}
             </div>
           </div>
         ) : (
           <Outlet />
         )}
       </main>
-      {!admin && !login && !customerNav && footer}
       {user && !login && (
         <nav className="mobile-nav" aria-label={t("a11y.mobile_nav")}>
           {user.isAdmin ? (

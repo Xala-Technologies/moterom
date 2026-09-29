@@ -391,10 +391,6 @@ export function Messages() {
           title={t("messages.empty_title")}
         >
           <p>{t("messages.empty_body")}</p>
-          <Button type="button" disabled={starting} onClick={openContact}>
-            <LifeBuoy size={16} aria-hidden="true" />
-            {t("messages.contact_us")}
-          </Button>
         </Empty>
       ) : (
         <div

@@ -41,6 +41,7 @@ export function RoomEditForm({
   onSubmit,
   submitLabel,
   submittingLabel,
+  showImageKind = true,
 }: {
   room: Room;
   onChange: (room: Room) => void;
@@ -49,6 +50,8 @@ export function RoomEditForm({
   onSubmit: (payload: RoomEditPayload) => void;
   submitLabel?: string;
   submittingLabel?: string;
+  /** Photo provenance control; hidden on create (defaults to illustrative). */
+  showImageKind?: boolean;
 }) {
   const { t } = useT();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -158,31 +161,33 @@ export function RoomEditForm({
             }}
           />
         </div>
-        <Field>
-          <Label>{t("admin.room_image_kind")}</Label>
-          <FilterSelect
-            label={t("admin.room_image_kind")}
-            value={room.imageKind || "illustrative"}
-            onChange={(imageKind) =>
-              onChange({
-                ...roomRef.current,
-                imageKind: imageKind as "illustrative" | "actual",
-              })
-            }
-            options={[
-              {
-                value: "illustrative",
-                label: t("admin.room_image_illustrative"),
-                icon: <Image size={18} />,
-              },
-              {
-                value: "actual",
-                label: t("admin.room_image_actual"),
-                icon: <Camera size={18} />,
-              },
-            ]}
-          />
-        </Field>
+        {showImageKind ? (
+          <Field>
+            <Label>{t("admin.room_image_kind")}</Label>
+            <FilterSelect
+              label={t("admin.room_image_kind")}
+              value={room.imageKind || "illustrative"}
+              onChange={(imageKind) =>
+                onChange({
+                  ...roomRef.current,
+                  imageKind: imageKind as "illustrative" | "actual",
+                })
+              }
+              options={[
+                {
+                  value: "illustrative",
+                  label: t("admin.room_image_illustrative"),
+                  icon: <Image size={18} />,
+                },
+                {
+                  value: "actual",
+                  label: t("admin.room_image_actual"),
+                  icon: <Camera size={18} />,
+                },
+              ]}
+            />
+          </Field>
+        ) : null}
         <Field>
           <Label htmlFor={fileId}>{t("admin.room_image_upload")}</Label>
           <div className="room-edit-file-row">
