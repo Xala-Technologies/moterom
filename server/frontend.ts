@@ -1,6 +1,6 @@
 import { join, resolve } from "node:path";
 import express, { type Express, type Request, type Response } from "express";
-import { demoUploadDir } from "./roomImage";
+import { demoUploadDir, roomUploadDir } from "./roomImage";
 import { messageUploadDir } from "./messageImage";
 import { config, port, production } from "./config";
 
@@ -17,11 +17,12 @@ export function isStaticAssetPath(path: string): boolean {
 }
 
 /**
- * After static mounts for /rooms and /message-images: terminate with 404 so the
- * SPA catch-all cannot return HTML for a missing image URL.
+ * After static mounts for /rooms, /room-images and /message-images: terminate
+ * with 404 so the SPA catch-all cannot return HTML for a missing image URL.
  */
 export function mountMissingAssetNotFound(app: Express) {
   app.use("/rooms", sendMissingAsset);
+  app.use("/room-images", sendMissingAsset);
   app.use("/message-images", sendMissingAsset);
 }
 
@@ -44,6 +45,10 @@ export async function mountFrontend(app: Express) {
       app.use("/rooms", express.static(demoUploadDir(), { fallthrough: true }));
     }
     app.use(
+      "/room-images",
+      express.static(roomUploadDir(), { fallthrough: true }),
+    );
+    app.use(
       "/message-images",
       express.static(messageUploadDir(), { fallthrough: true }),
     );
@@ -63,6 +68,10 @@ export async function mountFrontend(app: Express) {
   for (const dir of roomStaticDirs()) {
     app.use("/rooms", express.static(dir, { fallthrough: true }));
   }
+  app.use(
+    "/room-images",
+    express.static(roomUploadDir(), { fallthrough: true }),
+  );
   app.use(
     "/message-images",
     express.static(messageUploadDir(), { fallthrough: true }),

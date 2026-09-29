@@ -37,7 +37,7 @@ Historical acceptance notes elsewhere in this repository disagree about demo/liv
 
 Admin → Users now shows the actual tenant's active/invited membership list. Customer and anonymous access to that API is denied. Access requests remain an inbox, not a permission store. The wording explains that declining a request does not revoke membership.
 
-Live room image editing now uses an HTTPS URL. Content-only saves preserve the existing gallery and variants. Clearing a multi-image gallery requires the Digilist gallery workflow; this form must not silently delete unrelated photos. Images are labelled illustrative until their provenance is explicitly confirmed for the selected URL. No image files or room facts were added or invented.
+Live room image editing accepts HTTPS URLs or Møterom-hosted uploads (`.data/room-images`, `/room-images/…`). Digilist stores only the URL reference under resource images and `metadata.moterom` (`imageHost: "moterom"` when BFF-hosted). Content-only saves preserve the existing gallery and variants. Clearing a multi-image gallery requires the Digilist gallery workflow; this form must not silently delete unrelated photos. Images are labelled illustrative until their provenance is explicitly confirmed. No image files or room facts were added or invented.
 
 Cancellation authentication was verified directly in Digilist `convex/http.ts`: `/auth/me` accepts the opaque session token, while `/me/bookings/{id}/cancel` uses `requireAccessToken`. The existing cancellation credential was correct and remains unchanged; a regression test now protects that distinction.
 
