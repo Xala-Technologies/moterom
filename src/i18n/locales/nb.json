@@ -680,7 +680,7 @@
     "capacity_label_en": "Capacity label (English)",
     "room_image": "Bilde",
     "room_image_upload": "Last opp bilde",
-    "room_image_upload_hint": "WebP, JPEG eller PNG, maks 2 MB. Demo lagrer filen lokalt.",
+    "room_image_upload_hint": "WebP, JPEG eller PNG, maks 2 MB. Bildet lagres hos Møterom (ikke i Digilist-mediebiblioteket).",
     "room_image_too_large": "Bildet kan ikke være større enn 2 MB.",
     "room_image_type": "Bruk WebP, JPEG eller PNG.",
     "room_image_kind": "Bildetype",
@@ -801,8 +801,8 @@
       "cannot_revoke_self": "Du kan ikke fjerne ditt eget medlemskap.",
       "revoked": "Tilgangen for {{email}} er fjernet."
     },
-    "room_image_url": "Bildeadresse",
-    "room_image_url_hint": "Bruk en godkjent HTTPS-adresse. La feltet stå tomt for å bruke illustrasjonsbildet fra katalogen. Velg riktig bildetype."
+    "room_image_url": "Bildeadresse (valgfritt)",
+    "room_image_url_hint": "Alternativ til opplasting: en godkjent HTTPS-adresse. Opplastede bilder lagres hos Møterom; Digilist får bare URL-en. Velg riktig bildetype."
   },
   "validation": {
     "name_required": "Skriv inn navn.",

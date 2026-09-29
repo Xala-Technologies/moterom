@@ -2,7 +2,7 @@
 
 None of these files are photographs of the customer’s rooms. They are licensed illustrative meeting-room pictures used only until approved building photographs are configured in Digilist or this inventory.
 
-Live Digilist HTTPS images replace these paths. Admin must explicitly confirm the photo type; `metadata.moterom.imageKind` is bound to the selected image URL. Unclassified live photos are conservatively labelled illustrative until reviewed. A later image replacement does not inherit an earlier photo’s provenance. Keep `FLOORPLAN_PATH` for the private plan; do not commit that file.
+Live room photos may be uploaded in admin and stored by the Møterom BFF under `.data/room-images` (public URL `/room-images/…`). Digilist receives that absolute HTTPS URL as a resource image reference and records `metadata.moterom.imageHost: "moterom"` — binaries are not uploaded into Digilist media. External HTTPS URLs still work. Admin must explicitly confirm the photo type; `metadata.moterom.imageKind` is bound to the selected image URL. Unclassified live photos are conservatively labelled illustrative until reviewed. A later image replacement does not inherit an earlier photo’s provenance. Keep `FLOORPLAN_PATH` for the private plan; do not commit that file.
 
 License for every file below: [Unsplash License](https://unsplash.com/license) (free to use, including commercially). Retrieved 16 September 2026. The UI labels them **Illustrasjonsfoto**.
 

@@ -186,50 +186,54 @@ export function RoomEditForm({
             ]}
           />
         </Field>
-        {mode === "live" ? (
+        <Field>
+          <Label htmlFor={fileId}>{t("admin.room_image_upload")}</Label>
+          <div className="room-edit-file-row">
+            <input
+              ref={fileRef}
+              id={fileId}
+              className="room-edit-file"
+              type="file"
+              accept="image/webp,image/jpeg,image/png"
+              tabIndex={-1}
+              onChange={(event) => {
+                chooseFile(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => fileRef.current?.click()}
+            >
+              {t("admin.room_image_upload")}
+            </Button>
+            {imageName && (
+              <span className="caption" role="status">
+                {imageName}
+              </span>
+            )}
+          </div>
+          <p className="caption">{t("admin.room_image_upload_hint")}</p>
+        </Field>
+        {mode === "live" && (
           <Field>
             <Label htmlFor={imageUrlId}>{t("admin.room_image_url")}</Label>
             <Input
               id={imageUrlId}
               type="url"
-              value={room.image?.startsWith("/rooms/") ? "" : room.image || ""}
+              value={
+                room.image?.startsWith("/rooms/") ||
+                room.image?.startsWith("/room-images/")
+                  ? ""
+                  : room.image || ""
+              }
               placeholder="https://"
               onChange={(event) =>
                 onChange({ ...roomRef.current, image: event.target.value })
               }
             />
             <p className="caption">{t("admin.room_image_url_hint")}</p>
-          </Field>
-        ) : (
-          <Field>
-            <Label htmlFor={fileId}>{t("admin.room_image_upload")}</Label>
-            <div className="room-edit-file-row">
-              <input
-                ref={fileRef}
-                id={fileId}
-                className="room-edit-file"
-                type="file"
-                accept="image/webp,image/jpeg,image/png"
-                tabIndex={-1}
-                onChange={(event) => {
-                  chooseFile(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => fileRef.current?.click()}
-              >
-                {t("admin.room_image_upload")}
-              </Button>
-              {imageName && (
-                <span className="caption" role="status">
-                  {imageName}
-                </span>
-              )}
-            </div>
-            <p className="caption">{t("admin.room_image_upload_hint")}</p>
           </Field>
         )}
       </div>

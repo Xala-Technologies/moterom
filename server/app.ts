@@ -83,7 +83,11 @@ import {
   parseInsightsQuery,
   previousPeriod,
 } from "./insights";
-import { saveDemoRoomImage } from "./roomImage";
+import {
+  publicRoomImageUrl,
+  saveDemoRoomImage,
+  saveRoomImage,
+} from "./roomImage";
 const demo =
   config.mode === "demo"
     ? new DemoStore(process.env.DEMO_DB_PATH || ".data/demo.sqlite", inventory)
@@ -1479,12 +1483,6 @@ app.post("/api/admin/rooms", async (req, res) => {
   const { imageFile, ...fields } = body;
   let image = fields.image?.trim();
   let imageKind = fields.imageKind;
-  if (imageFile && config.mode !== "demo")
-    throw new AppError(
-      400,
-      "I live-modus må rombilder publiseres i Digilist.",
-      "image_upload_demo_only",
-    );
   const created = await ctx.provider.createRoom(
     {
       ...fields,
@@ -1494,7 +1492,11 @@ app.post("/api/admin/rooms", async (req, res) => {
     ctx.user!,
   );
   if (imageFile) {
-    image = await saveDemoRoomImage(created.id, imageFile);
+    const stored =
+      config.mode === "demo"
+        ? await saveDemoRoomImage(created.id, imageFile)
+        : await saveRoomImage(created.id, imageFile);
+    image = config.mode === "live" ? publicRoomImageUrl(stored) : stored;
     imageKind = imageKind ?? "illustrative";
     res.status(201).json(
       await ctx.provider.updateRoom(
@@ -1526,13 +1528,11 @@ app.patch("/api/admin/rooms/:id", async (req, res) => {
   let image = fields.image?.trim();
   let imageKind = fields.imageKind;
   if (imageFile) {
-    if (config.mode !== "demo")
-      throw new AppError(
-        400,
-        "I live-modus må rombilder publiseres i Digilist.",
-        "image_upload_demo_only",
-      );
-    image = await saveDemoRoomImage(String(req.params.id), imageFile);
+    const stored =
+      config.mode === "demo"
+        ? await saveDemoRoomImage(String(req.params.id), imageFile)
+        : await saveRoomImage(String(req.params.id), imageFile);
+    image = config.mode === "live" ? publicRoomImageUrl(stored) : stored;
     imageKind = imageKind ?? "illustrative";
   }
   res.json(

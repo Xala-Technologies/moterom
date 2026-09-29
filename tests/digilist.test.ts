@@ -128,6 +128,36 @@ describe("Digilist boundary contracts from the reviewed source", () => {
     );
     expect(mocks.mutation.mock.calls[0][1]).not.toHaveProperty("images");
   });
+  it("accepts a Møterom-hosted PUBLIC_ORIGIN room image URL", async () => {
+    const { origin } = await import("../server/config");
+    const hosted = `${origin}/room-images/sauda-1-1.png`;
+    mocks.query.mockResolvedValue({
+      ...source,
+      images: [{ url: "https://images.example.invalid/old.webp" }],
+    });
+    await new Digilist().updateRoom(
+      inventory[0].id,
+      {
+        name: "Sauda",
+        capacity: 12,
+        description: "Møterom",
+        requiresApproval: false,
+        image: hosted,
+        imageKind: "illustrative",
+      },
+      user,
+    );
+    expect(mocks.mutation.mock.calls[0][1]).toMatchObject({
+      images: [{ url: hosted }],
+      metadata: {
+        moterom: {
+          imageKind: "illustrative",
+          imageUrl: hosted,
+          imageHost: "moterom",
+        },
+      },
+    });
+  });
   it("uses the canonical approvalRequired flag even when the legacy flag is false", async () => {
     expect((await new Digilist().rooms())[0].requiresApproval).toBe(true);
   });
