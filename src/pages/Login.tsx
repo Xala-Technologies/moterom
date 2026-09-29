@@ -255,6 +255,7 @@ export function Login() {
     } catch (err) {
       otpAutoSubmitted.current = false;
       setError(err as Error);
+    } finally {
       setBusy(false);
     }
   };
@@ -279,6 +280,7 @@ export function Login() {
   const onOtpChange = (raw: string, length = 6) => {
     const digits = raw.replace(/\D/g, "").slice(0, length);
     setCode(digits);
+    setError(undefined);
     if (digits.length < length) {
       otpAutoSubmitted.current = false;
       return;
@@ -289,7 +291,12 @@ export function Login() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (step === "code" || step === "mfa") {
-      await submitOtp(code.replace(/\D/g, "").slice(0, 6));
+      const otp = code.replace(/\D/g, "").slice(0, 6);
+      if (otp.length !== 6) {
+        setError(new Error(t("auth.code_required")));
+        return;
+      }
+      await submitOtp(otp);
       return;
     }
     setBusy(true);

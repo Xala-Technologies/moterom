@@ -1266,6 +1266,7 @@ export function Admin() {
             room={createDraft}
             busy={busy}
             error={error}
+            showImageKind={false}
             submitLabel={t("admin.new_room_submit")}
             submittingLabel={t("admin.creating_room")}
             onChange={(next) => setCreateDraft(next)}
