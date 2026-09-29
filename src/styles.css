@@ -3533,7 +3533,7 @@ a.login-option:hover {
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
 .customer-messages-thread-header .message-context {
-  margin-top: 10px;
+  margin-top: 6px;
 }
 .customer-messages-back {
   align-self: flex-start;
@@ -3667,12 +3667,12 @@ a.login-option:hover {
 }
 .message-context {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  margin-top: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--ds-color-neutral-border-subtle);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--ds-color-neutral-background-tinted);
 }
 .message-context-support {
@@ -3685,26 +3685,26 @@ a.login-option:hover {
 }
 .message-context-support strong,
 .message-context-body strong {
-  display: block;
-  font-size: var(--ds-font-size-md, var(--ds-font-size-3, 1rem));
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  line-height: 1.3;
 }
 .message-context-support p,
 .message-context-body p {
   margin: 0;
-  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 .message-context-photo {
-  flex: 0 0 4.5rem;
-  width: 4.5rem;
-  min-width: 4.5rem;
-  max-width: 4.5rem;
+  flex: 0 0 3rem;
+  width: 3rem;
+  min-width: 3rem;
+  max-width: 3rem;
 }
 /* Override global .room-image height (280px) for this compact thumb. */
 .message-context-photo .room-image {
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 3rem;
+  height: 3rem;
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .message-context-photo .room-image img {
@@ -3713,25 +3713,25 @@ a.login-option:hover {
   object-fit: cover;
 }
 .message-context-photo .photo-credit {
-  left: 4px;
-  bottom: 4px;
-  padding: 1px 5px;
-  font-size: 0.625rem;
+  left: 3px;
+  bottom: 3px;
+  padding: 0 4px;
+  font-size: 0.5625rem;
   line-height: 1.2;
-  max-width: calc(100% - 8px);
+  max-width: calc(100% - 6px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .message-context-photo .no-photo {
-  gap: 4px;
-  padding: 6px;
+  gap: 2px;
+  padding: 4px;
   font-size: var(--ds-font-size-xs, 0.75rem);
   text-align: center;
 }
 .message-context-photo .no-photo svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 .message-context-body {
   min-width: 0;
@@ -3739,14 +3739,34 @@ a.login-option:hover {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 2px;
+}
+.message-context-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  width: 100%;
+}
+.message-context-heading strong {
+  min-width: 0;
 }
 .message-context-meta {
   margin: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 10px;
-  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  line-height: 1.35;
+}
+.message-context-meta > div {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+  min-width: 0;
 }
 .message-context-meta dt {
   margin: 0;
@@ -3758,21 +3778,27 @@ a.login-option:hover {
   min-width: 0;
   color: var(--ds-color-neutral-text-default);
 }
+.message-context-body .text-link {
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+  line-height: 1.35;
+}
 .message-context-body .status {
   margin-top: 0;
+  padding: 2px 7px;
+  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
 }
 @media (max-width: 390px) {
   .message-context {
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 8px;
+    padding: 8px;
   }
   .message-context-photo,
   .message-context-photo .room-image {
-    flex-basis: 3.75rem;
-    width: 3.75rem;
-    min-width: 3.75rem;
-    max-width: 3.75rem;
-    height: 3.75rem;
+    flex-basis: 2.75rem;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    max-width: 2.75rem;
+    height: 2.75rem;
   }
 }
 .admin-messages-toolbar-actions {
