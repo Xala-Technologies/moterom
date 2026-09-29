@@ -1164,7 +1164,6 @@ export function Admin() {
           <RoomEditForm
             key={editRoom.id}
             room={editRoom}
-            mode={config?.mode}
             busy={busy}
             error={error}
             onChange={(next) => setEditRoom(next)}
@@ -1265,7 +1264,6 @@ export function Admin() {
           <RoomEditForm
             key="new-room"
             room={createDraft}
-            mode={config?.mode}
             busy={busy}
             error={error}
             submitLabel={t("admin.new_room_submit")}
