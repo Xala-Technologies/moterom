@@ -147,7 +147,7 @@ export function toAdminBookingRow(
       label: t("admin.follow_up"),
       disabled: busy,
       tone: "default",
-      href: `/booking/${encodeURIComponent(booking.id)}#meldinger`,
+      href: `/admin/messages?booking=${encodeURIComponent(booking.id)}`,
     });
   }
   if (canCalendar && !["cancelled", "rejected"].includes(booking.status)) {
