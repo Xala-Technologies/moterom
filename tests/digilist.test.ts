@@ -451,6 +451,8 @@ describe("Digilist boundary contracts from the reviewed source", () => {
         requiresApproval: false,
         amenities: ["Skjerm"],
         arrivalInfo: "Resepsjonen",
+        openTime: "09:00",
+        closeTime: "16:00",
       },
       user,
     );
@@ -466,6 +468,17 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       accessChannel: "tenant_portal",
       visibility: "private",
       capacity: 6,
+      openingHours: expect.arrayContaining([
+        expect.objectContaining({
+          dayIndex: 1,
+          open: "09:00",
+          close: "16:00",
+        }),
+        expect.objectContaining({
+          dayIndex: 0,
+          isClosed: true,
+        }),
+      ]),
     });
   });
   it("surfaces Digilist create failures instead of a generic incomplete error", async () => {

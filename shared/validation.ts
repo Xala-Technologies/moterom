@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  DEFAULT_CLOSE_TIME,
+  DEFAULT_OPEN_TIME,
+  clockToMinutes,
+  isValidClockTime,
+} from "./openingHours";
+
 export const searchSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start: z.string().regex(/^\d{2}:\d{2}$/),
@@ -22,54 +29,83 @@ export const bookingSchema = searchSchema.extend({
       message: "Skriv inn et gyldig telefonnummer.",
     }),
 });
-export const roomSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  capacity: z.coerce.number().int().min(1).max(500),
-  description: z.string().trim().max(3000),
-  descriptionEn: z.string().trim().max(3000).optional().default(""),
-  capacityLabel: z.string().trim().max(100).optional(),
-  capacityLabelEn: z.string().trim().max(100).optional(),
-  requiresApproval: z.boolean(),
-  image: z.string().trim().max(2000).optional(),
-  imageKind: z.enum(["illustrative", "actual"]).optional(),
-  amenities: z
-    .array(z.string().trim().min(1).max(80))
-    .max(20)
-    .optional()
-    .default([]),
-  arrivalInfo: z.string().trim().max(1000).optional().default(""),
-  imageFile: z
-    .object({
-      filename: z.string().trim().min(1).max(200),
-      contentType: z.enum(["image/webp", "image/jpeg", "image/png"]),
-      data: z.string().min(1).max(2_800_000),
-    })
-    .optional(),
-});
-export const roomCreateSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  capacity: z.coerce.number().int().min(1).max(500),
-  description: z.string().trim().max(3000).optional().default(""),
-  descriptionEn: z.string().trim().max(3000).optional().default(""),
-  capacityLabel: z.string().trim().max(100).optional(),
-  capacityLabelEn: z.string().trim().max(100).optional(),
-  requiresApproval: z.boolean().optional().default(false),
-  image: z.string().trim().max(2000).optional(),
-  imageKind: z.enum(["illustrative", "actual"]).optional(),
-  amenities: z
-    .array(z.string().trim().min(1).max(80))
-    .max(20)
-    .optional()
-    .default([]),
-  arrivalInfo: z.string().trim().max(1000).optional().default(""),
-  imageFile: z
-    .object({
-      filename: z.string().trim().min(1).max(200),
-      contentType: z.enum(["image/webp", "image/jpeg", "image/png"]),
-      data: z.string().min(1).max(2_800_000),
-    })
-    .optional(),
-});
+
+const clockTime = z
+  .string()
+  .trim()
+  .refine(isValidClockTime, { message: "Bruk klokkeslett som 08:00." });
+
+const roomHoursFields = {
+  openTime: clockTime.optional().default(DEFAULT_OPEN_TIME),
+  closeTime: clockTime.optional().default(DEFAULT_CLOSE_TIME),
+};
+
+function refineOpenBeforeClose<
+  T extends { openTime: string; closeTime: string },
+>(schema: z.ZodType<T>) {
+  return schema.refine(
+    (value) => clockToMinutes(value.openTime) < clockToMinutes(value.closeTime),
+    {
+      message: "Åpningstid må være før stengetid.",
+      path: ["closeTime"],
+    },
+  );
+}
+
+export const roomSchema = refineOpenBeforeClose(
+  z.object({
+    name: z.string().trim().min(1).max(100),
+    capacity: z.coerce.number().int().min(1).max(500),
+    description: z.string().trim().max(3000),
+    descriptionEn: z.string().trim().max(3000).optional().default(""),
+    capacityLabel: z.string().trim().max(100).optional(),
+    capacityLabelEn: z.string().trim().max(100).optional(),
+    requiresApproval: z.boolean(),
+    image: z.string().trim().max(2000).optional(),
+    imageKind: z.enum(["illustrative", "actual"]).optional(),
+    amenities: z
+      .array(z.string().trim().min(1).max(80))
+      .max(20)
+      .optional()
+      .default([]),
+    arrivalInfo: z.string().trim().max(1000).optional().default(""),
+    imageFile: z
+      .object({
+        filename: z.string().trim().min(1).max(200),
+        contentType: z.enum(["image/webp", "image/jpeg", "image/png"]),
+        data: z.string().min(1).max(2_800_000),
+      })
+      .optional(),
+    ...roomHoursFields,
+  }),
+);
+export const roomCreateSchema = refineOpenBeforeClose(
+  z.object({
+    name: z.string().trim().min(1).max(100),
+    capacity: z.coerce.number().int().min(1).max(500),
+    description: z.string().trim().max(3000).optional().default(""),
+    descriptionEn: z.string().trim().max(3000).optional().default(""),
+    capacityLabel: z.string().trim().max(100).optional(),
+    capacityLabelEn: z.string().trim().max(100).optional(),
+    requiresApproval: z.boolean().optional().default(false),
+    image: z.string().trim().max(2000).optional(),
+    imageKind: z.enum(["illustrative", "actual"]).optional(),
+    amenities: z
+      .array(z.string().trim().min(1).max(80))
+      .max(20)
+      .optional()
+      .default([]),
+    arrivalInfo: z.string().trim().max(1000).optional().default(""),
+    imageFile: z
+      .object({
+        filename: z.string().trim().min(1).max(200),
+        contentType: z.enum(["image/webp", "image/jpeg", "image/png"]),
+        data: z.string().min(1).max(2_800_000),
+      })
+      .optional(),
+    ...roomHoursFields,
+  }),
+);
 export type RoomPatch = z.infer<typeof roomSchema>;
 export type RoomCreate = z.infer<typeof roomCreateSchema>;
 export const accessRequestCreateSchema = z.object({

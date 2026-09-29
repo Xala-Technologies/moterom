@@ -16,6 +16,10 @@ export interface Room {
   nameNeedsConfirmation?: boolean;
   arrivalInfo?: string;
   sourceId?: string;
+  /** Weekday opening time HH:mm (Mon–Fri). Digilist owns full schedule. */
+  openTime?: string;
+  /** Weekday closing time HH:mm (Mon–Fri). Digilist owns full schedule. */
+  closeTime?: string;
 }
 export interface Search {
   date: string;
