@@ -36,7 +36,6 @@ export type RoomEditPayload = {
 export function RoomEditForm({
   room,
   onChange,
-  mode,
   busy,
   error,
   onSubmit,
@@ -45,7 +44,6 @@ export function RoomEditForm({
 }: {
   room: Room;
   onChange: (room: Room) => void;
-  mode?: "demo" | "live";
   busy: boolean;
   error?: Error;
   onSubmit: (payload: RoomEditPayload) => void;
@@ -66,7 +64,6 @@ export function RoomEditForm({
   const descriptionEnId = useId();
   const amenitiesId = useId();
   const arrivalId = useId();
-  const imageUrlId = useId();
   const fileId = useId();
   const [amenitiesText, setAmenitiesText] = useState(() =>
     room.amenities.join("\n"),
@@ -216,26 +213,6 @@ export function RoomEditForm({
           </div>
           <p className="caption">{t("admin.room_image_upload_hint")}</p>
         </Field>
-        {mode === "live" && (
-          <Field>
-            <Label htmlFor={imageUrlId}>{t("admin.room_image_url")}</Label>
-            <Input
-              id={imageUrlId}
-              type="url"
-              value={
-                room.image?.startsWith("/rooms/") ||
-                room.image?.startsWith("/room-images/")
-                  ? ""
-                  : room.image || ""
-              }
-              placeholder="https://"
-              onChange={(event) =>
-                onChange({ ...roomRef.current, image: event.target.value })
-              }
-            />
-            <p className="caption">{t("admin.room_image_url_hint")}</p>
-          </Field>
-        )}
       </div>
       <div className="room-edit-main">
         <div className="room-edit-pair">
