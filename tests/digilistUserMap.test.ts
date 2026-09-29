@@ -103,9 +103,23 @@ describe("mapDigilistUser", () => {
 
   it("uses email as display name when Digilist name is missing", () => {
     const user = mapDigilistUser(
-      { ...allowlisted, name: null, tenantRole: "member" },
+      {
+        ...other,
+        email: "missing-name@example.invalid",
+        name: null,
+        tenantRole: "member",
+      },
       building,
     );
-    expect(user.name).toBe(allowlisted.email);
+    expect(user.name).toBe("missing-name@example.invalid");
+  });
+
+  it("shows a short label for the SKB allowlist admin account", () => {
+    expect(
+      mapDigilistUser(
+        { ...allowlisted, name: "SKB allowlist admin", tenantRole: "member" },
+        building,
+      ).name,
+    ).toBe("skb admin");
   });
 });
