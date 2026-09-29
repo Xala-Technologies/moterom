@@ -55,7 +55,7 @@ describe("toAdminBookingRow", () => {
     expect(row.actions).toEqual([]);
   });
 
-  it("exposes follow-up, calendar, and cancel in the overflow set", () => {
+  it("exposes follow-up and cancel in the overflow set", () => {
     const future = Date.now() + 60 * 60 * 1000;
     const row = toAdminBookingRow(
       {
@@ -69,17 +69,12 @@ describe("toAdminBookingRow", () => {
         formatters,
         canCancel: true,
         canMessage: true,
-        canCalendar: true,
       },
     );
-    expect(row.actions.map((a) => a.id)).toEqual([
-      "message",
-      "calendar",
-      "cancel",
-    ]);
+    expect(row.actions.map((a) => a.id)).toEqual(["message", "cancel"]);
     expect(row.actions.every((a) => !a.primary)).toBe(true);
     expect(row.actions.find((a) => a.id === "message")?.href).toBe(
-      "/booking/b1#meldinger",
+      "/admin/messages?booking=b1",
     );
   });
 
@@ -99,7 +94,6 @@ describe("toAdminBookingRow", () => {
         canReject: true,
         canCancel: true,
         canMessage: true,
-        canCalendar: true,
       },
     );
     expect(row.actions.filter((a) => a.primary).map((a) => a.id)).toEqual([
@@ -108,7 +102,6 @@ describe("toAdminBookingRow", () => {
     ]);
     expect(row.actions.filter((a) => !a.primary).map((a) => a.id)).toEqual([
       "message",
-      "calendar",
       "cancel",
     ]);
   });

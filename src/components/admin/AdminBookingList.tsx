@@ -43,7 +43,6 @@ export function AdminBookingList({
       canReject: Boolean(onReject),
       canCancel: Boolean(onCancel),
       canMessage: true,
-      canCalendar: true,
       busy,
     }),
   );

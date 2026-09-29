@@ -26,7 +26,6 @@ import {
   ClipboardList,
   Clock3,
   DoorOpen,
-  Download,
   LayoutDashboard,
   ListFilter,
   LockKeyhole,
@@ -1056,19 +1055,11 @@ export function Admin() {
               </Button>
             ) : (
               <>
-                <a
-                  className="ds-button"
-                  data-variant="secondary"
-                  href={`/api/bookings/${event.id}/calendar.ics`}
-                >
-                  <Download size={18} />
-                  {t("booking.add_to_calendar")}
-                </a>
                 {event.booking ? (
                   <Link
                     className="ds-button"
                     data-variant="secondary"
-                    to={`/booking/${encodeURIComponent(event.booking.id)}#meldinger`}
+                    to={`/admin/messages?booking=${encodeURIComponent(event.booking.id)}`}
                   >
                     <MessageCircle size={18} />
                     {t("admin.follow_up")}
