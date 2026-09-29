@@ -1124,16 +1124,24 @@ export class Digilist {
         "room_setup_unavailable",
       );
     if (published) {
-      await mutate(this.c, "domain/resources:update", {
-        id: room.sourceId,
-        updatedBy: user.id,
-        status: "published",
-      });
+      try {
+        await mutate(this.c, "domain/resources:update", {
+          id: room.sourceId,
+          updatedBy: user.id,
+          status: "published",
+        });
+      } catch (error) {
+        throw this.roomPublishFailure(error);
+      }
     } else {
-      await mutate(this.c, "domain/resources:unpublish", {
-        id: room.sourceId,
-        unpublishedBy: user.id,
-      });
+      try {
+        await mutate(this.c, "domain/resources:unpublish", {
+          id: room.sourceId,
+          unpublishedBy: user.id,
+        });
+      } catch (error) {
+        throw this.roomPublishFailure(error);
+      }
     }
     this.roomRequests.delete(id);
     this.roomRequests.delete(room.id);
@@ -1332,6 +1340,29 @@ export class Digilist {
       502,
       text || "Rommet kunne ikke opprettes i Digilist.",
       "room_create_failed",
+    );
+  }
+  private roomPublishFailure(error: unknown): AppError {
+    if (error instanceof AppError) return error;
+    const data = error instanceof ConvexError ? row(error.data) : {};
+    if (str(data.code) === "VENUE_LIMIT_REACHED")
+      return new AppError(
+        409,
+        "Byggets Digilist-plan har nådd grensen for publiserte markedsplass-lokaler. Private portalrom skal ikke telle — kontakt Digilist hvis dette fortsetter.",
+        "venue_limit_reached",
+        {
+          limit: str(data.limit),
+          currentCount: str(data.currentCount),
+          planId: str(data.planId),
+        },
+      );
+    const text =
+      str(data.message, str(data.type)) ||
+      (error instanceof Error ? error.message : String(error || ""));
+    return new AppError(
+      502,
+      text || "Rommet kunne ikke publiseres i Digilist.",
+      "room_publish_failed",
     );
   }
   async createBlock(roomId: string, search: Search, title: string, user: User) {
