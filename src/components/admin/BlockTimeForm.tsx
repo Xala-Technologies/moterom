@@ -30,9 +30,25 @@ export function BlockTimeForm({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [dateOpen, setDateOpen] = useState(false);
-  const slots = suggestedSlots();
+  const room = rooms.find((item) => item.id === roomId);
+  const slots = suggestedSlots(room?.openTime, room?.closeTime);
   const starts = slots.map((slot) => slot.start);
   const ends = slots.map((slot) => slot.end).filter((end) => end > value.start);
+
+  useEffect(() => {
+    if (!starts.length) return;
+    const start = starts.includes(value.start) ? value.start : starts[0]!;
+    const endOptions = slots
+      .map((slot) => slot.end)
+      .filter((end) => end > start);
+    const end = endOptions.includes(value.end)
+      ? value.end
+      : (endOptions[0] ?? start);
+    if (start === value.start && end === value.end) return;
+    onChange({ ...value, start, end, people: 1 });
+    // Clamp block times when the selected room’s opening window changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional room-hours trigger
+  }, [roomId, room?.openTime, room?.closeTime]);
 
   useEffect(() => {
     if (!dateOpen) return;

@@ -2,6 +2,12 @@ import { Temporal } from "@js-temporal/polyfill";
 import type { Search } from "./types";
 import { DEFAULT_LOCALE, toBcp47, type Locale } from "./i18n/locale";
 import { translateMessage } from "./i18n/messages";
+import {
+  DEFAULT_CLOSE_TIME,
+  DEFAULT_OPEN_TIME,
+  clockToMinutes,
+  isValidClockTime,
+} from "./openingHours";
 export const ZONE = "Europe/Oslo";
 export function today() {
   return Temporal.Now.plainDateISO(ZONE).toString();
@@ -97,12 +103,30 @@ export function defaultSearch(): Search {
 function clock(hour: number) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
-/** Portal one-hour suggestions, not Digilist opening hours. */
-export function suggestedSlots() {
-  return Array.from({ length: 9 }, (_, i) => {
-    const start = 8 + i;
-    return { start: clock(start), end: clock(start + 1) };
-  });
+/**
+ * One-hour chips that fit inside a room’s weekday window.
+ * Defaults to 08:00–17:00 when open/close are missing or invalid.
+ */
+export function suggestedSlots(
+  openTime: string = DEFAULT_OPEN_TIME,
+  closeTime: string = DEFAULT_CLOSE_TIME,
+) {
+  const open =
+    isValidClockTime(openTime) && isValidClockTime(closeTime)
+      ? openTime
+      : DEFAULT_OPEN_TIME;
+  const close =
+    isValidClockTime(openTime) && isValidClockTime(closeTime)
+      ? closeTime
+      : DEFAULT_CLOSE_TIME;
+  if (clockToMinutes(open) >= clockToMinutes(close)) return [];
+  const firstHour = Math.ceil(clockToMinutes(open) / 60);
+  const lastEndHour = Math.floor(clockToMinutes(close) / 60);
+  const slots: { start: string; end: string }[] = [];
+  for (let hour = firstHour; hour < lastEndHour; hour++) {
+    slots.push({ start: clock(hour), end: clock(hour + 1) });
+  }
+  return slots;
 }
 export function searchParams(search: Search) {
   return new URLSearchParams({

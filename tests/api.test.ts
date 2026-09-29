@@ -90,6 +90,51 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       "available",
     );
   });
+  it("scopes room card slots to the room opening hours", async () => {
+    const date = addDays(today(), 2);
+    const room = (await administrator.get("/api/admin").expect(200)).body
+      .rooms[0] as {
+      id: string;
+      name: string;
+      capacity: number;
+      description: string;
+      descriptionEn?: string;
+      capacityLabel?: string;
+      capacityLabelEn?: string;
+      requiresApproval: boolean;
+      amenities?: string[];
+      arrivalInfo?: string;
+    };
+    await administrator
+      .patch(`/api/admin/rooms/${room.id}`)
+      .set("Origin", origin)
+      .send({
+        name: room.name,
+        capacity: room.capacity,
+        description: room.description,
+        descriptionEn: room.descriptionEn ?? "",
+        capacityLabel: room.capacityLabel ?? "",
+        capacityLabelEn: room.capacityLabelEn ?? "",
+        requiresApproval: room.requiresApproval,
+        amenities: room.amenities ?? [],
+        arrivalInfo: room.arrivalInfo ?? "",
+        openTime: "10:00",
+        closeTime: "14:00",
+      })
+      .expect(200);
+    const slots = (
+      await customer
+        .get("/api/availability/slots")
+        .query({ date, roomId: room.id })
+        .expect(200)
+    ).body as Array<{ start: string; end: string }>;
+    expect(slots.map((slot) => `${slot.start}-${slot.end}`)).toEqual([
+      "10:00-11:00",
+      "11:00-12:00",
+      "12:00-13:00",
+      "13:00-14:00",
+    ]);
+  });
   it("lets a demo guest quote and book with name and email", async () => {
     const guest = request.agent(app);
     const search = {

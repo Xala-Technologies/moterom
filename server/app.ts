@@ -61,6 +61,7 @@ import {
   type PortalRole,
 } from "../shared/adminAccess";
 import { interval, suggestedSlots } from "../shared/time";
+import { DEFAULT_CLOSE_TIME, DEFAULT_OPEN_TIME } from "../shared/openingHours";
 import { translateMessage } from "../shared/i18n/messages";
 import { requestLocale } from "./locale";
 import type {
@@ -878,8 +879,15 @@ app.get("/api/availability/slots", async (req, res) => {
   const roomId = req.query.roomId
     ? z.string().min(1).max(100).parse(req.query.roomId)
     : undefined;
+  let openTime = DEFAULT_OPEN_TIME;
+  let closeTime = DEFAULT_CLOSE_TIME;
+  if (roomId) {
+    const room = await ctx.provider.room(roomId);
+    openTime = room.openTime?.trim() || DEFAULT_OPEN_TIME;
+    closeTime = room.closeTime?.trim() || DEFAULT_CLOSE_TIME;
+  }
   const slots: TimeSlot[] = await Promise.all(
-    suggestedSlots().map(async (slot) => {
+    suggestedSlots(openTime, closeTime).map(async (slot) => {
       const search = { date, start: slot.start, end: slot.end, people: 1 };
       try {
         parseSearch(search);
