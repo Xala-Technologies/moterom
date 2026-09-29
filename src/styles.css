@@ -3121,6 +3121,22 @@ a.login-option:hover {
   width: 100%;
   min-width: 0;
 }
+.message-composer-input {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.message-composer-input.has-attach .ds-input {
+  padding-inline-end: 3rem;
+  padding-block-end: 2.75rem;
+}
+.message-composer-input .message-attach-button {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 1;
+  background: var(--ds-color-neutral-background-default);
+}
 .message-composer-actions {
   display: flex;
   flex-wrap: wrap;

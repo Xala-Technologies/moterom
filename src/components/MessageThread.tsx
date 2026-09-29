@@ -369,42 +369,50 @@ export function MessageThread({
         <div className="message-composer-main">
           <Field>
             <Label htmlFor={composeId}>{t("messages.compose_label")}</Label>
-            <Textarea
-              id={composeId}
-              rows={2}
-              maxLength={4000}
-              value={draft}
-              disabled={busy}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={onComposerKeyDown}
-            />
+            <div
+              className={
+                canAttach
+                  ? "message-composer-input has-attach"
+                  : "message-composer-input"
+              }
+            >
+              <Textarea
+                id={composeId}
+                rows={2}
+                maxLength={4000}
+                value={draft}
+                disabled={busy}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={onComposerKeyDown}
+              />
+              {canAttach ? (
+                <>
+                  <input
+                    ref={fileRef}
+                    id={fileId}
+                    className="message-attach-input"
+                    type="file"
+                    accept="image/webp,image/jpeg,image/png"
+                    disabled={busy}
+                    onChange={(e) => void chooseFile(e.target.files?.[0])}
+                  />
+                  <Button
+                    type="button"
+                    variant="tertiary"
+                    data-size="sm"
+                    className="message-attach-button"
+                    disabled={busy}
+                    onClick={() => fileRef.current?.click()}
+                    aria-label={t("messages.attach_image")}
+                    title={t("messages.attach_image")}
+                  >
+                    <ImagePlus size={18} aria-hidden="true" />
+                  </Button>
+                </>
+              ) : null}
+            </div>
           </Field>
           <div className="message-composer-actions">
-            {canAttach ? (
-              <>
-                <input
-                  ref={fileRef}
-                  id={fileId}
-                  className="message-attach-input"
-                  type="file"
-                  accept="image/webp,image/jpeg,image/png"
-                  disabled={busy}
-                  onChange={(e) => void chooseFile(e.target.files?.[0])}
-                />
-                <Button
-                  type="button"
-                  variant="tertiary"
-                  data-size="sm"
-                  className="message-attach-button"
-                  disabled={busy}
-                  onClick={() => fileRef.current?.click()}
-                  aria-label={t("messages.attach_image")}
-                  title={t("messages.attach_image")}
-                >
-                  <ImagePlus size={18} aria-hidden="true" />
-                </Button>
-              </>
-            ) : null}
             <Button
               type="submit"
               className="message-send-button"
