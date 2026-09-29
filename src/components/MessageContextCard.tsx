@@ -39,7 +39,7 @@ export function MessageContextCard({
   if (kind === "support") {
     return (
       <aside className="message-context message-context-support">
-        <MessageCircle size={20} aria-hidden="true" />
+        <MessageCircle size={18} aria-hidden="true" />
         <div>
           <strong>{t("messages.kind_support")}</strong>
           <p className="muted">{t("messages.support_context_body")}</p>
@@ -73,33 +73,28 @@ export function MessageContextCard({
         </div>
       ) : null}
       <div className="message-context-body">
-        <strong>{roomName}</strong>
+        <div className="message-context-heading">
+          <strong>{roomName}</strong>
+          {ctx?.status ? <Status status={ctx.status} /> : null}
+        </div>
         <dl className="message-context-meta">
           {capacityLabel ? (
-            <>
+            <div>
               <dt>{t("messages.context_capacity")}</dt>
               <dd>{capacityLabel}</dd>
-            </>
+            </div>
           ) : null}
           {whenLabel ? (
-            <>
+            <div>
               <dt>{t("messages.context_when")}</dt>
               <dd>{whenLabel}</dd>
-            </>
-          ) : null}
-          {ctx?.status ? (
-            <>
-              <dt>{t("messages.context_status")}</dt>
-              <dd>
-                <Status status={ctx.status} />
-              </dd>
-            </>
+            </div>
           ) : null}
           {ctx?.reference ? (
-            <>
+            <div>
               <dt>{t("messages.context_reference")}</dt>
               <dd>{ctx.reference}</dd>
-            </>
+            </div>
           ) : null}
         </dl>
         {bookingHref ? (
