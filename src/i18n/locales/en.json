@@ -680,7 +680,7 @@
     "capacity_label_en": "Capacity label (English)",
     "room_image": "Photo",
     "room_image_upload": "Upload photo",
-    "room_image_upload_hint": "WebP, JPEG or PNG, max 2 MB. Demo stores the file locally.",
+    "room_image_upload_hint": "WebP, JPEG or PNG, max 2 MB. The file is stored by Møterom (not Digilist media).",
     "room_image_too_large": "The photo cannot be larger than 2 MB.",
     "room_image_type": "Use WebP, JPEG or PNG.",
     "room_image_kind": "Photo type",
@@ -801,8 +801,8 @@
       "cannot_revoke_self": "You cannot revoke your own membership.",
       "revoked": "Access for {{email}} has been revoked."
     },
-    "room_image_url": "Photo URL",
-    "room_image_url_hint": "Use an approved HTTPS photo URL. Leave empty to use the catalogue illustration. Select the correct photo type."
+    "room_image_url": "Photo URL (optional)",
+    "room_image_url_hint": "Alternative to upload: an approved HTTPS photo URL. Uploads are stored by Møterom; Digilist only keeps the URL. Select the correct photo type."
   },
   "validation": {
     "name_required": "Enter a name.",

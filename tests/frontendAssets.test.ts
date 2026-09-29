@@ -20,15 +20,17 @@ describe("static asset paths vs SPA fallthrough", () => {
 
   it("detects image and bundle extensions as static assets", () => {
     expect(isStaticAssetPath("/rooms/sauda-1.webp")).toBe(true);
+    expect(isStaticAssetPath("/room-images/sauda-1.jpg")).toBe(true);
     expect(isStaticAssetPath("/message-images/note.jpg")).toBe(true);
     expect(isStaticAssetPath("/assets/index-abc.js")).toBe(true);
     expect(isStaticAssetPath("/bookings")).toBe(false);
     expect(isStaticAssetPath("/rom/sauda-1")).toBe(false);
   });
 
-  it("returns plain 404 for missing /rooms and /message-images instead of SPA HTML", async () => {
+  it("returns plain 404 for missing /rooms, /room-images and /message-images instead of SPA HTML", async () => {
     root = mkdtempSync(join(tmpdir(), "moterom-assets-"));
     mkdirSync(join(root, "rooms"));
+    mkdirSync(join(root, "room-images"));
     mkdirSync(join(root, "message-images"));
     writeFileSync(join(root, "rooms", "ok.webp"), "webp-bytes");
     writeFileSync(
@@ -40,6 +42,10 @@ describe("static asset paths vs SPA fallthrough", () => {
     app.use(
       "/rooms",
       express.static(join(root, "rooms"), { fallthrough: true }),
+    );
+    app.use(
+      "/room-images",
+      express.static(join(root, "room-images"), { fallthrough: true }),
     );
     app.use(
       "/message-images",
@@ -61,6 +67,11 @@ describe("static asset paths vs SPA fallthrough", () => {
     expect(missingRoom.headers["content-type"]).toMatch(/text\/plain/);
     expect(missingRoom.text).toBe("Not found");
     expect(missingRoom.text).not.toMatch(/spa/i);
+
+    const missingHosted = await request(app)
+      .get("/room-images/gone.jpg")
+      .expect(404);
+    expect(missingHosted.text).toBe("Not found");
 
     const missingMessage = await request(app)
       .get("/message-images/gone.jpg")

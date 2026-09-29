@@ -63,7 +63,8 @@ const nb: Record<string, string> = {
   period_too_long: "Velg en periode på høyst ett år.",
   unknown_room: "Ukjent rom.",
   invalid_period: "Ugyldig periode.",
-  image_upload_demo_only: "I live-modus må rombilder publiseres i Digilist.",
+  image_upload_demo_only:
+    "Romopplasting er midlertidig utilgjengelig. Bruk en HTTPS-adresse.",
   invalid_image_type: "Bruk WebP, JPEG eller PNG.",
   invalid_image_url: "Bruk en HTTPS-adresse til bildet.",
   image_gallery_managed_in_digilist:
@@ -72,6 +73,7 @@ const nb: Record<string, string> = {
   message_images_unsupported:
     "Bildemeldinger er ikke tilgjengelig for booking-samtaler ennå. Bruk generelle henvendelser, eller skriv en tekstmelding.",
   message_image_store_failed: "Bildet kunne ikke lagres. Prøv igjen.",
+  room_image_store_failed: "Bildet kunne ikke lagres. Prøv igjen.",
   room_name_required: "Skriv inn et romnavn.",
   room_create_failed: "Rommet kunne ikke opprettes i Digilist.",
   room_delete_failed: "Rommet kunne ikke slettes i Digilist.",
@@ -197,7 +199,7 @@ const en: Record<string, string> = {
   unknown_room: "Unknown room.",
   invalid_period: "Invalid period.",
   image_upload_demo_only:
-    "In live mode, room photos must be published in Digilist.",
+    "Room upload is temporarily unavailable. Use an HTTPS photo URL.",
   invalid_image_type: "Use WebP, JPEG or PNG.",
   invalid_image_url: "Use an HTTPS photo URL.",
   image_gallery_managed_in_digilist:
@@ -206,6 +208,7 @@ const en: Record<string, string> = {
   message_images_unsupported:
     "Image messages are not available for booking conversations yet. Use a general enquiry, or send a text message.",
   message_image_store_failed: "The image could not be stored. Try again.",
+  room_image_store_failed: "The image could not be stored. Try again.",
   room_name_required: "Enter a room name.",
   room_create_failed: "The room could not be created in Digilist.",
   room_delete_failed: "The room could not be deleted in Digilist.",

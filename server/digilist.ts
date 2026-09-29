@@ -9,6 +9,7 @@ import {
   convexUrl,
   httpUrl,
   inventory,
+  origin,
   tenantId,
 } from "./config";
 import type { Session } from "./session";
@@ -94,6 +95,29 @@ function isTenantPortalRoom(source: Row): boolean {
     str(row(source.metadata).visibility),
   );
   return channel === "tenant_portal" && visibility === "private";
+}
+
+/**
+ * Digilist stores a URL reference only — binaries stay on the Møterom BFF.
+ * Accept HTTPS urls or same-origin /room-images/ (and legacy /rooms/) under PUBLIC_ORIGIN.
+ */
+function liveResourceImageUrl(image: string | undefined): string | undefined {
+  const trimmed = image?.trim();
+  if (!trimmed) return undefined;
+  if (/^https:\/\//.test(trimmed)) return trimmed;
+  if (
+    trimmed.startsWith(`${origin}/room-images/`) ||
+    trimmed.startsWith(`${origin}/rooms/`)
+  )
+    return trimmed;
+  return undefined;
+}
+
+function isMoteromHostedImage(url: string): boolean {
+  return (
+    url.startsWith(`${origin}/room-images/`) ||
+    url.startsWith(`${origin}/rooms/`)
+  );
 }
 
 /** Digilist status is the publish authority (draft / archived are not bookable). */
@@ -1012,7 +1036,7 @@ export class Digilist {
     const room = await this.room(id);
     const source = this.sources.get(id);
     const image = patch.image?.trim();
-    const liveImage = image && /^https:\/\//.test(image) ? image : undefined;
+    const liveImage = liveResourceImageUrl(image);
     if (image && !liveImage && image !== room.image)
       throw new AppError(
         400,
@@ -1026,6 +1050,10 @@ export class Digilist {
         "Administrer rommets bildegalleri i Digilist.",
         "image_gallery_managed_in_digilist",
       );
+    const resolvedImageUrl =
+      image === ""
+        ? inventory.find((item) => item.id === id)?.image || ""
+        : liveImage || room.image || "";
     await mutate(this.c, "domain/resources:update", {
       id: room.sourceId,
       updatedBy: user.id,
@@ -1057,13 +1085,14 @@ export class Digilist {
           ...(patch.capacityLabelEn !== undefined
             ? { capacityLabelEn: patch.capacityLabelEn }
             : {}),
-          ...(patch.imageKind !== undefined || image === ""
+          ...(patch.imageKind !== undefined || image === "" || liveImage
             ? {
                 imageKind: image === "" ? "illustrative" : patch.imageKind,
-                imageUrl:
-                  image === ""
-                    ? inventory.find((item) => item.id === id)?.image || ""
-                    : liveImage || room.image || "",
+                imageUrl: resolvedImageUrl,
+                imageHost:
+                  resolvedImageUrl && isMoteromHostedImage(resolvedImageUrl)
+                    ? "moterom"
+                    : "",
               }
             : {}),
         },
@@ -1157,7 +1186,7 @@ export class Digilist {
     const slug = slugFromName(name);
     const description = input.description.trim() || name;
     const image = input.image?.trim();
-    const liveImage = image && /^https:\/\//.test(image) ? image : undefined;
+    const liveImage = liveResourceImageUrl(image);
     if (image && !liveImage)
       throw new AppError(
         400,
@@ -1176,6 +1205,9 @@ export class Digilist {
           ? {
               imageKind: input.imageKind || "illustrative",
               imageUrl: liveImage || "",
+              ...(liveImage && isMoteromHostedImage(liveImage)
+                ? { imageHost: "moterom" }
+                : {}),
             }
           : {}),
       },
