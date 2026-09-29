@@ -13,6 +13,7 @@ import { useApp } from "../../context";
 import { useFormatters, useT } from "../../i18n";
 import type { AccessRequest, AccessRequestStatus } from "../../../shared/types";
 import { openingAccessFilter } from "./accessRequestFilter";
+import { menuPlacementFor, type MenuPlacement } from "./menuPlacement";
 
 type ApiResult = {
   data?: AccessRequest[];
@@ -40,10 +41,48 @@ function RequestMenu({
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<MenuPlacement>("down");
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const estimatedHeight = Math.max(120, actions.length * 48 + 16);
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const trigger = triggerRef.current;
+    if (trigger) {
+      setPlacement(
+        menuPlacementFor(trigger.getBoundingClientRect(), estimatedHeight),
+      );
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const sync = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const measured = menuRef.current?.offsetHeight ?? 0;
+      setPlacement(
+        menuPlacementFor(
+          trigger.getBoundingClientRect(),
+          measured > 0 ? measured : estimatedHeight,
+        ),
+      );
+    };
+    sync();
+    window.addEventListener("resize", sync);
+    window.addEventListener("scroll", sync, true);
+    return () => {
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("scroll", sync, true);
+    };
+  }, [open, estimatedHeight]);
 
   useEffect(() => {
     if (!open) return;
@@ -97,7 +136,7 @@ function RequestMenu({
         aria-expanded={open}
         aria-controls={menuId}
         disabled={busy}
-        onClick={() => setOpen((current) => !current)}
+        onClick={toggle}
       >
         <MoreHorizontal size={20} aria-hidden="true" />
       </button>
@@ -105,7 +144,7 @@ function RequestMenu({
         <div
           id={menuId}
           ref={menuRef}
-          className="admin-users-menu-list"
+          className={`admin-users-menu-list${placement === "up" ? " opens-up" : ""}`}
           role="menu"
         >
           {actions.map((action) => (
