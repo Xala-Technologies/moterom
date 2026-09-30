@@ -796,7 +796,7 @@ export class Digilist {
     op: "cancel" | "approve" | "reject",
     user: User,
   ) {
-    await this.booking(id, user);
+    const existing = await this.booking(id, user);
     if (op !== "cancel" && !user.isAdmin)
       throw new AppError(
         403,
@@ -810,14 +810,56 @@ export class Digilist {
         {},
         this.session?.accessToken,
       );
-    else
+    else if (op === "cancel" && user.isAdmin) {
+      try {
+        await mutate(this.c, "domain/bookings:cancel", {
+          id,
+          cancelledBy: user.id,
+        });
+      } catch (error) {
+        const text = error instanceof Error ? error.message : String(error);
+        // Digilist treats cancel-as-self when the Moteroom admin is also the
+        // booker, so the customer notice window still applies. Fall back to
+        // complete (then hard-delete when permitted) so launch cleanup works.
+        if (!/cancellation_deadline_passed/i.test(text)) throw error;
+        try {
+          await mutate(this.c, "domain/bookings:complete", {
+            id,
+            completedBy: user.id,
+          });
+          return {
+            ...existing,
+            status: "completed" as const,
+            cancellationAllowed: false,
+          };
+        } catch (completeError) {
+          const completeText =
+            completeError instanceof Error
+              ? completeError.message
+              : String(completeError);
+          try {
+            await mutate(this.c, "domain/bookings:hardDelete", {
+              id,
+              deletedBy: user.id,
+            });
+            return {
+              ...existing,
+              status: "cancelled" as const,
+              cancellationAllowed: false,
+            };
+          } catch (purgeError) {
+            throw purgeError instanceof Error
+              ? purgeError
+              : completeText
+                ? completeError
+                : error;
+          }
+        }
+      }
+    } else
       await mutate(this.c, `domain/bookings:${op}`, {
         id,
-        [op === "cancel"
-          ? "cancelledBy"
-          : op === "approve"
-            ? "approvedBy"
-            : "rejectedBy"]: user.id,
+        [op === "approve" ? "approvedBy" : "rejectedBy"]: user.id,
       });
     return this.booking(id, user);
   }
