@@ -116,7 +116,10 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
         capacityLabel: room.capacityLabel ?? "",
         capacityLabelEn: room.capacityLabelEn ?? "",
         requiresApproval: room.requiresApproval,
-        amenities: room.amenities ?? [],
+        amenities:
+          room.amenities && room.amenities.length > 0
+            ? room.amenities
+            : ["Skjerm"],
         arrivalInfo: room.arrivalInfo ?? "",
         openTime: "10:00",
         closeTime: "14:00",
@@ -311,6 +314,10 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
           capacity: pendingRoom.capacity,
           description: pendingRoom.description,
           requiresApproval: true,
+          amenities:
+            pendingRoom.amenities?.length > 0
+              ? pendingRoom.amenities
+              : ["Skjerm"],
         })
         .expect(200)
     ).body;
@@ -436,6 +443,10 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
         capacity: pendingRoom.capacity,
         description: pendingRoom.description,
         requiresApproval: false,
+        amenities:
+          pendingRoom.amenities?.length > 0
+            ? pendingRoom.amenities
+            : ["Skjerm"],
       })
       .expect(200);
   });
@@ -542,6 +553,9 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
           capacity: 4,
           description: "Med opplastet bilde",
           requiresApproval: false,
+          amenities: ["Skjerm"],
+          openTime: "08:00",
+          closeTime: "12:00",
           imageKind: "illustrative",
           imageFile: {
             filename: "room.jpg",
@@ -550,9 +564,40 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
           },
         })
         .expect(201)
-    ).body as { id: string; image?: string; imageKind?: string };
+    ).body as {
+      id: string;
+      image?: string;
+      imageKind?: string;
+      openTime?: string;
+      closeTime?: string;
+    };
     expect(withPhoto.imageKind).toBe("illustrative");
     expect(withPhoto.image).toMatch(/^\/rooms\/room-/);
+    expect(withPhoto.openTime).toBe("08:00");
+    expect(withPhoto.closeTime).toBe("12:00");
+    await administrator
+      .post(`/api/admin/rooms/${withPhoto.id}/portal`)
+      .set("Origin", origin)
+      .send({ published: true })
+      .expect(200);
+    const photoDate = addDays(today(), 3);
+    const photoSlots = (
+      await customer
+        .get("/api/availability/slots")
+        .query({ date: photoDate, roomId: withPhoto.id })
+        .expect(200)
+    ).body as Array<{ start: string; end: string }>;
+    expect(photoSlots.map((slot) => `${slot.start}-${slot.end}`)).toEqual([
+      "08:00-09:00",
+      "09:00-10:00",
+      "10:00-11:00",
+      "11:00-12:00",
+    ]);
+    await administrator
+      .post(`/api/admin/rooms/${withPhoto.id}/portal`)
+      .set("Origin", origin)
+      .send({ published: false })
+      .expect(200);
     await administrator
       .delete(`/api/admin/rooms/${withPhoto.id}`)
       .set("Origin", origin)

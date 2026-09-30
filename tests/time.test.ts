@@ -65,6 +65,12 @@ describe("Oslo booking intervals", () => {
       end: "10:00",
     });
     expect(suggestedSlots("10:00", "10:00")).toEqual([]);
+    expect(suggestedSlots("08:00:00", "12:00:00")).toEqual([
+      { start: "08:00", end: "09:00" },
+      { start: "09:00", end: "10:00" },
+      { start: "10:00", end: "11:00" },
+      { start: "11:00", end: "12:00" },
+    ]);
   });
   it("allows adjacent reservations but detects partial overlap", () => {
     const a = { startTime: 10, endTime: 20 };

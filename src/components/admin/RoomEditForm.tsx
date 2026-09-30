@@ -33,7 +33,6 @@ export type RoomEditPayload = {
   imageKind: "illustrative" | "actual";
   image?: string;
   amenities: string[];
-  arrivalInfo: string;
   openTime: string;
   closeTime: string;
   imageFile?: RoomImageFile;
@@ -72,7 +71,6 @@ export function RoomEditForm({
   const descriptionId = useId();
   const descriptionEnId = useId();
   const amenitiesId = useId();
-  const arrivalId = useId();
   const fileId = useId();
   const openTimeId = useId();
   const closeTimeId = useId();
@@ -137,6 +135,28 @@ export function RoomEditForm({
       onSubmit={(event) => {
         event.preventDefault();
         const current = roomRef.current;
+        const amenities = amenitiesText
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .slice(0, 20);
+        if (!current.name.trim()) {
+          setFormError(t("admin.room_name_required"));
+          return;
+        }
+        if (!Number.isFinite(current.capacity) || current.capacity < 1) {
+          setFormError(t("admin.room_capacity_required"));
+          return;
+        }
+        if (!current.description.trim()) {
+          setFormError(t("admin.room_description_required"));
+          return;
+        }
+        if (!amenities.length) {
+          setFormError(t("admin.room_amenities_required"));
+          return;
+        }
+        setFormError(undefined);
         onSubmit({
           name: current.name,
           capacity: current.capacity,
@@ -149,12 +169,7 @@ export function RoomEditForm({
           image: current.image?.startsWith("/rooms/")
             ? undefined
             : current.image,
-          amenities: amenitiesText
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .slice(0, 20),
-          arrivalInfo: current.arrivalInfo || "",
+          amenities,
           openTime: current.openTime || DEFAULT_OPEN_TIME,
           closeTime: current.closeTime || DEFAULT_CLOSE_TIME,
           ...(imageFile ? { imageFile } : {}),
@@ -232,7 +247,12 @@ export function RoomEditForm({
       <div className="room-edit-main">
         <div className="room-edit-pair">
           <Field>
-            <Label htmlFor={nameId}>{t("admin.room_name")}</Label>
+            <Label htmlFor={nameId}>
+              {t("admin.room_name")}
+              <span className="field-required" aria-hidden="true">
+                *
+              </span>
+            </Label>
             <Input
               id={nameId}
               value={room.name}
@@ -244,7 +264,12 @@ export function RoomEditForm({
             />
           </Field>
           <Field>
-            <Label htmlFor={capacityId}>{t("admin.confirmed_capacity")}</Label>
+            <Label htmlFor={capacityId}>
+              {t("admin.confirmed_capacity")}
+              <span className="field-required" aria-hidden="true">
+                *
+              </span>
+            </Label>
             <Input
               id={capacityId}
               type="number"
@@ -293,10 +318,16 @@ export function RoomEditForm({
         </div>
         <div className="room-edit-pair">
           <Field>
-            <Label htmlFor={descriptionId}>{t("admin.description")}</Label>
+            <Label htmlFor={descriptionId}>
+              {t("admin.description")}
+              <span className="field-required" aria-hidden="true">
+                *
+              </span>
+            </Label>
             <Textarea
               id={descriptionId}
               value={room.description}
+              required
               maxLength={3000}
               rows={3}
               onChange={(event) =>
@@ -328,7 +359,12 @@ export function RoomEditForm({
           <p className="caption">{t("admin.room_hours_caption")}</p>
           <div className="room-edit-pair">
             <Field>
-              <Label htmlFor={openTimeId}>{t("common.time_from")}</Label>
+              <Label htmlFor={openTimeId}>
+                {t("common.time_from")}
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </Label>
               <Input
                 id={openTimeId}
                 type="time"
@@ -344,7 +380,12 @@ export function RoomEditForm({
               />
             </Field>
             <Field>
-              <Label htmlFor={closeTimeId}>{t("common.time_to")}</Label>
+              <Label htmlFor={closeTimeId}>
+                {t("common.time_to")}
+                <span className="field-required" aria-hidden="true">
+                  *
+                </span>
+              </Label>
               <Input
                 id={closeTimeId}
                 type="time"
@@ -361,34 +402,23 @@ export function RoomEditForm({
             </Field>
           </div>
         </div>
-        <div className="room-edit-pair">
-          <Field>
-            <Label htmlFor={amenitiesId}>{t("admin.room_amenities")}</Label>
-            <Textarea
-              id={amenitiesId}
-              value={amenitiesText}
-              maxLength={1600}
-              rows={3}
-              onChange={(event) => setAmenitiesText(event.target.value)}
-            />
-            <p className="caption">{t("admin.room_amenities_hint")}</p>
-          </Field>
-          <Field>
-            <Label htmlFor={arrivalId}>{t("admin.room_arrival_info")}</Label>
-            <Textarea
-              id={arrivalId}
-              value={room.arrivalInfo || ""}
-              maxLength={1000}
-              rows={3}
-              onChange={(event) =>
-                onChange({
-                  ...roomRef.current,
-                  arrivalInfo: event.target.value || undefined,
-                })
-              }
-            />
-          </Field>
-        </div>
+        <Field>
+          <Label htmlFor={amenitiesId}>
+            {t("admin.room_amenities")}
+            <span className="field-required" aria-hidden="true">
+              *
+            </span>
+          </Label>
+          <Textarea
+            id={amenitiesId}
+            value={amenitiesText}
+            required
+            maxLength={1600}
+            rows={3}
+            onChange={(event) => setAmenitiesText(event.target.value)}
+          />
+          <p className="caption">{t("admin.room_amenities_hint")}</p>
+        </Field>
         <label className="consent">
           <input
             type="checkbox"
