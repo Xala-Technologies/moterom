@@ -28,6 +28,7 @@ const nb: Record<string, string> = {
   booking_fingerprint_mismatch:
     "Bestillingen ble endret. Kontroller opplysningene på nytt.",
   room_unavailable: "Rommet er ikke ledig.",
+  outside_opening_hours: "Tidspunktet er utenfor rommets åpningstid.",
   action_forbidden: "Du har ikke tilgang til denne handlingen.",
   booking_not_pending: "Bookingen venter ikke på godkjenning.",
   booking_not_editable: "Denne bookingen kan ikke endres.",
@@ -165,6 +166,7 @@ const en: Record<string, string> = {
   booking_fingerprint_mismatch:
     "The booking was changed. Review the details again.",
   room_unavailable: "The room is not available.",
+  outside_opening_hours: "The time is outside the room’s opening hours.",
   action_forbidden: "You do not have access to this action.",
   booking_not_pending: "The booking is not awaiting approval.",
   booking_not_editable: "This booking cannot be changed.",

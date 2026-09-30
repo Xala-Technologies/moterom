@@ -472,7 +472,8 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       openingHours: expect.arrayContaining([
         expect.objectContaining({
           dayIndex: 1,
-          open: "09:00",
+          // Digilist open is shifted −2h for Convex UTC getHours skew.
+          open: "07:00",
           close: "16:00",
         }),
         expect.objectContaining({
@@ -504,6 +505,24 @@ describe("Digilist boundary contracts from the reviewed source", () => {
     const room = (await new Digilist().allRooms())[0];
     expect(room.openTime).toBe("08:00");
     expect(room.closeTime).toBe("12:00");
+  });
+  it("prefers metadata Fra/Til over Digilist UTC-skewed openingHours", async () => {
+    mocks.query.mockResolvedValue({
+      ...source,
+      openingHours: [
+        { dayIndex: 1, open: "09:00", close: "17:00" },
+        { dayIndex: 0, open: "00:00", close: "00:00", isClosed: true },
+      ],
+      metadata: {
+        moterom: {
+          openTime: "11:00",
+          closeTime: "17:00",
+        },
+      },
+    });
+    const room = (await new Digilist().allRooms())[0];
+    expect(room.openTime).toBe("11:00");
+    expect(room.closeTime).toBe("17:00");
   });
   it("surfaces Digilist create failures instead of a generic incomplete error", async () => {
     mocks.mutation.mockRejectedValueOnce(

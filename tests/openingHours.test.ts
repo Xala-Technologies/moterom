@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDigilistOpeningHours,
   buildPortalOpeningHours,
   clockToMinutes,
+  digilistEngineOpenTime,
   isValidClockTime,
+  isWithinWeekdayClockWindow,
   normalizeClockTime,
   weekdayWindowFromOpeningHours,
 } from "../shared/openingHours";
@@ -39,6 +42,26 @@ describe("portal opening hours", () => {
         saturday: { open: "00:00", close: "00:00", isClosed: true },
       }),
     ).toEqual({ openTime: "08:00", closeTime: "12:00" });
+  });
+
+  it("shifts Digilist engine open earlier for Convex UTC hour checks", () => {
+    expect(digilistEngineOpenTime("11:00")).toBe("09:00");
+    expect(digilistEngineOpenTime("08:00")).toBe("06:00");
+    expect(digilistEngineOpenTime("01:00")).toBe("00:00");
+    expect(
+      buildDigilistOpeningHours("11:00", "17:00").find(
+        (row) => row.dayIndex === 1,
+      ),
+    ).toMatchObject({ open: "09:00", close: "17:00" });
+  });
+
+  it("checks an Oslo clock window", () => {
+    expect(isWithinWeekdayClockWindow("11:00", "12:00", "11:00", "17:00")).toBe(
+      true,
+    );
+    expect(isWithinWeekdayClockWindow("10:00", "11:00", "11:00", "17:00")).toBe(
+      false,
+    );
   });
 
   it("validates clock times", () => {
