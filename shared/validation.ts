@@ -3,7 +3,7 @@ import {
   DEFAULT_CLOSE_TIME,
   DEFAULT_OPEN_TIME,
   clockToMinutes,
-  isValidClockTime,
+  normalizeClockTime,
 } from "./openingHours";
 
 export const searchSchema = z.object({
@@ -33,7 +33,17 @@ export const bookingSchema = searchSchema.extend({
 const clockTime = z
   .string()
   .trim()
-  .refine(isValidClockTime, { message: "Bruk klokkeslett som 08:00." });
+  .transform((value, ctx) => {
+    const normalized = normalizeClockTime(value);
+    if (!normalized) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Bruk klokkeslett som 08:00.",
+      });
+      return z.NEVER;
+    }
+    return normalized;
+  });
 
 const roomHoursFields = {
   openTime: clockTime.optional().default(DEFAULT_OPEN_TIME),
@@ -56,18 +66,14 @@ export const roomSchema = refineOpenBeforeClose(
   z.object({
     name: z.string().trim().min(1).max(100),
     capacity: z.coerce.number().int().min(1).max(500),
-    description: z.string().trim().max(3000),
+    description: z.string().trim().min(1).max(3000),
     descriptionEn: z.string().trim().max(3000).optional().default(""),
     capacityLabel: z.string().trim().max(100).optional(),
     capacityLabelEn: z.string().trim().max(100).optional(),
     requiresApproval: z.boolean(),
     image: z.string().trim().max(2000).optional(),
     imageKind: z.enum(["illustrative", "actual"]).optional(),
-    amenities: z
-      .array(z.string().trim().min(1).max(80))
-      .max(20)
-      .optional()
-      .default([]),
+    amenities: z.array(z.string().trim().min(1).max(80)).min(1).max(20),
     arrivalInfo: z.string().trim().max(1000).optional().default(""),
     imageFile: z
       .object({
@@ -83,18 +89,14 @@ export const roomCreateSchema = refineOpenBeforeClose(
   z.object({
     name: z.string().trim().min(1).max(100),
     capacity: z.coerce.number().int().min(1).max(500),
-    description: z.string().trim().max(3000).optional().default(""),
+    description: z.string().trim().min(1).max(3000),
     descriptionEn: z.string().trim().max(3000).optional().default(""),
     capacityLabel: z.string().trim().max(100).optional(),
     capacityLabelEn: z.string().trim().max(100).optional(),
     requiresApproval: z.boolean().optional().default(false),
     image: z.string().trim().max(2000).optional(),
     imageKind: z.enum(["illustrative", "actual"]).optional(),
-    amenities: z
-      .array(z.string().trim().min(1).max(80))
-      .max(20)
-      .optional()
-      .default([]),
+    amenities: z.array(z.string().trim().min(1).max(80)).min(1).max(20),
     arrivalInfo: z.string().trim().max(1000).optional().default(""),
     imageFile: z
       .object({

@@ -50,6 +50,8 @@ import {
   DEFAULT_CLOSE_TIME,
   DEFAULT_OPEN_TIME,
   buildPortalOpeningHours,
+  clockToMinutes,
+  normalizeClockTime,
   weekdayWindowFromOpeningHours,
 } from "../shared/openingHours";
 type Row = Record<string, unknown>;
@@ -507,10 +509,31 @@ export class Digilist {
       portalPublished: isDigilistPublished(source),
       arrivalInfo: str(row(source.metadata).arrivalInfo),
       nameNeedsConfirmation: seed?.nameNeedsConfirmation,
-      ...(weekdayWindowFromOpeningHours(source.openingHours) ?? {
-        openTime: DEFAULT_OPEN_TIME,
-        closeTime: DEFAULT_CLOSE_TIME,
-      }),
+      ...this.roomWeekdayWindow(source),
+    };
+  }
+  /** Digilist openingHours first, then metadata.moterom backup, then portal default. */
+  private roomWeekdayWindow(source: Row): {
+    openTime: string;
+    closeTime: string;
+  } {
+    const fromHours = weekdayWindowFromOpeningHours(source.openingHours);
+    if (fromHours) return fromHours;
+    const portal = row(row(source.metadata).moterom);
+    const open =
+      typeof portal.openTime === "string"
+        ? normalizeClockTime(portal.openTime)
+        : undefined;
+    const close =
+      typeof portal.closeTime === "string"
+        ? normalizeClockTime(portal.closeTime)
+        : undefined;
+    if (open && close && clockToMinutes(open) < clockToMinutes(close)) {
+      return { openTime: open, closeTime: close };
+    }
+    return {
+      openTime: DEFAULT_OPEN_TIME,
+      closeTime: DEFAULT_CLOSE_TIME,
     };
   }
   private assertPortalPublished(room: Room) {
@@ -1117,8 +1140,20 @@ export class Digilist {
       image === ""
         ? inventory.find((item) => item.id === id)?.image || ""
         : liveImage || room.image || "";
-    const openTime = patch.openTime?.trim() || DEFAULT_OPEN_TIME;
-    const closeTime = patch.closeTime?.trim() || DEFAULT_CLOSE_TIME;
+    // Only rewrite Digilist openingHours when both times are supplied.
+    // Image/content follow-ups must not reset hours to the portal default.
+    const openTime =
+      typeof patch.openTime === "string"
+        ? normalizeClockTime(patch.openTime.trim())
+        : undefined;
+    const closeTime =
+      typeof patch.closeTime === "string"
+        ? normalizeClockTime(patch.closeTime.trim())
+        : undefined;
+    const hasHours =
+      Boolean(openTime) &&
+      Boolean(closeTime) &&
+      clockToMinutes(openTime!) < clockToMinutes(closeTime!);
     await mutate(this.c, "domain/resources:update", {
       id: room.sourceId,
       updatedBy: user.id,
@@ -1130,7 +1165,9 @@ export class Digilist {
         ...row(source?.bookingConfig),
         approvalRequired: patch.requiresApproval,
       },
-      openingHours: buildPortalOpeningHours(openTime, closeTime),
+      ...(hasHours
+        ? { openingHours: buildPortalOpeningHours(openTime!, closeTime!) }
+        : {}),
       // Content-only saves must not replace variants or drop other gallery photos.
       ...(image === ""
         ? { images: [] }
@@ -1151,6 +1188,7 @@ export class Digilist {
           ...(patch.capacityLabelEn !== undefined
             ? { capacityLabelEn: patch.capacityLabelEn }
             : {}),
+          ...(hasHours ? { openTime, closeTime } : {}),
           ...(patch.imageKind !== undefined || image === "" || liveImage
             ? {
                 imageKind: image === "" ? "illustrative" : patch.imageKind,
@@ -1274,13 +1312,18 @@ export class Digilist {
     const capacityLabel = input.capacityLabel?.trim() || `${capacity} personer`;
     const capacityLabelEn =
       input.capacityLabelEn?.trim() || `${capacity} people`;
-    const openTime = input.openTime?.trim() || DEFAULT_OPEN_TIME;
-    const closeTime = input.closeTime?.trim() || DEFAULT_CLOSE_TIME;
+    const openTime =
+      normalizeClockTime(input.openTime?.trim() || "") || DEFAULT_OPEN_TIME;
+    const closeTime =
+      normalizeClockTime(input.closeTime?.trim() || "") || DEFAULT_CLOSE_TIME;
+    const openingHours = buildPortalOpeningHours(openTime, closeTime);
     const metadata = {
       moterom: {
         descriptionEn: input.descriptionEn?.trim() || "",
         capacityLabel,
         capacityLabelEn,
+        openTime,
+        closeTime,
         ...(input.imageKind || liveImage
           ? {
               imageKind: input.imageKind || "illustrative",
@@ -1320,7 +1363,7 @@ export class Digilist {
             ...PORTAL_BOOKING_CONFIG,
             approvalRequired: input.requiresApproval,
           },
-          openingHours: buildPortalOpeningHours(openTime, closeTime),
+          openingHours,
           slotDurationMinutes: 60,
           metadata,
         }),
@@ -1346,6 +1389,9 @@ export class Digilist {
     if (!created.status) created.status = "draft";
     if (!created.tenantId) created.tenantId = tenantId;
     if (!created.metadata) created.metadata = metadata;
+    // Digilist may omit openingHours on the create response; stamp what we sent.
+    if (!weekdayWindowFromOpeningHours(created.openingHours))
+      created.openingHours = openingHours;
     if (created.requiresApproval == null)
       created.requiresApproval = input.requiresApproval;
     if (!created.bookingConfig)

@@ -127,6 +127,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       user,
     );
     expect(mocks.mutation.mock.calls[0][1]).not.toHaveProperty("images");
+    expect(mocks.mutation.mock.calls[0][1]).not.toHaveProperty("openingHours");
   });
   it("accepts a Møterom-hosted PUBLIC_ORIGIN room image URL", async () => {
     const { origin } = await import("../server/config");
@@ -479,7 +480,30 @@ describe("Digilist boundary contracts from the reviewed source", () => {
           isClosed: true,
         }),
       ]),
+      metadata: {
+        moterom: expect.objectContaining({
+          openTime: "09:00",
+          closeTime: "16:00",
+        }),
+      },
     });
+    expect(room.openTime).toBe("09:00");
+    expect(room.closeTime).toBe("16:00");
+  });
+  it("maps weekday hours from metadata when Digilist omits openingHours", async () => {
+    mocks.query.mockResolvedValue({
+      ...source,
+      openingHours: undefined,
+      metadata: {
+        moterom: {
+          openTime: "08:00",
+          closeTime: "12:00",
+        },
+      },
+    });
+    const room = (await new Digilist().allRooms())[0];
+    expect(room.openTime).toBe("08:00");
+    expect(room.closeTime).toBe("12:00");
   });
   it("surfaces Digilist create failures instead of a generic incomplete error", async () => {
     mocks.mutation.mockRejectedValueOnce(

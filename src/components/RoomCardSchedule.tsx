@@ -1,13 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useApi } from "../api";
 import type { TimeSlot } from "../../shared/types";
-import {
-  nextSlotSelection,
-  rangeIsAvailable,
-  slotInRange,
-} from "../../shared/slots";
+import { slotInRange } from "../../shared/slots";
+import { addDays, today } from "../../shared/time";
 import { Loading, ErrorState, Button } from "./ui";
 import { MonthCalendar } from "./MonthCalendar";
 import { useFormatters, useT } from "../i18n";
@@ -24,7 +21,6 @@ export function RoomCardSchedule({
   onDateChange,
   selection,
   onSelect,
-  onBook,
   moreHref,
   slotsRevision = 0,
 }: {
@@ -33,7 +29,6 @@ export function RoomCardSchedule({
   onDateChange: (date: string) => void;
   selection: RoomSlotSelection | null;
   onSelect: (next: RoomSlotSelection | null) => void;
-  onBook: () => void;
   moreHref: string;
   slotsRevision?: number;
 }) {
@@ -42,16 +37,11 @@ export function RoomCardSchedule({
   const dateId = `room-date-${roomId}`;
   const datePanelId = useId();
   const timesPanelId = useId();
-  const timesToggleId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const timesPanelRef = useRef<HTMLDivElement>(null);
-  const slotsGroupRef = useRef<HTMLDivElement>(null);
-  const focusTimes = useRef(false);
   const [open, setOpen] = useState(false);
-  const [timesOpen, setTimesOpen] = useState(false);
   const slots = useApi<TimeSlot[]>(
-    timesOpen && date
+    date
       ? `/availability/slots?date=${encodeURIComponent(date)}&roomId=${encodeURIComponent(roomId)}`
       : null,
   );
@@ -60,16 +50,15 @@ export function RoomCardSchedule({
     // Reload only when parent bumps revision after a successful booking.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- slots.reload is stable
   }, [slotsRevision]);
-  const canBook = Boolean(
-    selection &&
-    selection.date === date &&
-    slots.data &&
-    rangeIsAvailable(slots.data, selection.start, selection.end),
-  );
-  const chosen =
-    selection && selection.date === date
-      ? `${selection.start}–${selection.end}`
-      : null;
+  const minDate = today();
+  const shiftDate = (delta: number) => {
+    if (!date) return;
+    const next = addDays(date, delta);
+    if (next < minDate) return;
+    onDateChange(next);
+    onSelect(null);
+    setOpen(false);
+  };
   useEffect(() => {
     if (!open) return;
     const panel = document.getElementById(datePanelId);
@@ -121,21 +110,6 @@ export function RoomCardSchedule({
       document.removeEventListener("pointerdown", onPointer);
     };
   }, [open, datePanelId]);
-  useEffect(() => {
-    if (!timesOpen || !focusTimes.current) return;
-    if (date && (slots.loading || (!slots.data && !slots.error))) return;
-    const group = slotsGroupRef.current;
-    const first = group?.querySelector<HTMLButtonElement>(
-      "button:not([disabled])",
-    );
-    const target = first ?? group ?? timesPanelRef.current;
-    target?.focus({ preventScroll: true, focusVisible: true });
-    timesPanelRef.current?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-    });
-    focusTimes.current = false;
-  }, [timesOpen, date, slots.loading, slots.data, slots.error]);
 
   return (
     <div
@@ -143,42 +117,26 @@ export function RoomCardSchedule({
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <Button
-        type="button"
-        variant="secondary"
-        id={timesToggleId}
-        className="room-times-toggle"
-        aria-expanded={timesOpen}
-        aria-controls={timesPanelId}
-        onClick={() => {
-          setTimesOpen((current) => {
-            if (current) {
-              setOpen(false);
-              return false;
-            }
-            focusTimes.current = true;
-            return true;
-          });
-        }}
+      <div
+        id={timesPanelId}
+        className="room-schedule-panel"
+        role="region"
+        aria-label={t("a11y.available_times")}
       >
-        {timesOpen ? t("rooms.hide_times") : t("rooms.show_times")}
-        <ChevronDown
-          aria-hidden
-          size={18}
-          className={timesOpen ? "is-open" : undefined}
-        />
-      </Button>
-      {timesOpen ? (
-        <div
-          id={timesPanelId}
-          ref={timesPanelRef}
-          className="room-schedule-panel"
-          role="region"
-          tabIndex={-1}
-          aria-labelledby={timesToggleId}
-        >
-          <div className="room-schedule-date" ref={rootRef}>
-            <label htmlFor={dateId}>{t("common.date")}</label>
+        <div className="room-schedule-date" ref={rootRef}>
+          <label htmlFor={dateId}>{t("common.date")}</label>
+          <div className="room-schedule-date-row">
+            <Button
+              type="button"
+              variant="secondary"
+              icon
+              className="room-date-step"
+              aria-label={t("a11y.previous_day")}
+              disabled={!date || date <= minDate}
+              onClick={() => shiftDate(-1)}
+            >
+              <ChevronLeft size={18} aria-hidden="true" />
+            </Button>
             <button
               ref={triggerRef}
               id={dateId}
@@ -199,121 +157,115 @@ export function RoomCardSchedule({
               </span>
               <CalendarDays aria-hidden size={20} />
             </button>
-            {open && (
-              <div
-                id={datePanelId}
-                className="room-date-popover"
-                role="dialog"
-                aria-label={t("a11y.pick_date")}
-              >
-                <MonthCalendar
-                  value={date}
-                  onChange={(next) => {
-                    onDateChange(next);
-                    onSelect(null);
-                    setOpen(false);
-                    triggerRef.current?.focus();
-                  }}
-                />
-              </div>
-            )}
-          </div>
-          {!date ? (
-            <p className="muted" role="status">
-              {t("rooms.pick_date_for_slots")}
-            </p>
-          ) : slots.loading ? (
-            <Loading label={t("booking.checking_slots")} />
-          ) : slots.error ? (
-            <ErrorState error={slots.error} retry={slots.reload} />
-          ) : (
-            <>
-              <p className="muted">{t("rooms.slots_range_hint")}</p>
-              <div
-                ref={slotsGroupRef}
-                className="room-schedule-slots"
-                role="group"
-                tabIndex={-1}
-                aria-label={t("a11y.available_times")}
-              >
-                {(slots.data || []).map((slot) => {
-                  const label = `${slot.start}–${slot.end}`;
-                  const current =
-                    selection && selection.date === date
-                      ? { start: selection.start, end: selection.end }
-                      : null;
-                  const pressed = Boolean(
-                    current && slotInRange(slot, current),
-                  );
-                  return (
-                    <button
-                      type="button"
-                      key={slot.start}
-                      className={
-                        slot.state === "available"
-                          ? pressed
-                            ? "is-selected"
-                            : "is-available"
-                          : slot.state === "error"
-                            ? "is-unknown"
-                            : "is-unavailable"
-                      }
-                      aria-pressed={pressed}
-                      aria-label={
-                        slot.state === "available"
-                          ? pressed
-                            ? t("a11y.slot_selected", { label })
-                            : label
-                          : slot.state === "error"
-                            ? t("a11y.slot_unknown", { label })
-                            : t("a11y.slot_unavailable", { label })
-                      }
-                      disabled={slot.state !== "available"}
-                      onClick={() => {
-                        const next = nextSlotSelection(
-                          slots.data || [],
-                          current,
-                          slot,
-                        );
-                        onSelect(next ? { date, ...next } : null);
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              {slots.data?.every((slot) => slot.state !== "available") && (
-                <p className="muted" role="status">
-                  {t("booking.no_slots")}
-                </p>
-              )}
-            </>
-          )}
-          <div className="room-schedule-actions">
-            <Link className="room-more-options" to={moreHref}>
-              {t("rooms.more_options")}
-            </Link>
             <Button
               type="button"
-              data-size="sm"
-              disabled={!canBook}
-              onClick={onBook}
+              variant="secondary"
+              icon
+              className="room-date-step"
+              aria-label={t("a11y.next_day")}
+              disabled={!date}
+              onClick={() => shiftDate(1)}
             >
-              {t("rooms.book_selected")}
+              <ChevronRight size={18} aria-hidden="true" />
             </Button>
           </div>
+          {open && (
+            <div
+              id={datePanelId}
+              className="room-date-popover"
+              role="dialog"
+              aria-label={t("a11y.pick_date")}
+            >
+              <MonthCalendar
+                value={date}
+                onChange={(next) => {
+                  onDateChange(next);
+                  onSelect(null);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
+              />
+            </div>
+          )}
         </div>
-      ) : chosen ? (
-        <div className="room-schedule-actions">
-          <p className="room-schedule-selected" role="status">
-            {t("rooms.selected_time", { label: chosen })}
+        {!date ? (
+          <p className="muted" role="status">
+            {t("rooms.pick_date_for_slots")}
           </p>
-          <Button type="button" data-size="sm" onClick={onBook}>
-            {t("rooms.book_selected")}
-          </Button>
+        ) : slots.loading ? (
+          <Loading label={t("booking.checking_slots")} />
+        ) : slots.error ? (
+          <ErrorState error={slots.error} retry={slots.reload} />
+        ) : (
+          <>
+            <p className="muted">{t("rooms.slots_range_hint")}</p>
+            <div
+              className="room-schedule-slots"
+              role="group"
+              aria-label={t("a11y.available_times")}
+            >
+              {(slots.data || []).map((slot) => {
+                const label = `${slot.start}–${slot.end}`;
+                const current =
+                  selection && selection.date === date
+                    ? { start: selection.start, end: selection.end }
+                    : null;
+                const pressed = Boolean(current && slotInRange(slot, current));
+                return (
+                  <button
+                    type="button"
+                    key={slot.start}
+                    className={
+                      slot.state === "available"
+                        ? pressed
+                          ? "is-selected"
+                          : "is-available"
+                        : slot.state === "error"
+                          ? "is-unknown"
+                          : "is-unavailable"
+                    }
+                    aria-pressed={pressed}
+                    aria-label={
+                      slot.state === "available"
+                        ? pressed
+                          ? t("a11y.slot_selected", { label })
+                          : label
+                        : slot.state === "error"
+                          ? t("a11y.slot_unknown", { label })
+                          : t("a11y.slot_unavailable", { label })
+                    }
+                    disabled={slot.state !== "available"}
+                    onClick={() => {
+                      // Re-click clears selection; a new available hour opens confirm.
+                      if (pressed) {
+                        onSelect(null);
+                        return;
+                      }
+                      onSelect({
+                        date,
+                        start: slot.start,
+                        end: slot.end,
+                      });
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {slots.data?.every((slot) => slot.state !== "available") && (
+              <p className="muted" role="status">
+                {t("booking.no_slots")}
+              </p>
+            )}
+          </>
+        )}
+        <div className="room-schedule-actions">
+          <Link className="room-more-options" to={moreHref}>
+            {t("rooms.more_options")}
+          </Link>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

@@ -1519,6 +1519,9 @@ app.post("/api/admin/rooms", async (req, res) => {
           requiresApproval: created.requiresApproval,
           amenities: created.amenities,
           arrivalInfo: created.arrivalInfo || "",
+          // Keep the weekday window from create — omitting times used to reset Digilist hours.
+          openTime: created.openTime || fields.openTime,
+          closeTime: created.closeTime || fields.closeTime,
           image,
           imageKind,
         },

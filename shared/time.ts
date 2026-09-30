@@ -6,7 +6,7 @@ import {
   DEFAULT_CLOSE_TIME,
   DEFAULT_OPEN_TIME,
   clockToMinutes,
-  isValidClockTime,
+  normalizeClockTime,
 } from "./openingHours";
 export const ZONE = "Europe/Oslo";
 export function today() {
@@ -111,15 +111,16 @@ export function suggestedSlots(
   openTime: string = DEFAULT_OPEN_TIME,
   closeTime: string = DEFAULT_CLOSE_TIME,
 ) {
-  const open =
-    isValidClockTime(openTime) && isValidClockTime(closeTime)
-      ? openTime
-      : DEFAULT_OPEN_TIME;
-  const close =
-    isValidClockTime(openTime) && isValidClockTime(closeTime)
-      ? closeTime
-      : DEFAULT_CLOSE_TIME;
-  if (clockToMinutes(open) >= clockToMinutes(close)) return [];
+  const openNorm = normalizeClockTime(openTime);
+  const closeNorm = normalizeClockTime(closeTime);
+  if (
+    openNorm &&
+    closeNorm &&
+    clockToMinutes(openNorm) >= clockToMinutes(closeNorm)
+  )
+    return [];
+  const open = openNorm && closeNorm ? openNorm : DEFAULT_OPEN_TIME;
+  const close = openNorm && closeNorm ? closeNorm : DEFAULT_CLOSE_TIME;
   const firstHour = Math.ceil(clockToMinutes(open) / 60);
   const lastEndHour = Math.floor(clockToMinutes(close) / 60);
   const slots: { start: string; end: string }[] = [];
