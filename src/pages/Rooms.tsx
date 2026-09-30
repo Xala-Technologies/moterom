@@ -103,13 +103,9 @@ export function Rooms() {
                 setCardDates((prev) => ({ ...prev, [room.id]: date }))
               }
               selection={selections[room.id] ?? null}
-              onSelectSlot={(next) =>
-                setSelections((prev) => ({ ...prev, [room.id]: next }))
-              }
-              onBook={() => {
-                const selection = selections[room.id];
-                if (!selection) return;
-                setConfirm({ roomId: room.id, selection });
+              onSelectSlot={(next) => {
+                setSelections((prev) => ({ ...prev, [room.id]: next }));
+                if (next) setConfirm({ roomId: room.id, selection: next });
               }}
               slotsRevision={slotsRevision[room.id] ?? 0}
             />

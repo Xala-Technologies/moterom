@@ -3,6 +3,7 @@ import {
   buildPortalOpeningHours,
   clockToMinutes,
   isValidClockTime,
+  normalizeClockTime,
   weekdayWindowFromOpeningHours,
 } from "../shared/openingHours";
 import { roomCreateSchema } from "../shared/validation";
@@ -30,8 +31,19 @@ describe("portal opening hours", () => {
     expect(weekdayWindowFromOpeningHours(undefined)).toBeUndefined();
   });
 
+  it("normalizes HH:mm:ss and day-keyed Digilist hours", () => {
+    expect(normalizeClockTime("08:00:00")).toBe("08:00");
+    expect(
+      weekdayWindowFromOpeningHours({
+        monday: { open: "08:00:00", close: "12:00:00" },
+        saturday: { open: "00:00", close: "00:00", isClosed: true },
+      }),
+    ).toEqual({ openTime: "08:00", closeTime: "12:00" });
+  });
+
   it("validates clock times", () => {
     expect(isValidClockTime("08:00")).toBe(true);
+    expect(isValidClockTime("08:00:00")).toBe(true);
     expect(isValidClockTime("24:00")).toBe(false);
     expect(clockToMinutes("09:30")).toBe(570);
   });
@@ -40,6 +52,8 @@ describe("portal opening hours", () => {
     const result = roomCreateSchema.safeParse({
       name: "Test",
       capacity: 10,
+      description: "Beskrivelse",
+      amenities: ["Skjerm"],
       openTime: "17:00",
       closeTime: "08:00",
     });
@@ -50,8 +64,28 @@ describe("portal opening hours", () => {
     const parsed = roomCreateSchema.parse({
       name: "Test",
       capacity: 10,
+      description: "Beskrivelse",
+      amenities: ["Skjerm"],
     });
     expect(parsed.openTime).toBe("08:00");
     expect(parsed.closeTime).toBe("17:00");
+  });
+
+  it("requires description and at least one amenity", () => {
+    expect(
+      roomCreateSchema.safeParse({
+        name: "Test",
+        capacity: 10,
+        amenities: ["Skjerm"],
+      }).success,
+    ).toBe(false);
+    expect(
+      roomCreateSchema.safeParse({
+        name: "Test",
+        capacity: 10,
+        description: "Beskrivelse",
+        amenities: [],
+      }).success,
+    ).toBe(false);
   });
 });

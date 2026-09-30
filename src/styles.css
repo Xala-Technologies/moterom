@@ -119,6 +119,11 @@ button:disabled {
   font-weight: var(--ds-font-weight-medium, 500);
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
+.field-required {
+  margin-inline-start: 0.15em;
+  color: var(--ds-color-danger-text-default, #c51b1b);
+  font-weight: var(--ds-font-weight-semibold, 600);
+}
 .ds-input,
 .ds-select,
 .ds-textarea {
@@ -1009,21 +1014,26 @@ a.brand {
 }
 .room-card-top {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   min-height: 24px;
 }
-.room-card .eyebrow {
-  font-size: var(--ds-font-size-xs, var(--ds-font-size-1, 0.75rem));
+.room-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 10px;
 }
 .room-card h2 {
-  margin: 8px 0 10px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
   font-size: var(--ds-font-size-xl, var(--ds-font-size-5, 1.3125rem));
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  min-height: calc(1.3em * 2);
 }
 .room-card h2 a {
   color: inherit;
@@ -1036,6 +1046,8 @@ a.brand {
   display: flex;
   align-items: center;
   gap: 7px;
+  flex-shrink: 0;
+  margin: 0;
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-default);
 }
@@ -1103,6 +1115,44 @@ a.brand {
 .room-card.has-schedule .room-action::after {
   content: none;
 }
+.room-card.has-schedule .room-image {
+  height: 180px;
+}
+.room-card.has-schedule .room-card-content {
+  padding: 16px;
+}
+.room-card.has-schedule .room-card-heading {
+  margin: 4px 0 6px;
+}
+.room-card.has-schedule .room-description {
+  margin-top: 6px;
+  min-height: 0;
+}
+.room-card.has-schedule .amenities {
+  margin-top: 8px;
+  min-height: 0;
+}
+.room-card.has-schedule .room-schedule {
+  margin-top: 10px;
+  padding-top: 10px;
+  gap: 8px;
+}
+.room-card.has-schedule .room-schedule-panel {
+  gap: 8px;
+}
+.room-card.has-schedule .room-schedule-date {
+  gap: 4px;
+}
+.room-card.has-schedule .room-schedule-slots {
+  gap: 6px;
+}
+.room-card.has-schedule .room-schedule-slots button {
+  min-height: 40px;
+  padding: 4px 6px;
+}
+.room-card.has-schedule .room-schedule-actions {
+  gap: 8px;
+}
 .room-action:hover {
   text-decoration: underline;
 }
@@ -1121,13 +1171,6 @@ a.brand {
   position: relative;
   z-index: 1;
 }
-.room-times-toggle {
-  width: 100%;
-  justify-content: space-between;
-}
-.room-times-toggle svg.is-open {
-  transform: rotate(180deg);
-}
 .room-schedule-panel {
   display: flex;
   flex-direction: column;
@@ -1144,6 +1187,23 @@ a.brand {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.room-schedule-date-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.room-schedule-date-row .room-date-trigger {
+  flex: 1;
+  min-width: 0;
+}
+.room-schedule-date-row .room-date-step {
+  flex-shrink: 0;
+  min-height: var(--ds-touch-target-min, 44px);
+  min-width: var(--ds-touch-target-min, 44px);
+}
+.room-card.has-schedule .room-schedule-date-row {
+  gap: 4px;
 }
 .room-schedule-date label {
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
@@ -1246,9 +1306,9 @@ a.brand {
 .room-schedule-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 .room-schedule-actions .room-more-options {
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
@@ -6167,6 +6227,9 @@ button.admin-users-menu-trigger:disabled {
   .room-card-content {
     padding: 20px;
   }
+  .room-card.has-schedule .room-card-content {
+    padding: 14px;
+  }
   .room-card-footer {
     align-items: start;
     flex-direction: column;
@@ -6597,6 +6660,9 @@ button.admin-users-menu-trigger:disabled {
   }
   .room-card-content {
     padding: 20px;
+  }
+  .room-card.has-schedule .room-card-content {
+    padding: 14px;
   }
   .page-heading {
     flex-direction: column;

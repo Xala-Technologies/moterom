@@ -21,7 +21,6 @@ export function RoomCard({
   onScheduleDateChange,
   selection,
   onSelectSlot,
-  onBook,
   slotsRevision = 0,
 }: {
   room: Room;
@@ -33,7 +32,6 @@ export function RoomCard({
   onScheduleDateChange?: (date: string) => void;
   selection?: RoomSlotSelection | null;
   onSelectSlot?: (next: RoomSlotSelection | null) => void;
-  onBook?: () => void;
   slotsRevision?: number;
 }) {
   const { t } = useT();
@@ -44,10 +42,7 @@ export function RoomCard({
   const ariaLabel =
     action?.ariaLabel ?? t("rooms.book_room_aria", { name: room.name });
   const showSchedule =
-    scheduleDate !== undefined &&
-    onScheduleDateChange &&
-    onSelectSlot &&
-    onBook;
+    scheduleDate !== undefined && onScheduleDateChange && onSelectSlot;
 
   return (
     <article
@@ -57,9 +52,8 @@ export function RoomCard({
         <RoomPhoto room={room} />
       </div>
       <div className="room-card-content">
-        <div className="room-card-top">
-          <span className="eyebrow">{t("common.meeting_room")}</span>
-          {availability && (
+        {availability && (
+          <div className="room-card-top">
             <span className={`availability-badge ${availability.state}`}>
               {availability.state === "available"
                 ? t("rooms.available")
@@ -67,13 +61,15 @@ export function RoomCard({
                   ? t("rooms.availability_unknown")
                   : t("rooms.unavailable")}
             </span>
-          )}
+          </div>
+        )}
+        <div className="room-card-heading">
+          <h2>{room.name}</h2>
+          <p className="room-capacity">
+            <UsersRound size={17} aria-hidden="true" />
+            {copy.capacityLabel}
+          </p>
         </div>
-        <h2>{room.name}</h2>
-        <p className="room-capacity">
-          <UsersRound size={17} />
-          {copy.capacityLabel}
-        </p>
         <p className="room-description">{copy.description}</p>
         <div
           className="amenities"
@@ -90,7 +86,6 @@ export function RoomCard({
             onDateChange={onScheduleDateChange}
             selection={selection ?? null}
             onSelect={onSelectSlot}
-            onBook={onBook}
             moreHref={href}
             slotsRevision={slotsRevision}
           />
