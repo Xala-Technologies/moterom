@@ -49,8 +49,10 @@ import {
 import {
   DEFAULT_CLOSE_TIME,
   DEFAULT_OPEN_TIME,
+  buildDigilistOpeningHours,
   buildPortalOpeningHours,
   clockToMinutes,
+  isWithinWeekdayClockWindow,
   normalizeClockTime,
   weekdayWindowFromOpeningHours,
 } from "../shared/openingHours";
@@ -512,13 +514,11 @@ export class Digilist {
       ...this.roomWeekdayWindow(source),
     };
   }
-  /** Digilist openingHours first, then metadata.moterom backup, then portal default. */
+  /** Portal metadata first (real Fra/Til), then Digilist hours, then default. */
   private roomWeekdayWindow(source: Row): {
     openTime: string;
     closeTime: string;
   } {
-    const fromHours = weekdayWindowFromOpeningHours(source.openingHours);
-    if (fromHours) return fromHours;
     const portal = row(row(source.metadata).moterom);
     const open =
       typeof portal.openTime === "string"
@@ -531,6 +531,8 @@ export class Digilist {
     if (open && close && clockToMinutes(open) < clockToMinutes(close)) {
       return { openTime: open, closeTime: close };
     }
+    const fromHours = weekdayWindowFromOpeningHours(source.openingHours);
+    if (fromHours) return fromHours;
     return {
       openTime: DEFAULT_OPEN_TIME,
       closeTime: DEFAULT_CLOSE_TIME,
@@ -563,6 +565,19 @@ export class Digilist {
               room.capacity < search.people
                 ? translateMessage(locale, "too_many_participants")
                 : translateMessage(locale, "time_past"),
+          };
+        if (
+          !isWithinWeekdayClockWindow(
+            search.start,
+            search.end,
+            room.openTime || DEFAULT_OPEN_TIME,
+            room.closeTime || DEFAULT_CLOSE_TIME,
+          )
+        )
+          return {
+            roomId: room.id,
+            state: "unavailable" as const,
+            reason: translateMessage(locale, "outside_opening_hours"),
           };
         try {
           // Single-room validator preserves upstream failures and minimum-duration rules.
@@ -768,6 +783,19 @@ export class Digilist {
     const room = await this.room(input.roomId);
     this.assertPortalPublished(room);
     const span = interval(input);
+    if (
+      !isWithinWeekdayClockWindow(
+        input.start,
+        input.end,
+        room.openTime || DEFAULT_OPEN_TIME,
+        room.closeTime || DEFAULT_CLOSE_TIME,
+      )
+    )
+      throw new AppError(
+        409,
+        translateMessage(DEFAULT_LOCALE, "outside_opening_hours"),
+        "outside_opening_hours",
+      );
     const slot = row(
       await query(this.c, "domain/bookings:validateBookingSlot", {
         resourceId: room.sourceId,
@@ -1166,7 +1194,7 @@ export class Digilist {
         approvalRequired: patch.requiresApproval,
       },
       ...(hasHours
-        ? { openingHours: buildPortalOpeningHours(openTime!, closeTime!) }
+        ? { openingHours: buildDigilistOpeningHours(openTime!, closeTime!) }
         : {}),
       // Content-only saves must not replace variants or drop other gallery photos.
       ...(image === ""
@@ -1316,7 +1344,9 @@ export class Digilist {
       normalizeClockTime(input.openTime?.trim() || "") || DEFAULT_OPEN_TIME;
     const closeTime =
       normalizeClockTime(input.closeTime?.trim() || "") || DEFAULT_CLOSE_TIME;
-    const openingHours = buildPortalOpeningHours(openTime, closeTime);
+    // Digilist engine hours are UTC-skewed; metadata keeps the admin Fra/Til.
+    const portalOpeningHours = buildPortalOpeningHours(openTime, closeTime);
+    const openingHours = buildDigilistOpeningHours(openTime, closeTime);
     const metadata = {
       moterom: {
         descriptionEn: input.descriptionEn?.trim() || "",
@@ -1389,9 +1419,10 @@ export class Digilist {
     if (!created.status) created.status = "draft";
     if (!created.tenantId) created.tenantId = tenantId;
     if (!created.metadata) created.metadata = metadata;
-    // Digilist may omit openingHours on the create response; stamp what we sent.
+    // Digilist may omit openingHours on the create response; stamp portal hours
+    // (real Fra/Til) so mapSourceToRoom does not read the UTC-skewed Digilist copy.
     if (!weekdayWindowFromOpeningHours(created.openingHours))
-      created.openingHours = openingHours;
+      created.openingHours = portalOpeningHours;
     if (created.requiresApproval == null)
       created.requiresApproval = input.requiresApproval;
     if (!created.bookingConfig)
