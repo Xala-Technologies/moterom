@@ -12,11 +12,15 @@ export function FilterSelect({
   value,
   options,
   onChange,
+  disabled = false,
+  title,
 }: {
   label: string;
   value: string;
   options: FilterOption[];
   onChange: (value: string) => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -25,6 +29,10 @@ export function FilterSelect({
   const listId = useId();
   const selected =
     options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +81,10 @@ export function FilterSelect({
   };
 
   return (
-    <div className={`filter-select${open ? " is-open" : ""}`} ref={rootRef}>
+    <div
+      className={`filter-select${open ? " is-open" : ""}${disabled ? " is-disabled" : ""}`}
+      ref={rootRef}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -82,8 +93,14 @@ export function FilterSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        onClick={() => setOpen((current) => !current)}
+        disabled={disabled}
+        title={title}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((current) => !current);
+        }}
         onKeyDown={(event) => {
+          if (disabled) return;
           if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
           event.preventDefault();
           setOpen(true);

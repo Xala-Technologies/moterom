@@ -210,7 +210,7 @@
     "caption_error": "Prøv ledighetssøket igjen",
     "caption_default": "Velg tidspunkt for ledighet",
     "pick_date_for_slots": "Velg en dato for å se ledige tider.",
-    "slots_range_hint": "Klikk en ledig time for å booke. Flere timer finner du under Flere valg.",
+    "slots_range_hint": "Klikk en ledig time for å booke.",
     "show_times": "Vis ledige tider",
     "hide_times": "Skjul ledige tider",
     "selected_time": "Valgt: {{label}}",
@@ -626,7 +626,6 @@
     "settings_rule_payment": "Betaling",
     "settings_rule_payment_value": "Gratis. Ingen betaling eller faktura.",
     "users": {
-      "caption": "Innboksen er forespørsler om tilgang. Byggets medlemmer vises i listen over. Godkjenn tilgang her i Møterom — personen får bruke portalen. Avslag på en ventende forespørsel endrer ikke tilgangen. Avslag eller fjerning av en godkjent forespørsel trekker tilgangen tilbake.",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -658,7 +657,6 @@
         "marked_approved_demo": "Tilgang er godkjent i demo.",
         "removed": "Forespørselen er fjernet."
       },
-      "caption_demo": "Demoforespørsler lagres lokalt. Godkjenn gir portaltilgang i demo uten Digilist.",
       "mark_approved_demo": "Godkjenn tilgang",
       "remove": "Fjern",
       "remove_title": "Fjern forespørsel",
@@ -784,7 +782,7 @@
     },
     "members": {
       "title": "Byggets medlemmer",
-      "caption": "Portaltilgang styres her i Møterom. Godkjenn forespørsler i innboksen under, eller gi tilgang til personer i listen. Digilist-medlemskap alene åpner ikke portalen.",
+      "caption": "Velg portalrolle for hver person her. Byggadministrator kan styre rom og brukere; saksbehandler får drift. Gi eller fjern portaltilgang uten å endre Digilist-medlemskap.",
       "refresh": "Oppdater medlemmer",
       "role": "Rolle",
       "role_administrator": "Administrator",
@@ -793,6 +791,7 @@
       "role_member": "Medlem",
       "role_for": "Portalrolle for {{name}}",
       "role_saved": "Portalrollen er lagret.",
+      "cannot_demote_self": "Du kan ikke fjerne din egen byggadministratorrolle.",
       "active": "Aktiv",
       "invited": "Invitert",
       "empty": "Ingen medlemmer å vise.",

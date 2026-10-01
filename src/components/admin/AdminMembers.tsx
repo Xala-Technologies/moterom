@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api, useApi } from "../../api";
 import { useApp } from "../../context";
 import { useT } from "../../i18n";
-import { Button, ErrorState, Loading, Modal, Status } from "../ui";
-import { isBuildingAdminRole } from "../../../shared/members";
+import {
+  Button,
+  ErrorState,
+  Label,
+  Loading,
+  Modal,
+  Select,
+  Status,
+} from "../ui";
+import { PORTAL_ROLES, type PortalRole } from "../../../shared/adminAccess";
 import type { TenantMember } from "../../../shared/types";
 
 function initials(name: string): string {
@@ -13,13 +21,20 @@ function initials(name: string): string {
   return `${parts[0]!.slice(0, 1)}${parts[parts.length - 1]!.slice(0, 1)}`.toUpperCase();
 }
 
-/** Digilist directory with explicit Møterom portal grants. */
+function roleLabelKey(role: PortalRole): string {
+  if (role === "full") return "admin.members.role_portal_admin";
+  if (role === "operations") return "admin.members.role_operations";
+  return "admin.members.role_member";
+}
+
+/** Digilist directory with explicit Møterom portal grants and roles. */
 export function AdminMembers() {
   const { notify, user } = useApp();
   const { t } = useT();
   const result = useApi<TenantMember[]>("/admin/members");
   const [revokeTarget, setRevokeTarget] = useState<TenantMember>();
   const [busyId, setBusyId] = useState<string>();
+  const roleFieldId = useId();
 
   const grant = async (member: TenantMember) => {
     setBusyId(member.userId);
@@ -55,6 +70,34 @@ export function AdminMembers() {
       notify(t("admin.members.revoked", { email: member.email }));
     } catch (e) {
       notify((e as Error).message);
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
+  const setPortalRole = async (member: TenantMember, role: PortalRole) => {
+    if ((member.portalRole ?? "member") === role) return;
+    setBusyId(member.userId);
+    try {
+      const updated = await api<TenantMember>("/admin/members/portal-role", {
+        method: "PATCH",
+        body: JSON.stringify({ email: member.email, role }),
+      });
+      result.setData((prev) =>
+        (prev || []).map((row) =>
+          row.userId === member.userId
+            ? {
+                ...row,
+                portalRole: updated.portalRole ?? role,
+                portalGranted: updated.portalGranted ?? row.portalGranted,
+              }
+            : row,
+        ),
+      );
+      notify(t("admin.members.role_saved"));
+    } catch (e) {
+      notify((e as Error).message);
+      result.reload();
     } finally {
       setBusyId(undefined);
     }
@@ -96,6 +139,9 @@ export function AdminMembers() {
               {result.data.map((member) => {
                 const isSelf = member.userId === user?.id;
                 const granted = Boolean(member.portalGranted);
+                const portalRole = member.portalRole ?? "member";
+                const lockRole = isSelf && portalRole === "full";
+                const selectId = `${roleFieldId}-${member.userId}`;
                 return (
                   <li
                     key={member.userId}
@@ -112,13 +158,41 @@ export function AdminMembers() {
                         </span>
                       </div>
                     </div>
-                    <p className="admin-members-role">
-                      {t(
-                        isBuildingAdminRole(member.role)
-                          ? "admin.members.role_administrator"
-                          : "admin.members.role_member",
-                      )}
-                    </p>
+                    <div className="admin-members-role">
+                      <Label htmlFor={selectId} className="visually-hidden">
+                        {t("admin.members.role_for", { name: member.name })}
+                      </Label>
+                      <Select
+                        id={selectId}
+                        data-size="sm"
+                        value={portalRole}
+                        disabled={busyId === member.userId || lockRole}
+                        title={
+                          lockRole
+                            ? t("admin.members.cannot_demote_self")
+                            : undefined
+                        }
+                        onChange={(event) => {
+                          const next = event.target.value;
+                          if (
+                            next === "member" ||
+                            next === "operations" ||
+                            next === "full"
+                          )
+                            void setPortalRole(member, next);
+                        }}
+                      >
+                        {PORTAL_ROLES.map((role) => (
+                          <Select.Option
+                            key={role}
+                            value={role}
+                            disabled={isSelf && role !== "full"}
+                          >
+                            {t(roleLabelKey(role))}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </div>
                     <div className="admin-users-status">
                       <Status status={granted ? "active" : "invited"} />
                       <span className="admin-members-access-label">
