@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, post } from "./api";
+import { api, post, setAuthLossHandler } from "./api";
 import { Button, Modal } from "./components/ui";
 import type { Announcement, Config, User } from "../shared/types";
 import { useT } from "./i18n";
@@ -68,6 +68,12 @@ function AnnouncementPopup({ user }: { user: User }) {
   );
 }
 
+function loginRedirectUrl(): string {
+  const path = `${window.location.pathname}${window.location.search}`;
+  if (path === "/login" || path.startsWith("/login?")) return "/login";
+  return `/login?returnTo=${encodeURIComponent(path || "/")}`;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<Config>();
   const [user, setUser] = useState<User>();
@@ -94,6 +100,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   useEffect(() => {
     void refresh();
+  }, []);
+  useEffect(() => {
+    setAuthLossHandler(() => {
+      setUser(undefined);
+      setLoading(false);
+      const target = loginRedirectUrl();
+      if (target === "/login" && window.location.pathname === "/login") return;
+      window.location.assign(target);
+    });
+    return () => setAuthLossHandler(undefined);
   }, []);
   useEffect(() => {
     if (!notice) return;

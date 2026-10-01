@@ -210,7 +210,7 @@
     "caption_error": "Try the availability search again",
     "caption_default": "Choose a time to check availability",
     "pick_date_for_slots": "Choose a date to see available times.",
-    "slots_range_hint": "Click an available hour to book. Use More options for longer bookings.",
+    "slots_range_hint": "Click an available hour to book.",
     "show_times": "Show available times",
     "hide_times": "Hide available times",
     "selected_time": "Selected: {{label}}",
@@ -626,7 +626,6 @@
     "settings_rule_payment": "Payment",
     "settings_rule_payment_value": "Free. No payment or invoice.",
     "users": {
-      "caption": "The inbox is access requests. Building members are listed above. Approve access here in Møterom — the person can use the portal. Declining a pending request does not change access. Declining or removing an approved request revokes access.",
       "loading": "Loading requests …",
       "filter_aria": "Filter requests",
       "filter_pending": "Pending",
@@ -658,7 +657,6 @@
         "marked_approved_demo": "Access approved in demo.",
         "removed": "Request removed."
       },
-      "caption_demo": "Demo requests are stored locally. Approve grants portal access in demo without Digilist.",
       "mark_approved_demo": "Approve access",
       "remove": "Remove",
       "remove_title": "Remove request",
@@ -784,7 +782,7 @@
     },
     "members": {
       "title": "Building members",
-      "caption": "Portal access is managed here in Møterom. Approve requests in the inbox below, or grant access to people in the list. Digilist membership alone does not open the portal.",
+      "caption": "Choose each person’s portal role here. Building administrators manage rooms and users; case handlers get operations access. Grant or revoke portal access without changing Digilist membership.",
       "refresh": "Refresh members",
       "role": "Role",
       "role_administrator": "Administrator",
@@ -793,6 +791,7 @@
       "role_member": "Member",
       "role_for": "Portal role for {{name}}",
       "role_saved": "Portal role saved.",
+      "cannot_demote_self": "You cannot remove your own building administrator role.",
       "active": "Active",
       "invited": "Invited",
       "empty": "No members to show.",

@@ -29,21 +29,23 @@ The BFF prefers Digilist `tenant_portal` rooms for the building tenant and keeps
 
 ### Building administrators
 
-Møterom Admin requires **both** a Digilist email listed in `ADMIN_EMAILS` (comma-separated, case-insensitive) **and** building membership on `DIGILIST_TENANT_ID`. Production live deployments must set at least one allowlisted address. Digilist tenant roles alone do not open `/admin`. Allowlisted emails without tenant membership do not open `/admin`.
+`ADMIN_EMAILS` (comma-separated, case-insensitive) is the **bootstrap allowlist** for production: at least one Digilist email must be listed so the first building administrator can open `/admin`. Digilist tenant roles alone do not open `/admin`. Allowlisted emails without building membership on `DIGILIST_TENANT_ID` do not open `/admin`.
 
-Portal roles are set on **Admin → Brukere** (not Digilist):
+Additional administrators are chosen on **Admin → Brukere** (Byggets medlemmer), not by editing Digilist or `ADMIN_EMAILS`. An explicit portal-role assignment of `operations` or `full` grants Møterom admin for people who already have portal membership, without requiring them on the allowlist.
+
+Portal roles on Brukere:
 
 - **Building administrator** (`full`): rooms, users, announcements, and full settings links.
 - **Operations** (`operations`): overview, calendar, bookings, messages, blocks, and insights.
 - **Member**: booking only.
 
-Digilist tenant admin roles still seed a default portal role when nothing is saved yet. Changing the role on Brukere applies immediately in this portal and does not rewrite Digilist staff roles.
+Digilist tenant admin roles still seed a default portal role when nothing is saved yet; that seed still needs `ADMIN_EMAILS`. Changing the role on Brukere applies immediately in this portal and does not rewrite Digilist staff roles. Promoting someone to Drift or Byggadministrator also grants Moteroom portal access; demoting to Medlem clears the portal role but does not revoke booker access (use Fjern tilgang for that).
 
-1. Put the administrator’s Digilist email in `ADMIN_EMAILS` (this building uses `skb@digilist.no`) and add them to the building tenant in Digilist.
+1. Put the bootstrap administrator’s Digilist email in `ADMIN_EMAILS` (this building uses `skb@digilist.no`) and add them to the building tenant in Digilist.
 2. They sign in on Møterom with Digilist email OTP or SMS OTP.
-3. After login, the BFF sets `isAdmin` from allowlist + membership + portal role, and redirects them to `/admin`. Assign or adjust portal roles under Brukere.
+3. After login, the BFF sets `isAdmin` from membership + portal role (allowlist or an explicit Brukere assignment), and redirects them to `/admin`. Assign further admins under Brukere.
 
-Other Digilist accounts (even Digilist tenant admins) are not Møterom admins unless listed in `ADMIN_EMAILS`. They land on Mine bookinger or the access-pending screen and receive 403 on `/api/admin`. Demo mode still offers «Logg inn som administrator» for local testing without Digilist.
+Other Digilist accounts without an allowlist entry or Brukere assignment land on Mine bookinger or the access-pending screen and receive 403 on `/api/admin`. Demo mode still offers «Logg inn som administrator» for local testing without Digilist.
 
 ### Access requests (Admin → Brukere)
 

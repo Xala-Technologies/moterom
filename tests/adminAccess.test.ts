@@ -67,13 +67,40 @@ describe("resolvePortalCapabilities", () => {
     ).toBe(false);
   });
 
-  it("still requires allowlist and membership", () => {
+  it("grants admin from an explicit Brukere assignment without ADMIN_EMAILS", () => {
+    expect(
+      resolvePortalCapabilities({
+        email: "a@example.invalid",
+        isMember: true,
+        allowlisted: false,
+        tenantRole: "support",
+        assigned: "full",
+      }),
+    ).toMatchObject({
+      isAdmin: true,
+      adminAccess: "full",
+      portalRole: "full",
+    });
+  });
+
+  it("still requires allowlist for Digilist seeds without a Brukere assignment", () => {
     expect(
       resolvePortalCapabilities({
         email: "a@example.invalid",
         isMember: true,
         allowlisted: false,
         tenantRole: "tenant_admin",
+      }).isAdmin,
+    ).toBe(false);
+  });
+
+  it("still requires portal membership", () => {
+    expect(
+      resolvePortalCapabilities({
+        email: "a@example.invalid",
+        isMember: false,
+        allowlisted: false,
+        tenantRole: "support",
         assigned: "full",
       }).isAdmin,
     ).toBe(false);

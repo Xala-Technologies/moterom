@@ -835,4 +835,52 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     expect(thread.body.conversation.context?.roomId).toBe(mine!.roomId);
     expect(thread.body.conversation.context?.bookingId).toBe(mine!.id);
   });
+
+  it("lets a full admin assign portal roles on Byggets medlemmer", async () => {
+    const before = await customer.get("/api/session").expect(200);
+    expect(before.body.user.isAdmin).toBe(false);
+
+    const lastAdmin = await administrator
+      .patch("/api/admin/members/portal-role")
+      .set("Origin", origin)
+      .send({ email: "admin@example.invalid", role: "member" })
+      .expect(409);
+    expect(lastAdmin.body.code).toBe("cannot_demote_last_full_admin");
+
+    await administrator
+      .patch("/api/admin/members/portal-role")
+      .set("Origin", origin)
+      .send({ email: "nobody@example.invalid", role: "full" })
+      .expect(404);
+
+    const promoted = await administrator
+      .patch("/api/admin/members/portal-role")
+      .set("Origin", origin)
+      .send({ email: "kari@example.invalid", role: "full" })
+      .expect(200);
+    expect(promoted.body.portalRole).toBe("full");
+    expect(promoted.body.portalGranted).toBe(true);
+
+    const after = await customer.get("/api/session").expect(200);
+    expect(after.body.user.isAdmin).toBe(true);
+    expect(after.body.user.adminAccess).toBe("full");
+    expect(after.body.user.portalRole).toBe("full");
+
+    const selfDemote = await administrator
+      .patch("/api/admin/members/portal-role")
+      .set("Origin", origin)
+      .send({ email: "admin@example.invalid", role: "operations" })
+      .expect(409);
+    expect(selfDemote.body.code).toBe("cannot_demote_self");
+
+    await administrator
+      .patch("/api/admin/members/portal-role")
+      .set("Origin", origin)
+      .send({ email: "kari@example.invalid", role: "member" })
+      .expect(200);
+
+    const demoted = await customer.get("/api/session").expect(200);
+    expect(demoted.body.user.isAdmin).toBe(false);
+    expect(demoted.body.user.portalRole).toBe("member");
+  });
 });
