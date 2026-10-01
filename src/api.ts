@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { i18n } from "./i18n";
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -9,6 +10,39 @@ export class ApiError extends Error {
     super(message);
   }
 }
+
+const AUTH_LOSS_CODES = new Set(["login_required", "session_expired"]);
+
+export function isAuthLossError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 401 &&
+    Boolean(error.code && AUTH_LOSS_CODES.has(error.code))
+  );
+}
+
+type AuthLossHandler = () => void;
+
+let authLossHandler: AuthLossHandler | undefined;
+let authLossNotified = false;
+
+/** AppProvider registers once; parallel 401s only invoke the handler once. */
+export function setAuthLossHandler(handler: AuthLossHandler | undefined) {
+  authLossHandler = handler;
+  authLossNotified = false;
+}
+
+/** Test helper — allow a fresh auth-loss cycle after a redirect was simulated. */
+export function resetAuthLossGuard() {
+  authLossNotified = false;
+}
+
+function notifyAuthLoss() {
+  if (authLossNotified) return;
+  authLossNotified = true;
+  authLossHandler?.();
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {},
@@ -30,12 +64,15 @@ export async function api<T>(
     throw new ApiError(i18n.t("errors.network_unreachable"), 0);
   }
   const body = await res.json().catch(() => ({}));
-  if (!res.ok)
-    throw new ApiError(
+  if (!res.ok) {
+    const error = new ApiError(
       body.message || i18n.t("errors.request_failed"),
       res.status,
       body.code,
     );
+    if (isAuthLossError(error)) notifyAuthLoss();
+    throw error;
+  }
   return body as T;
 }
 export const post = <T>(
