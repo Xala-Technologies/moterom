@@ -68,8 +68,9 @@ export class PortalAccessStore {
 
 /**
  * Portal entry is owned by Møterom. Digilist membership alone never opens the
- * portal. In live mode a Møterom grant (or ADMIN_EMAILS) is enough after Digilist
- * sign-in. Demo keeps Digilist-mapped demo members without a grant row.
+ * portal. After Digilist sign-in, a Møterom grant (or ADMIN_EMAILS) is enough.
+ * `demo: true` is only for local demo-role / demo-guest personas that have no
+ * grant rows — Digilist OTP on a demo BFF uses the live grant rules.
  */
 export function isPortalMember(input: {
   digilistMember: boolean;

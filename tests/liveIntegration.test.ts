@@ -750,12 +750,46 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       },
     ];
     portalAccessStore.grant("guest@example.invalid", "admin");
+    const approved = (
+      await request(app)
+        .post("/api/access-requests")
+        .set("Origin", origin)
+        .send({
+          name: "Guest Booker",
+          email: "guest@example.invalid",
+          company: "Gjest AS",
+        })
+        .expect(201)
+    ).body;
+    await request(app)
+      .patch(`/api/admin/access-requests/${approved.id}`)
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .send({ status: "approved" })
+      .expect(200);
+    expect(portalAccessStore.has("guest@example.invalid")).toBe(true);
+
     await request(app)
       .delete("/api/admin/members/guest-user")
       .set("Origin", origin)
       .set("Cookie", await cookie("admin"))
       .expect(200);
     expect(tenantMembers.map((row) => row.userId)).toEqual([admin.id]);
+    expect(portalAccessStore.has("guest@example.invalid")).toBe(false);
+    const inbox = (
+      await request(app)
+        .get("/api/admin/access-requests")
+        .set("Cookie", await cookie("admin"))
+        .expect(200)
+    ).body as { id: string; email: string; status: string }[];
+    expect(inbox.find((row) => row.id === approved.id)?.status).toBe(
+      "rejected",
+    );
+    // Restart backfill must not resurrect the Moteroom grant.
+    for (const row of inbox) {
+      if (row.status === "approved")
+        portalAccessStore.grant(row.email, "backfill");
+    }
     expect(portalAccessStore.has("guest@example.invalid")).toBe(false);
     const call = mocks.mutation.mock.calls.find(
       ([ref]) => getFunctionName(ref) === "domain/tenantTeam:removeMember",
@@ -765,6 +799,58 @@ describe("live-mode BFF with mocked Digilist contracts (no live writes)", () => 
       userId: "guest-user",
       actorId: admin.id,
     });
+    mocks.liveUser.mockImplementation(async (session) =>
+      session.token === "guest"
+        ? {
+            id: "guest-user",
+            name: "Guest Booker",
+            email: "guest@example.invalid",
+            isAdmin: false,
+            isMember: true,
+          }
+        : session.token === "admin"
+          ? admin
+          : member,
+    );
+    const session = await request(app)
+      .get("/api/session")
+      .set("Cookie", await cookie("guest"))
+      .expect(200);
+    expect(session.body.user.isMember).toBe(false);
+  });
+
+  it("keeps Moteroom portal revoked when Digilist removeMember fails", async () => {
+    tenantMembers = [
+      {
+        userId: admin.id,
+        name: "SKB DEV Admin",
+        email: admin.email,
+        role: "tenant_admin",
+        status: "active",
+      },
+      {
+        userId: "guest-user",
+        name: "Guest Booker",
+        email: "guest@example.invalid",
+        role: "support",
+        status: "active",
+      },
+    ];
+    portalAccessStore.grant("guest@example.invalid", "admin");
+    mocks.mutation.mockImplementation(async (ref, _args) => {
+      if (getFunctionName(ref) === "domain/tenantTeam:removeMember") {
+        throw new AppError(502, "Digilist nede", "digilist_unavailable");
+      }
+      return null;
+    });
+    await request(app)
+      .delete("/api/admin/members/guest-user")
+      .set("Origin", origin)
+      .set("Cookie", await cookie("admin"))
+      .expect(200);
+    expect(portalAccessStore.has("guest@example.invalid")).toBe(false);
+    // Digilist membership may remain; Moteroom entry must still be closed.
+    expect(tenantMembers.map((row) => row.userId)).toContain("guest-user");
   });
 
   it("refuses self-revocation and customer callers on membership delete", async () => {

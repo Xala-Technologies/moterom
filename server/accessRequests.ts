@@ -174,6 +174,24 @@ export class AccessRequestStore {
     return Boolean(row);
   }
 
+  /**
+   * Reject every approved request for this email so startup backfill cannot
+   * resurrect a Moteroom portal grant after Fjern tilgang.
+   */
+  rejectApprovedForEmail(email: string): number {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return 0;
+    const updated = Date.now();
+    const result = this.db
+      .prepare(
+        `UPDATE access_requests
+         SET status = 'rejected', updated = ?
+         WHERE email = ? AND status = 'approved'`,
+      )
+      .run(updated, normalized);
+    return Number(result.changes ?? 0);
+  }
+
   private map(row: Record<string, unknown>): AccessRequest {
     return {
       id: String(row.id),

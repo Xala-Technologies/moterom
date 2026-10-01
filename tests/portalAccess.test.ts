@@ -36,7 +36,7 @@ describe("isPortalMember", () => {
     ).toBe(true);
   });
 
-  it("keeps demo Digilist members as portal members without a grant row", () => {
+  it("keeps demo personas as portal members without a grant row", () => {
     expect(
       isPortalMember({
         digilistMember: true,
@@ -53,6 +53,18 @@ describe("isPortalMember", () => {
         demo: true,
       }),
     ).toBe(false);
+  });
+
+  it("honours Moteroom grants for Digilist OTP even when DATA_MODE is demo", () => {
+    // Digilist OTP on a demo BFF must not pass demo:true — grant opens the portal.
+    expect(
+      isPortalMember({
+        digilistMember: false,
+        allowlisted: false,
+        granted: true,
+        demo: false,
+      }),
+    ).toBe(true);
   });
 });
 

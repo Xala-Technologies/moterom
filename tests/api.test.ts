@@ -11,7 +11,8 @@ process.env.PORTAL_ACCESS_DB_PATH = ":memory:";
 process.env.FLOORPLAN_PATH = "/nonexistent-moterom-test-floorplan.png";
 process.env.PUBLIC_ORIGIN = "http://localhost:4173";
 process.env.SESSION_SECRET = "test-only-secret-that-is-not-a-production-secret";
-const { app } = await import("../server/app");
+const { app, portalAccessStore, accessRequestStore } =
+  await import("../server/app");
 const origin = "http://localhost:4173";
 const customer = request.agent(app);
 const administrator = request.agent(app);
@@ -882,5 +883,30 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
     const demoted = await customer.get("/api/session").expect(200);
     expect(demoted.body.user.isAdmin).toBe(false);
     expect(demoted.body.user.portalRole).toBe("member");
+  });
+
+  it("revokes Moteroom portal access from Byggets medlemmer without Digilist", async () => {
+    const created = accessRequestStore.create({
+      name: "Kari Nordmann",
+      email: "kari@example.invalid",
+      company: "Demo AS",
+    });
+    accessRequestStore.updateStatus(created.id, "approved");
+    portalAccessStore.grant("kari@example.invalid", "approve");
+    expect(accessRequestStore.hasApproved("kari@example.invalid")).toBe(true);
+
+    await administrator
+      .delete("/api/admin/members/demo-customer")
+      .set("Origin", origin)
+      .expect(200);
+    expect(portalAccessStore.has("kari@example.invalid")).toBe(false);
+    expect(accessRequestStore.hasApproved("kari@example.invalid")).toBe(false);
+
+    // Same loop as server startup — must not resurrect the grant.
+    for (const row of accessRequestStore.list()) {
+      if (row.status === "approved")
+        portalAccessStore.grant(row.email, "backfill");
+    }
+    expect(portalAccessStore.has("kari@example.invalid")).toBe(false);
   });
 });
