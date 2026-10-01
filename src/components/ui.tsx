@@ -10,6 +10,7 @@ import {
 import { AlertCircle, ArrowRight, Check, X } from "lucide-react";
 import type { Search } from "../../shared/types";
 import { interval, today } from "../../shared/time";
+import { isAuthLossError } from "../api";
 import { i18n, useT } from "../i18n";
 export function Loading({ label }: { label?: string }) {
   const { t } = useT();
@@ -29,16 +30,34 @@ export function ErrorState({
   retry?: () => void;
 }) {
   const { t } = useT();
+  const authLoss = isAuthLossError(error);
+  const returnTo =
+    typeof window !== "undefined"
+      ? `${window.location.pathname}${window.location.search}`
+      : "/";
+  const loginHref =
+    returnTo === "/login" || returnTo.startsWith("/login?")
+      ? "/login"
+      : `/login?returnTo=${encodeURIComponent(returnTo || "/")}`;
   return (
     <div className="error-state" role="alert">
       <AlertCircle size={22} />
       <div>
         <p>{typeof error === "string" ? error : error.message}</p>
-        {retry && (
+        {authLoss ? (
+          <a
+            className="ds-button"
+            data-variant="secondary"
+            data-size="sm"
+            href={loginHref}
+          >
+            {t("auth.log_in")}
+          </a>
+        ) : retry ? (
           <Button variant="secondary" data-size="sm" onClick={retry}>
             {t("common.retry")}
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );
