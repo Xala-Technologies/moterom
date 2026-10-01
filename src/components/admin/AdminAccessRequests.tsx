@@ -266,13 +266,6 @@ export function AdminAccessRequests({
 
   return (
     <div className="admin-users">
-      <p className="admin-users-note">
-        {t(
-          config?.mode === "live"
-            ? "admin.users.caption"
-            : "admin.users.caption_demo",
-        )}
-      </p>
       <div
         className="admin-users-tabs"
         role="group"

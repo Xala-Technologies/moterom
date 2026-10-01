@@ -1372,28 +1372,55 @@ app.patch("/api/admin/members/portal-role", async (req, res) => {
   if (!isPortalRole(body.role))
     throw new AppError(400, "Ugyldig portalrolle.", "invalid_portal_role");
   const email = body.email.trim().toLowerCase();
+  const members =
+    ctx.provider instanceof Digilist
+      ? attachPortalRoles(await ctx.provider.members(ctx.user!))
+      : demoMembers();
+  const target = members.find(
+    (row) => row.email.trim().toLowerCase() === email,
+  );
+  if (!target)
+    throw new AppError(404, "Medlemmet ble ikke funnet.", "member_not_found");
+  const currentRole = target.portalRole ?? "member";
+  if (currentRole === "full" && body.role !== "full") {
+    const otherFullAdmins = members.filter(
+      (row) =>
+        row.email.trim().toLowerCase() !== email &&
+        row.portalRole === "full" &&
+        row.portalGranted,
+    );
+    if (otherFullAdmins.length === 0)
+      throw new AppError(
+        409,
+        "Minst én byggadministrator må beholde tilgangen.",
+        "cannot_demote_last_full_admin",
+      );
+  }
   if (email === ctx.user!.email.trim().toLowerCase() && body.role !== "full")
     throw new AppError(
       409,
       "Du kan ikke fjerne din egen byggadministratorrolle.",
       "cannot_demote_self",
     );
+  if (body.role === "full" || body.role === "operations")
+    portalAccess.grant(email, "admin");
   const role = portalRoles.set(email, body.role);
-  const members =
+  const refreshed =
     ctx.provider instanceof Digilist
       ? attachPortalRoles(await ctx.provider.members(ctx.user!))
       : demoMembers();
-  const member = members.find(
+  const member = refreshed.find(
     (row) => row.email.trim().toLowerCase() === email,
   );
   res.json(
     member ?? {
-      userId: email,
-      name: email,
-      email,
-      role: "member",
-      status: "active" as const,
+      userId: target.userId,
+      name: target.name,
+      email: target.email,
+      role: target.role,
+      status: target.status,
       portalRole: role,
+      portalGranted: true,
     },
   );
 });

@@ -54,6 +54,9 @@ const nb: Record<string, string> = {
     "Tilgangen kunne ikke synkroniseres med bookingtjenesten. Prøv igjen, eller kontakt support.",
   digilist_membership_required:
     "Digilist-tilgangen til bygget mangler fortsatt. Logg ut og inn igjen, eller be administrator godkjenne tilgangen på nytt.",
+  cannot_demote_self: "Du kan ikke fjerne din egen byggadministratorrolle.",
+  cannot_demote_last_full_admin:
+    "Minst én byggadministrator må beholde tilgangen.",
   room_setup_unavailable:
     "Rommet {{name}} er ikke tilgjengelig i byggets oppsett.",
   admin_building_required: "Du har ikke administratortilgang til dette bygget.",
@@ -191,6 +194,9 @@ const en: Record<string, string> = {
     "Access could not be synced with the booking service. Try again, or contact support.",
   digilist_membership_required:
     "Building access in Digilist is still missing. Sign out and in again, or ask an administrator to approve access again.",
+  cannot_demote_self: "You cannot remove your own building administrator role.",
+  cannot_demote_last_full_admin:
+    "At least one building administrator must keep access.",
   room_setup_unavailable:
     "Room {{name}} is not available in the building setup.",
   admin_building_required:

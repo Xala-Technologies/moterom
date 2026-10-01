@@ -50,6 +50,9 @@ export function isPortalRole(value: string): value is PortalRole {
 /**
  * Resolve portal capabilities from an optional Brukere assignment, falling
  * back to the Digilist tenant role as a seed for allowlisted members.
+ *
+ * Digilist seeds alone still need ADMIN_EMAILS. An explicit Brukere assignment
+ * of operations/full grants admin for portal members without the allowlist.
  */
 export function resolvePortalCapabilities(input: {
   email: string;
@@ -65,9 +68,12 @@ export function resolvePortalCapabilities(input: {
       : fromDigilist === "operations"
         ? "operations"
         : "member";
-  const portalRole = input.assigned ?? seeded;
+  const assigned = input.assigned ?? null;
+  const portalRole = assigned ?? seeded;
   const isAdmin =
-    input.allowlisted && input.isMember && portalRole !== "member";
+    input.isMember &&
+    portalRole !== "member" &&
+    (input.allowlisted || Boolean(assigned));
   return {
     isAdmin,
     portalRole,
