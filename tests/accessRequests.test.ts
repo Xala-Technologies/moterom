@@ -40,6 +40,36 @@ describe("access request store", () => {
     expect(store.hasApproved("ola@example.invalid")).toBe(false);
   });
 
+  it("rejects every approved request for an email", () => {
+    const first = store.create({
+      name: "Ola",
+      email: "ola@example.invalid",
+      company: "Hei",
+    });
+    store.updateStatus(first.id, "approved");
+    // Second approved row for the same email (admin may have re-approved).
+    store.db
+      .prepare(
+        `INSERT INTO access_requests
+         (id, created, updated, name, email, message, company, user_id, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "second-approved",
+        Date.now(),
+        Date.now(),
+        "Ola",
+        "ola@example.invalid",
+        "",
+        "Hei",
+        null,
+        "approved",
+      );
+    expect(store.rejectApprovedForEmail("OLA@example.invalid")).toBe(2);
+    expect(store.hasApproved("ola@example.invalid")).toBe(false);
+    expect(store.list().every((row) => row.status === "rejected")).toBe(true);
+  });
+
   it("returns the existing pending request for the same email", () => {
     const first = store.create({
       name: "Ola",

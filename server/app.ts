@@ -110,12 +110,18 @@ const messagingLocal = new MessagingLocalStore(
   process.env.MESSAGING_LOCAL_DB_PATH || ".data/messaging_local.sqlite",
 );
 
-function withPortalRole(user: User, allowlisted: boolean): User {
+function withPortalRole(
+  user: User,
+  allowlisted: boolean,
+  opts?: { demoPersona?: boolean },
+): User {
   const isMember = isPortalMember({
     digilistMember: user.isMember,
     allowlisted,
     granted: portalAccess.has(user.email),
-    demo: config.mode === "demo",
+    // Only passwordless demo personas skip Moteroom grants. Digilist OTP on a
+    // demo BFF must honour Godkjenn / Gi tilgang the same way as live.
+    demo: Boolean(opts?.demoPersona),
   });
   const caps = resolvePortalCapabilities({
     email: user.email,
@@ -365,6 +371,7 @@ function deleteConversationFrom(
 export const app = express();
 /** Exposed for tests that seed Møterom portal grants. */
 export const portalAccessStore = portalAccess;
+export const accessRequestStore = accessRequests;
 app.disable("x-powered-by");
 app.use(
   helmet({
@@ -471,6 +478,7 @@ async function context(
         tenantRole: admin ? "tenant_admin" : "member",
       },
       true,
+      { demoPersona: true },
     );
   } else if (config.mode === "demo" && session?.demoGuest) {
     user = withPortalRole(
@@ -483,6 +491,7 @@ async function context(
         tenantRole: "member",
       },
       true,
+      { demoPersona: true },
     );
   } else if (session?.token) {
     if (!httpUrl)
@@ -1343,23 +1352,27 @@ app.delete("/api/admin/members/:userId", async (req, res) => {
       "Du kan ikke fjerne ditt eget medlemskap.",
       "cannot_remove_self",
     );
+  const members =
+    ctx.provider instanceof Digilist
+      ? await ctx.provider.members(ctx.user!)
+      : demoMembers();
+  const target = members.find((row) => row.userId === userId);
+  if (!target)
+    throw new AppError(404, "Medlemmet ble ikke funnet.", "member_not_found");
+  // Moteroom owns portal entry. Clear grant first so Digilist failures cannot
+  // leave Finn rom open, and reject approved inbox rows so restart backfill
+  // cannot resurrect access.
+  portalAccess.revoke(target.email);
+  portalRoles.clear(target.email);
+  accessRequests.rejectApprovedForEmail(target.email);
   if (ctx.provider instanceof Digilist) {
-    const members = await ctx.provider.members(ctx.user!);
-    const target = members.find((row) => row.userId === userId);
-    if (!target)
-      throw new AppError(404, "Medlemmet ble ikke funnet.", "member_not_found");
-    await ctx.provider.removeMember(userId, ctx.user!);
-    portalAccess.revoke(target.email);
-    portalRoles.clear(target.email);
-    res.json({ success: true as const, email: target.email });
-    return;
+    try {
+      await ctx.provider.removeMember(userId, ctx.user!);
+    } catch {
+      // Digilist may be unreachable or lack revoke rights; portal grant is gone.
+    }
   }
-  // Demo has no Digilist membership store to revoke.
-  throw new AppError(
-    409,
-    "I demo fjernes ikke Digilist-medlemskap. Bruk live-modus eller Digilist dashboard.",
-    "demo_membership_immutable",
-  );
+  res.json({ success: true as const, email: target.email });
 });
 app.patch("/api/admin/members/portal-role", async (req, res) => {
   const ctx = await requirePortalAdminContext(req, res);
