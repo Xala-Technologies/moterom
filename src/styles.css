@@ -5682,6 +5682,29 @@ button.admin-bl-menu-trigger:disabled {
   flex-direction: column;
   gap: 8px;
 }
+.admin-users-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 12px 4px 4px;
+  border-top: 1px solid var(--ds-color-neutral-border-subtle);
+}
+.admin-users-pagination-status {
+  margin: 0;
+  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
+  color: var(--ds-color-neutral-text-subtle);
+}
+.admin-users-pagination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-users-pagination-actions .ds-button {
+  min-height: 44px;
+}
 .admin-users-row {
   display: grid;
   grid-template-columns:
@@ -5725,11 +5748,8 @@ button.admin-bl-menu-trigger:disabled {
   gap: 8px;
   flex-wrap: wrap;
 }
-.admin-members-access-label {
-  display: block;
-  margin-top: 4px;
-  font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
-  color: var(--ds-color-neutral-text-subtle);
+.admin-members-actions .ds-button {
+  min-height: 44px;
 }
 .admin-users-identity {
   display: flex;
