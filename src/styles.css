@@ -1563,7 +1563,19 @@ a.brand {
   border-radius: var(--digilist-radius-lg, 12px);
   overflow: hidden;
   aspect-ratio: 16 / 10;
+  height: auto;
   max-height: 140px;
+  width: 100%;
+}
+.room-edit-photo .room-image img {
+  display: block;
+}
+.room-edit-photo-name {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .room-edit-form .caption {
   margin: 4px 0 0;
@@ -1584,6 +1596,7 @@ a.brand {
   position: relative;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   min-width: 0;
 }
