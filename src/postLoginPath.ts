@@ -24,11 +24,15 @@ export function postLoginPath(
   const pathname = path.split("?")[0]?.split("#")[0] || "/";
   const adminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   if (adminRoute && !user?.isAdmin) return "/";
-  // Admins default to Oversikt — not the previous customer inbox/bookings URL
-  // (Messages.tsx would otherwise bounce /meldinger → /admin/messages).
+  // Admins always land on Oversikt after login — not a deep admin returnTo
+  // or the previous customer inbox/bookings URL (Messages.tsx would otherwise
+  // bounce /meldinger → /admin/messages). Mid-booking paths stay intact.
   if (
     user?.isAdmin &&
-    (pathname === "/" || pathname === "" || isCustomerAccountPath(pathname))
+    (adminRoute ||
+      pathname === "/" ||
+      pathname === "" ||
+      isCustomerAccountPath(pathname))
   )
     return "/admin";
   return path;

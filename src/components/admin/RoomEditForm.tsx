@@ -80,6 +80,7 @@ export function RoomEditForm({
   const [imageFile, setImageFile] = useState<RoomImageFile>();
   const [imageName, setImageName] = useState("");
   const [imagePreview, setImagePreview] = useState<string>();
+  const [imageCleared, setImageCleared] = useState(false);
   const [formError, setFormError] = useState<string>();
   const [reading, setReading] = useState(false);
 
@@ -88,6 +89,20 @@ export function RoomEditForm({
       if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     };
   }, []);
+
+  const clearChosenImage = () => {
+    pickRef.current += 1;
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = undefined;
+    setImagePreview(undefined);
+    setImageName("");
+    setImageFile(undefined);
+    setImageCleared(true);
+    setReading(false);
+    setFormError(undefined);
+    if (fileRef.current) fileRef.current.value = "";
+    onChange({ ...roomRef.current, image: undefined });
+  };
 
   const chooseFile = (file: File | undefined) => {
     if (!file) return;
@@ -106,6 +121,7 @@ export function RoomEditForm({
     previewRef.current = preview;
     setImagePreview(preview);
     setImageName(file.name);
+    setImageCleared(false);
     setFormError(undefined);
     setReading(true);
     const reader = new FileReader();
@@ -157,6 +173,9 @@ export function RoomEditForm({
           return;
         }
         setFormError(undefined);
+        const keptImage = current.image?.startsWith("/rooms/")
+          ? undefined
+          : current.image;
         onSubmit({
           name: current.name,
           capacity: current.capacity,
@@ -166,9 +185,7 @@ export function RoomEditForm({
           capacityLabelEn: current.capacityLabelEn,
           requiresApproval: current.requiresApproval,
           imageKind: current.imageKind || "illustrative",
-          image: current.image?.startsWith("/rooms/")
-            ? undefined
-            : current.image,
+          image: imageFile ? keptImage : imageCleared ? "" : keptImage,
           amenities,
           openTime: current.openTime || DEFAULT_OPEN_TIME,
           closeTime: current.closeTime || DEFAULT_CLOSE_TIME,
@@ -180,11 +197,17 @@ export function RoomEditForm({
         <div className="room-edit-photo">
           <span className="eyebrow">{t("admin.room_image")}</span>
           <RoomPhoto
+            eager
             room={{
               ...room,
-              image: imagePreview || room.image,
+              image: imageCleared ? undefined : imagePreview || room.image,
             }}
           />
+          {imageName ? (
+            <p className="room-edit-photo-name caption" role="status">
+              {imageName}
+            </p>
+          ) : null}
         </div>
         {showImageKind ? (
           <Field>
@@ -235,11 +258,17 @@ export function RoomEditForm({
             >
               {t("admin.room_image_upload")}
             </Button>
-            {imageName && (
-              <span className="caption" role="status">
-                {imageName}
-              </span>
-            )}
+            {!imageCleared && (imagePreview || room.image) ? (
+              <Button
+                type="button"
+                variant="secondary"
+                data-color="danger"
+                disabled={busy || reading}
+                onClick={clearChosenImage}
+              >
+                {t("admin.room_image_remove")}
+              </Button>
+            ) : null}
           </div>
           <p className="caption">{t("admin.room_image_upload_hint")}</p>
         </Field>

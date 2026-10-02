@@ -17,10 +17,14 @@ describe("postLoginPath", () => {
     expect(postLoginPath("/", { isAdmin: false })).toBe("/");
   });
 
-  it("sends admins to administration from the home returnTo", () => {
+  it("sends admins to Oversikt from home or any admin returnTo", () => {
     expect(postLoginPath("/", { isAdmin: true })).toBe("/admin");
-    expect(postLoginPath("/admin/calendar", { isAdmin: true })).toBe(
-      "/admin/calendar",
+    expect(postLoginPath("/admin", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/admin/calendar", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/admin/users", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/admin/messages", { isAdmin: true })).toBe("/admin");
+    expect(postLoginPath("/admin/rooms?q=sauda", { isAdmin: true })).toBe(
+      "/admin",
     );
   });
 

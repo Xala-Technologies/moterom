@@ -685,6 +685,7 @@
     "capacity_label_en": "Capacity label (English)",
     "room_image": "Bilde",
     "room_image_upload": "Last opp bilde",
+    "room_image_remove": "Fjern bilde",
     "room_image_upload_hint": "WebP, JPEG eller PNG, maks 2 MB. Bildet lagres hos Møterom (ikke i Digilist-mediebiblioteket).",
     "room_image_too_large": "Bildet kan ikke være større enn 2 MB.",
     "room_image_type": "Bruk WebP, JPEG eller PNG.",
