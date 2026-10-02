@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { api, useApi } from "../../api";
 import { useApp } from "../../context";
 import { useT } from "../../i18n";
@@ -13,6 +14,8 @@ import {
 } from "../ui";
 import { PORTAL_ROLES, type PortalRole } from "../../../shared/adminAccess";
 import type { TenantMember } from "../../../shared/types";
+
+const PAGE_SIZE = 6;
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -32,9 +35,30 @@ export function AdminMembers() {
   const { notify, user } = useApp();
   const { t } = useT();
   const result = useApi<TenantMember[]>("/admin/members");
+  const [page, setPage] = useState(0);
   const [revokeTarget, setRevokeTarget] = useState<TenantMember>();
   const [busyId, setBusyId] = useState<string>();
   const roleFieldId = useId();
+
+  const members = result.data || [];
+  const paginate = members.length > PAGE_SIZE;
+  const pageCount = paginate ? Math.ceil(members.length / PAGE_SIZE) : 1;
+  const listKey = members.map((member) => member.userId).join(",");
+
+  useEffect(() => {
+    setPage(0);
+  }, [listKey]);
+
+  useEffect(() => {
+    if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount]);
+
+  const safePage = Math.min(page, pageCount - 1);
+  const start = paginate ? safePage * PAGE_SIZE : 0;
+  const end = paginate ? start + PAGE_SIZE : members.length;
+  const visible = members.slice(start, end);
+  const from = members.length === 0 ? 0 : start + 1;
+  const to = Math.min(end, members.length);
 
   const grant = async (member: TenantMember) => {
     setBusyId(member.userId);
@@ -108,19 +132,20 @@ export function AdminMembers() {
       <header className="settings-card-header">
         <div className="settings-card-heading">
           <h2 id="building-members-title">{t("admin.members.title")}</h2>
-          <p>{t("admin.members.caption")}</p>
         </div>
-      </header>
-      <div className="settings-card-body stack">
         <Button
           variant="secondary"
           data-size="sm"
           type="button"
           onClick={result.reload}
           disabled={result.loading}
+          aria-label={t("admin.members.refresh")}
         >
-          {t("admin.members.refresh")}
+          <RefreshCw size={16} aria-hidden="true" />
+          {t("admin.members.refresh_short")}
         </Button>
+      </header>
+      <div className="settings-card-body stack">
         {result.loading ? (
           <Loading />
         ) : result.error ? (
@@ -136,7 +161,7 @@ export function AdminMembers() {
               </span>
             </div>
             <ul className="admin-users-list">
-              {result.data.map((member) => {
+              {visible.map((member) => {
                 const isSelf = member.userId === user?.id;
                 const granted = Boolean(member.portalGranted);
                 const portalRole = member.portalRole ?? "member";
@@ -193,9 +218,16 @@ export function AdminMembers() {
                         ))}
                       </Select>
                     </div>
-                    <div className="admin-users-status">
+                    <div
+                      className="admin-users-status"
+                      title={t(
+                        granted
+                          ? "admin.members.portal_granted"
+                          : "admin.members.portal_digilist_only",
+                      )}
+                    >
                       <Status status={granted ? "active" : "invited"} />
-                      <span className="admin-members-access-label">
+                      <span className="visually-hidden">
                         {t(
                           granted
                             ? "admin.members.portal_granted"
@@ -243,6 +275,48 @@ export function AdminMembers() {
                 );
               })}
             </ul>
+            {paginate ? (
+              <nav
+                className="admin-users-pagination"
+                aria-label={t("admin.members.pagination_aria")}
+              >
+                <p className="admin-users-pagination-status" aria-live="polite">
+                  {t("admin.members.page_status", {
+                    from,
+                    to,
+                    total: members.length,
+                  })}
+                </p>
+                <div className="admin-users-pagination-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    data-size="sm"
+                    disabled={safePage <= 0}
+                    aria-label={t("admin.members.previous")}
+                    onClick={() =>
+                      setPage((current) => Math.max(0, current - 1))
+                    }
+                  >
+                    <ChevronLeft size={16} aria-hidden="true" />
+                    {t("admin.members.previous")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    data-size="sm"
+                    disabled={safePage >= pageCount - 1}
+                    aria-label={t("admin.members.next")}
+                    onClick={() =>
+                      setPage((current) => Math.min(pageCount - 1, current + 1))
+                    }
+                  >
+                    {t("admin.members.next")}
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </Button>
+                </div>
+              </nav>
+            ) : null}
           </div>
         ) : (
           <p>{t("admin.members.empty")}</p>
