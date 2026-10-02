@@ -626,6 +626,7 @@
     "settings_rule_payment": "Betaling",
     "settings_rule_payment_value": "Gratis. Ingen betaling eller faktura.",
     "users": {
+      "title": "Historikk",
       "loading": "Henter forespørsler …",
       "filter_aria": "Filtrer forespørsler",
       "filter_pending": "Venter",
@@ -664,7 +665,11 @@
       "remove_body_approved": "{{name}} fjernes fra listen, og portaltilgangen trekkes tilbake.",
       "remove_confirm": "Fjern forespørsel",
       "remove_cancel": "Avbryt",
-      "actions_menu": "Handlinger for {{name}}"
+      "actions_menu": "Handlinger for {{name}}",
+      "pagination_aria": "Bla i forespørsler",
+      "page_status": "Viser {{from}}–{{to}} av {{total}}",
+      "previous": "Forrige",
+      "next": "Neste"
     },
     "prelaunch_title": "Før kundelansering",
     "prelaunch_body": "Bekreft navnene på Eidefossen-rommene, kapasitet per oppsett, rombilder og bookingregler. Demoen sender ikke e-post og krever ingen betaling.",
@@ -782,8 +787,12 @@
     },
     "members": {
       "title": "Byggets medlemmer",
-      "caption": "Velg portalrolle for hver person her. Byggadministrator kan styre rom og brukere; saksbehandler får drift. Gi eller fjern portaltilgang uten å endre Digilist-medlemskap.",
       "refresh": "Oppdater medlemmer",
+      "refresh_short": "Oppdater",
+      "pagination_aria": "Bla i medlemmer",
+      "page_status": "Viser {{from}}–{{to}} av {{total}}",
+      "previous": "Forrige",
+      "next": "Neste",
       "role": "Rolle",
       "role_administrator": "Administrator",
       "role_portal_admin": "Byggadministrator",

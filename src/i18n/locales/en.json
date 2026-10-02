@@ -626,6 +626,7 @@
     "settings_rule_payment": "Payment",
     "settings_rule_payment_value": "Free. No payment or invoice.",
     "users": {
+      "title": "History",
       "loading": "Loading requests …",
       "filter_aria": "Filter requests",
       "filter_pending": "Pending",
@@ -664,7 +665,11 @@
       "remove_body_approved": "{{name}} is removed from the list, and portal access is revoked.",
       "remove_confirm": "Remove request",
       "remove_cancel": "Cancel",
-      "actions_menu": "Actions for {{name}}"
+      "actions_menu": "Actions for {{name}}",
+      "pagination_aria": "Browse requests",
+      "page_status": "Showing {{from}}–{{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
     },
     "prelaunch_title": "Before customer launch",
     "prelaunch_body": "Confirm the Eidefossen room names, capacity per layout, room photos and booking rules. The demo does not send email and does not require payment.",
@@ -782,8 +787,12 @@
     },
     "members": {
       "title": "Building members",
-      "caption": "Choose each person’s portal role here. Building administrators manage rooms and users; case handlers get operations access. Grant or revoke portal access without changing Digilist membership.",
       "refresh": "Refresh members",
+      "refresh_short": "Refresh",
+      "pagination_aria": "Browse members",
+      "page_status": "Showing {{from}}–{{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next",
       "role": "Role",
       "role_administrator": "Administrator",
       "role_portal_admin": "Building administrator",

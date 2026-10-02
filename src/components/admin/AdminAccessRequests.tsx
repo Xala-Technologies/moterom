@@ -6,7 +6,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { Button, Empty, ErrorState, Loading, Modal, Status } from "../ui";
 import { api } from "../../api";
 import { useApp } from "../../context";
@@ -14,6 +14,8 @@ import { useFormatters, useT } from "../../i18n";
 import type { AccessRequest, AccessRequestStatus } from "../../../shared/types";
 import { openingAccessFilter } from "./accessRequestFilter";
 import { menuPlacementFor, type MenuPlacement } from "./menuPlacement";
+
+const PAGE_SIZE = 6;
 
 type ApiResult = {
   data?: AccessRequest[];
@@ -179,6 +181,7 @@ export function AdminAccessRequests({
   const { t } = useT();
   const { displayDate } = useFormatters();
   const [filter, setFilter] = useState<"all" | AccessRequestStatus>("pending");
+  const [page, setPage] = useState(0);
   const [busyId, setBusyId] = useState<string>();
   const [removeTarget, setRemoveTarget] = useState<AccessRequest>();
   const opened = useRef(false);
@@ -198,6 +201,24 @@ export function AdminAccessRequests({
     all: all.length,
   };
   const rows = all.filter((row) => filter === "all" || row.status === filter);
+  const paginate = rows.length > PAGE_SIZE;
+  const pageCount = paginate ? Math.ceil(rows.length / PAGE_SIZE) : 1;
+  const listKey = `${filter}:${rows.map((row) => row.id).join(",")}`;
+
+  useEffect(() => {
+    setPage(0);
+  }, [listKey]);
+
+  useEffect(() => {
+    if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount]);
+
+  const safePage = Math.min(page, pageCount - 1);
+  const start = paginate ? safePage * PAGE_SIZE : 0;
+  const end = paginate ? start + PAGE_SIZE : rows.length;
+  const visible = rows.slice(start, end);
+  const from = rows.length === 0 ? 0 : start + 1;
+  const to = Math.min(end, rows.length);
 
   const setStatus = async (id: string, status: AccessRequestStatus) => {
     const previous = all.find((row) => row.id === id);
@@ -255,9 +276,38 @@ export function AdminAccessRequests({
     }
   };
 
-  if (result.loading) return <Loading label={t("admin.users.loading")} />;
+  if (result.loading)
+    return (
+      <section
+        className="settings-card"
+        aria-labelledby="access-requests-title"
+      >
+        <header className="settings-card-header">
+          <div className="settings-card-heading">
+            <h2 id="access-requests-title">{t("admin.users.title")}</h2>
+          </div>
+        </header>
+        <div className="settings-card-body">
+          <Loading label={t("admin.users.loading")} />
+        </div>
+      </section>
+    );
   if (result.error)
-    return <ErrorState error={result.error} retry={result.reload} />;
+    return (
+      <section
+        className="settings-card"
+        aria-labelledby="access-requests-title"
+      >
+        <header className="settings-card-header">
+          <div className="settings-card-heading">
+            <h2 id="access-requests-title">{t("admin.users.title")}</h2>
+          </div>
+        </header>
+        <div className="settings-card-body">
+          <ErrorState error={result.error} retry={result.reload} />
+        </div>
+      </section>
+    );
 
   const emptyElsewhere =
     filter === "pending" &&
@@ -265,154 +315,222 @@ export function AdminAccessRequests({
     counts.approved + counts.rejected > 0;
 
   return (
-    <div className="admin-users">
-      <div
-        className="admin-users-tabs"
-        role="group"
-        aria-label={t("admin.users.filter_aria")}
-      >
-        {(
-          [
-            [
-              "status",
-              [
-                ["pending", t("admin.users.filter_pending"), counts.pending],
-                ["approved", t("admin.users.filter_approved"), counts.approved],
-                ["rejected", t("admin.users.filter_rejected"), counts.rejected],
-              ],
-            ],
-            ["all", [["all", t("admin.users.filter_all"), counts.all]]],
-          ] as const
-        ).map(([group, items]) => (
-          <div
-            key={group}
-            className={
-              group === "all"
-                ? "admin-users-tab-track admin-users-tab-all"
-                : "admin-users-tab-track"
-            }
-          >
-            {items.map(([value, label, count]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={filter === value}
-                onClick={() => setFilter(value)}
-              >
-                <span>{label}</span>
-                <span className="admin-users-tab-count">{count}</span>
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {rows.length === 0 ? (
-        <Empty
-          title={
-            emptyElsewhere
-              ? t("admin.users.empty_pending_title")
-              : t("admin.users.empty_title")
-          }
-        >
-          <p>
-            {emptyElsewhere
-              ? t("admin.users.empty_pending_body")
-              : t("admin.users.empty_body")}
-          </p>
-          {emptyElsewhere && (
-            <Button
-              variant="secondary"
-              data-size="sm"
-              type="button"
-              onClick={() => setFilter("all")}
-            >
-              {t("admin.users.show_all")}
-            </Button>
-          )}
-        </Empty>
-      ) : (
-        <div className="admin-users-table">
-          <div className="admin-users-header" role="row">
-            <span>{t("admin.users.cols.user")}</span>
-            <span>{t("admin.users.cols.received")}</span>
-            <span>{t("admin.users.cols.company")}</span>
-            <span>{t("admin.users.cols.status")}</span>
-            <span className="admin-users-header-actions">
-              {t("admin.users.cols.actions")}
-            </span>
-          </div>
-          <ul className="admin-users-list">
-            {rows.map((row) => (
-              <li key={row.id} className="admin-users-row">
-                <div className="admin-users-identity">
-                  <div className="admin-users-avatar" aria-hidden="true">
-                    {initials(row.name)}
-                  </div>
-                  <div className="admin-users-identity-text">
-                    <strong>{row.name}</strong>
-                    <span className="admin-users-email">{row.email}</span>
-                  </div>
-                </div>
-                <p className="admin-users-date">
-                  {displayDate(row.createdAt, true)}
-                </p>
-                <p className="admin-users-message">
-                  {row.company || t("admin.users.company_missing")}
-                </p>
-                <div className="admin-users-status">
-                  <Status status={row.status} />
-                </div>
-                <div className="admin-users-actions">
-                  <RequestMenu
-                    name={row.name}
-                    busy={busyId === row.id}
-                    actions={[
-                      ...(row.status !== "approved"
-                        ? [
-                            {
-                              key: "approve",
-                              label: t(
-                                config?.mode === "live"
-                                  ? "admin.users.mark_approved"
-                                  : "admin.users.mark_approved_demo",
-                              ),
-                              run: () => void setStatus(row.id, "approved"),
-                            },
-                          ]
-                        : []),
-                      ...(row.status !== "rejected"
-                        ? [
-                            {
-                              key: "reject",
-                              label: t("admin.users.mark_rejected"),
-                              run: () => void setStatus(row.id, "rejected"),
-                            },
-                          ]
-                        : []),
-                      ...(row.status !== "pending"
-                        ? [
-                            {
-                              key: "reset",
-                              label: t("admin.users.mark_pending"),
-                              run: () => void setStatus(row.id, "pending"),
-                            },
-                          ]
-                        : []),
-                      {
-                        key: "remove",
-                        label: t("admin.users.remove"),
-                        danger: true,
-                        run: () => setRemoveTarget(row),
-                      },
-                    ]}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+    <section className="settings-card" aria-labelledby="access-requests-title">
+      <header className="settings-card-header">
+        <div className="settings-card-heading">
+          <h2 id="access-requests-title">{t("admin.users.title")}</h2>
         </div>
-      )}
+      </header>
+      <div className="settings-card-body">
+        <div className="admin-users">
+          <div
+            className="admin-users-tabs"
+            role="group"
+            aria-label={t("admin.users.filter_aria")}
+          >
+            {(
+              [
+                [
+                  "status",
+                  [
+                    [
+                      "pending",
+                      t("admin.users.filter_pending"),
+                      counts.pending,
+                    ],
+                    [
+                      "approved",
+                      t("admin.users.filter_approved"),
+                      counts.approved,
+                    ],
+                    [
+                      "rejected",
+                      t("admin.users.filter_rejected"),
+                      counts.rejected,
+                    ],
+                  ],
+                ],
+                ["all", [["all", t("admin.users.filter_all"), counts.all]]],
+              ] as const
+            ).map(([group, items]) => (
+              <div
+                key={group}
+                className={
+                  group === "all"
+                    ? "admin-users-tab-track admin-users-tab-all"
+                    : "admin-users-tab-track"
+                }
+              >
+                {items.map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={filter === value}
+                    onClick={() => setFilter(value)}
+                  >
+                    <span>{label}</span>
+                    <span className="admin-users-tab-count">{count}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {rows.length === 0 ? (
+            <Empty
+              title={
+                emptyElsewhere
+                  ? t("admin.users.empty_pending_title")
+                  : t("admin.users.empty_title")
+              }
+            >
+              <p>
+                {emptyElsewhere
+                  ? t("admin.users.empty_pending_body")
+                  : t("admin.users.empty_body")}
+              </p>
+              {emptyElsewhere && (
+                <Button
+                  variant="secondary"
+                  data-size="sm"
+                  type="button"
+                  onClick={() => setFilter("all")}
+                >
+                  {t("admin.users.show_all")}
+                </Button>
+              )}
+            </Empty>
+          ) : (
+            <div className="admin-users-table">
+              <div className="admin-users-header" role="row">
+                <span>{t("admin.users.cols.user")}</span>
+                <span>{t("admin.users.cols.received")}</span>
+                <span>{t("admin.users.cols.company")}</span>
+                <span>{t("admin.users.cols.status")}</span>
+                <span className="admin-users-header-actions">
+                  {t("admin.users.cols.actions")}
+                </span>
+              </div>
+              <ul className="admin-users-list">
+                {visible.map((row) => (
+                  <li key={row.id} className="admin-users-row">
+                    <div className="admin-users-identity">
+                      <div className="admin-users-avatar" aria-hidden="true">
+                        {initials(row.name)}
+                      </div>
+                      <div className="admin-users-identity-text">
+                        <strong>{row.name}</strong>
+                        <span className="admin-users-email">{row.email}</span>
+                      </div>
+                    </div>
+                    <p className="admin-users-date">
+                      {displayDate(row.createdAt, true)}
+                    </p>
+                    <p className="admin-users-message">
+                      {row.company || t("admin.users.company_missing")}
+                    </p>
+                    <div className="admin-users-status">
+                      <Status status={row.status} />
+                    </div>
+                    <div className="admin-users-actions">
+                      <RequestMenu
+                        name={row.name}
+                        busy={busyId === row.id}
+                        actions={[
+                          ...(row.status !== "approved"
+                            ? [
+                                {
+                                  key: "approve",
+                                  label: t(
+                                    config?.mode === "live"
+                                      ? "admin.users.mark_approved"
+                                      : "admin.users.mark_approved_demo",
+                                  ),
+                                  run: () => void setStatus(row.id, "approved"),
+                                },
+                              ]
+                            : []),
+                          ...(row.status !== "rejected"
+                            ? [
+                                {
+                                  key: "reject",
+                                  label: t("admin.users.mark_rejected"),
+                                  run: () => void setStatus(row.id, "rejected"),
+                                },
+                              ]
+                            : []),
+                          ...(row.status !== "pending"
+                            ? [
+                                {
+                                  key: "reset",
+                                  label: t("admin.users.mark_pending"),
+                                  run: () => void setStatus(row.id, "pending"),
+                                },
+                              ]
+                            : []),
+                          {
+                            key: "remove",
+                            label: t("admin.users.remove"),
+                            danger: true,
+                            run: () => setRemoveTarget(row),
+                          },
+                        ]}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {paginate ? (
+                <nav
+                  className="admin-users-pagination"
+                  aria-label={t("admin.users.pagination_aria")}
+                >
+                  <p
+                    className="admin-users-pagination-status"
+                    aria-live="polite"
+                  >
+                    {t("admin.users.page_status", {
+                      from,
+                      to,
+                      total: rows.length,
+                    })}
+                  </p>
+                  <div className="admin-users-pagination-actions">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-size="sm"
+                      disabled={safePage <= 0}
+                      aria-label={t("admin.users.previous")}
+                      onClick={() =>
+                        setPage((current) => Math.max(0, current - 1))
+                      }
+                    >
+                      <ChevronLeft size={16} aria-hidden="true" />
+                      {t("admin.users.previous")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-size="sm"
+                      disabled={safePage >= pageCount - 1}
+                      aria-label={t("admin.users.next")}
+                      onClick={() =>
+                        setPage((current) =>
+                          Math.min(pageCount - 1, current + 1),
+                        )
+                      }
+                    >
+                      {t("admin.users.next")}
+                      <ChevronRight size={16} aria-hidden="true" />
+                    </Button>
+                  </div>
+                </nav>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
       {removeTarget && (
         <Modal
           title={t("admin.users.remove_title")}
@@ -449,6 +567,6 @@ export function AdminAccessRequests({
           </div>
         </Modal>
       )}
-    </div>
+    </section>
   );
 }
