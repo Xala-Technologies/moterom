@@ -685,6 +685,7 @@
     "capacity_label_en": "Capacity label (English)",
     "room_image": "Photo",
     "room_image_upload": "Upload photo",
+    "room_image_remove": "Remove photo",
     "room_image_upload_hint": "WebP, JPEG or PNG, max 2 MB. The file is stored by Møterom (not Digilist media).",
     "room_image_too_large": "The photo cannot be larger than 2 MB.",
     "room_image_type": "Use WebP, JPEG or PNG.",

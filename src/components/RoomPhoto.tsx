@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
 import type { Room } from "../../shared/types";
 import { useT } from "../i18n";
 
-export function RoomPhoto({ room }: { room: Room }) {
+export function RoomPhoto({
+  room,
+  eager = false,
+}: {
+  room: Room;
+  /** Prefer for admin edit previews so a newly chosen file paints immediately. */
+  eager?: boolean;
+}) {
   const { t } = useT();
   const [failed, setFailed] = useState(false);
   const illustrative = room.imageKind !== "actual";
   const showImage = Boolean(room.image) && !failed;
   const className = `room-image ${showImage ? "" : "no-photo"}`;
+
+  useEffect(() => {
+    setFailed(false);
+  }, [room.image]);
+
   return (
     <div className={className}>
       {showImage ? (
@@ -18,7 +30,7 @@ export function RoomPhoto({ room }: { room: Room }) {
             alt=""
             width={1200}
             height={750}
-            loading="lazy"
+            loading={eager ? "eager" : "lazy"}
             decoding="async"
             onError={() => setFailed(true)}
           />
