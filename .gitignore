@@ -18,3 +18,5 @@ public/message-images/
 public/rooms/room-*.jpg
 public/rooms/room-*.png
 public/rooms/room-*.webp
+# Local GitNexus index (regenerate with `gitnexus analyze`)
+.gitnexus/
