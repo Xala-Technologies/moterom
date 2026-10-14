@@ -11,7 +11,7 @@ Verify before the customer meeting. Two hostnames on the same VPS are not enough
 
 ## Checks
 
-1. FHH `.env` has `DATA_MODE=demo`, `ALLOW_DEMO_DEPLOYMENT=true`, `BOOKING_ACCESS=public`, `BUILDING_NAME=Frivillighetens Hus`, and a **distinct** `DEMO_DB_PATH` (not SKB’s file).
+1. FHH `.env` has `DATA_MODE=demo`, `ALLOW_DEMO_DEPLOYMENT=true`, `BOOKING_ACCESS=public`, `BUILDING_NAME=Frivillighetens Hus`, and a **distinct** `DEMO_DB_PATH` inside the FHH volume (e.g. `/app/.data/fhh-demo.sqlite` — not SKB’s file).
 2. FHH `.env` has **no** `DIGILIST_TENANT_ID` / production write credentials used by SKB live. Digilist URL vars may exist for OTP later; demo mode must not create Digilist bookings.
 3. `curl -s https://fhh.digilist.no/api/config` → `mode=demo`, `access=public`.
 4. `curl -s https://skb.digilist.no/api/config` → `mode=live`, `access=members`, SKB building name.
