@@ -15,7 +15,9 @@
       "internal": 400,
       "ideal": 560,
       "external": 800
-    }
+    },
+    "image": "/rooms/fhh-elvebredden.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "biblioteket",
@@ -33,7 +35,9 @@
       "internal": 400,
       "ideal": 560,
       "external": 800
-    }
+    },
+    "image": "/rooms/fhh-biblioteket.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "salongen",
@@ -51,7 +55,9 @@
       "internal": 400,
       "ideal": 560,
       "external": 800
-    }
+    },
+    "image": "/rooms/fhh-salongen.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "spisestuen",
@@ -69,7 +75,9 @@
       "internal": 400,
       "ideal": 560,
       "external": 800
-    }
+    },
+    "image": "/rooms/fhh-spisestuen.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "styrerommet",
@@ -88,7 +96,9 @@
       "internal": 400,
       "ideal": 560,
       "external": 800
-    }
+    },
+    "image": "/rooms/fhh-styrerommet.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "sal-1",
@@ -106,7 +116,9 @@
       "internal": 600,
       "ideal": 840,
       "external": 1200
-    }
+    },
+    "image": "/rooms/fhh-sal-1.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "sal-2",
@@ -124,7 +136,9 @@
       "internal": 600,
       "ideal": 840,
       "external": 1200
-    }
+    },
+    "image": "/rooms/fhh-sal-2.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "sal-3",
@@ -142,7 +156,9 @@
       "internal": 600,
       "ideal": 840,
       "external": 1200
-    }
+    },
+    "image": "/rooms/fhh-sal-3.jpg",
+    "imageKind": "illustrative"
   },
   {
     "id": "bakgarden",
@@ -161,6 +177,8 @@
       "internal": 200,
       "ideal": 280,
       "external": 400
-    }
+    },
+    "image": "/rooms/fhh-bakgarden.jpg",
+    "imageKind": "illustrative"
   }
 ]

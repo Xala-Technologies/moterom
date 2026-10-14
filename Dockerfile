@@ -15,6 +15,7 @@ COPY --from=build /app/server ./server
 COPY --from=build /app/shared ./shared
 COPY --from=build /app/config ./config
 COPY --from=build /app/assets ./assets
+COPY --from=build /app/public ./public
 RUN mkdir -p .data/message-images .data/room-images && chown -R node:node .data
 USER node
 EXPOSE 4173

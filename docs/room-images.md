@@ -1,19 +1,37 @@
 # Room images
 
-Frivillighetens Hus has no approved photographs and no attached illustrations on this branch. Do not reuse the SKB Unsplash files below as pictures of this building. Leave `image` empty until a real photo is uploaded in admin or an approved file is added here.
+## Frivillighetens Hus (this branch)
 
-Live room photos may be uploaded in admin and stored by the Møterom BFF under `.data/room-images` (public URL `/room-images/…`). Digilist receives that absolute HTTPS URL as a resource image reference and records `metadata.moterom.imageHost: "moterom"` — binaries are not uploaded into Digilist media. External HTTPS URLs still work. Admin must explicitly confirm the photo type; `metadata.moterom.imageKind` is bound to the selected image URL. Unclassified live photos are conservatively labelled illustrative until reviewed. A later image replacement does not inherit an earlier photo’s provenance. Keep `FLOORPLAN_PATH` for the private plan; do not commit that file.
+Demo illustrations only. They are **not** photographs of Frivillighetens Hus. The UI labels them **Illustrasjonsfoto**. Replace with approved building photos when available.
 
-License for every file below: [Unsplash License](https://unsplash.com/license) (free to use, including commercially). Retrieved 16 September 2026. The UI labels them **Illustrasjonsfoto**.
+License: [Unsplash License](https://unsplash.com/license). Retrieved 14 October 2026.
 
-| Portal room        | File                             | Kind         | Unsplash photo ID                  | Photographer      |
-| ------------------ | -------------------------------- | ------------ | ---------------------------------- | ----------------- |
-| Sauda 1            | `public/rooms/sauda-1.webp`      | Illustrative | `photo-1497366216548-37526070297c` | Nastuh Abootalebi |
-| Sauda 2            | `public/rooms/sauda-2.webp`      | Illustrative | `photo-1497366811353-6870744d04b2` | Nastuh Abootalebi |
-| Tysso              | `public/rooms/tysso.webp`        | Illustrative | `photo-1517502884422-41eaead166d4` | Campaign Creators |
-| Glomma 1           | `public/rooms/glomma-1.webp`     | Illustrative | `photo-1431540015161-0bf868a2d407` | Benjamin Child    |
-| Glomma 2           | `public/rooms/glomma-2.webp`     | Illustrative | `photo-1568992687947-868a62a9f521` | Copernico         |
-| Eidefossen · 12–14 | `public/rooms/eidefossen-a.webp` | Illustrative | `photo-1577412647305-991150c7d163` | Covene            |
-| Eidefossen · 10–12 | `public/rooms/eidefossen-b.webp` | Illustrative | `photo-1556761175-5973dc0f32e7`    | Austin Distel     |
+| Portal room | File | Kind | Unsplash photo ID | Notes |
+| --- | --- | --- | --- | --- |
+| Elvebredden | `public/rooms/fhh-elvebredden.jpg` | Illustrative | `photo-1497366754035-f200968a6e72` | Generic meeting room |
+| Biblioteket | `public/rooms/fhh-biblioteket.jpg` | Illustrative | `photo-1542744173-8e7e53415bb0` | Generic meeting room |
+| Salongen | `public/rooms/fhh-salongen.jpg` | Illustrative | `photo-1517048676732-d65bc937f952` | Generic meeting room |
+| Spisestuen | `public/rooms/fhh-spisestuen.jpg` | Illustrative | `photo-1531482615713-2afd69097998` | Generic meeting room |
+| Styrerommet | `public/rooms/fhh-styrerommet.jpg` | Illustrative | `photo-1505373877841-8d25f7d46678` | Generic meeting room |
+| Sal 1 | `public/rooms/fhh-sal-1.jpg` | Illustrative | `photo-1557804506-669a67965ba0` | Generic hall / large room |
+| Sal 2 | `public/rooms/fhh-sal-2.jpg` | Illustrative | `photo-1497215842964-222b430dc094` | Generic office space |
+| Sal 3 | `public/rooms/fhh-sal-3.jpg` | Illustrative | `photo-1552581234-26160f608093` | Generic meeting room |
+| Bakgården | `public/rooms/fhh-bakgarden.jpg` | Illustrative | `photo-1600508774634-4e11d34730e2` | Outdoor / terrace stock |
 
-Replace a file and keep the same path, or publish a Digilist resource image, to switch a room to an actual photograph. Do not invent equipment, accessibility claims, or room identities to match the picture.
+Do not present these as actual FHH rooms. Do not invent equipment or capacities from the pictures.
+
+## SKB illustrative set (other branches / inventory)
+
+Not used on the FHH branch catalogue. Kept in `public/rooms/` for SKB:
+
+| Portal room | File | Kind | Unsplash photo ID | Photographer |
+| --- | --- | --- | --- | --- |
+| Sauda 1 | `public/rooms/sauda-1.webp` | Illustrative | `photo-1497366216548-37526070297c` | Nastuh Abootalebi |
+| Sauda 2 | `public/rooms/sauda-2.webp` | Illustrative | `photo-1497366811353-6870744d04b2` | Nastuh Abootalebi |
+| Tysso | `public/rooms/tysso.webp` | Illustrative | `photo-1517502884422-41eaead166d4` | Campaign Creators |
+| Glomma 1 | `public/rooms/glomma-1.webp` | Illustrative | `photo-1431540015161-0bf868a2d407` | Benjamin Child |
+| Glomma 2 | `public/rooms/glomma-2.webp` | Illustrative | `photo-1568992687947-868a62a9f521` | Copernico |
+| Eidefossen · 12–14 | `public/rooms/eidefossen-a.webp` | Illustrative | `photo-1577412647305-991150c7d163` | Covene |
+| Eidefossen · 10–12 | `public/rooms/eidefossen-b.webp` | Illustrative | `photo-1556761175-5973dc0f32e7` | Austin Distel |
+
+Live room photos may be uploaded in admin under `.data/room-images` (`/room-images/…`). Keep `FLOORPLAN_PATH` for the private plan; do not commit that file.

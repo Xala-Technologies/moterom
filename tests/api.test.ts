@@ -42,7 +42,7 @@ beforeAll(async () => {
   expect(catalogue.length).toBeGreaterThan(0);
   if (catalogue[0]?.image) {
     expect(catalogue[0].imageKind).toBe("illustrative");
-    expect(catalogue[0].image).toMatch(/\.webp$/);
+    expect(catalogue[0].image).toMatch(/\.(webp|jpe?g|png)$/);
   } else {
     expect(catalogue[0]?.imageKind).toBeUndefined();
   }
