@@ -1,6 +1,6 @@
 # Room images
 
-None of these files are photographs of the customer’s rooms. They are licensed illustrative meeting-room pictures used only until approved building photographs are configured in Digilist or this inventory.
+Frivillighetens Hus has no approved photographs and no attached illustrations on this branch. Do not reuse the SKB Unsplash files below as pictures of this building. Leave `image` empty until a real photo is uploaded in admin or an approved file is added here.
 
 Live room photos may be uploaded in admin and stored by the Møterom BFF under `.data/room-images` (public URL `/room-images/…`). Digilist receives that absolute HTTPS URL as a resource image reference and records `metadata.moterom.imageHost: "moterom"` — binaries are not uploaded into Digilist media. External HTTPS URLs still work. Admin must explicitly confirm the photo type; `metadata.moterom.imageKind` is bound to the selected image URL. Unclassified live photos are conservatively labelled illustrative until reviewed. A later image replacement does not inherit an earlier photo’s provenance. Keep `FLOORPLAN_PATH` for the private plan; do not commit that file.
 

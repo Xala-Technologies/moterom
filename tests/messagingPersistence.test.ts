@@ -238,7 +238,7 @@ describe("message history survives reopening the database file", () => {
       date: addDays(today(), 12),
       start: "11:00",
       end: "12:00",
-      people: 2,
+      people: 1,
       title: "Persist chat",
       notes: "",
       quoteToken: "",

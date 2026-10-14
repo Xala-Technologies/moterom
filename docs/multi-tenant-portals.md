@@ -54,9 +54,14 @@ flowchart LR
   Digilist --> Platform
 ```
 
-## Current SKB deployment
+## Current deployments
 
-Today Møterom is **single-tenant**: one `DIGILIST_TENANT_ID`, one `PUBLIC_ORIGIN`, one rooms map. That already enforces private Finn rom for SKB. See [`skb-private-portal.md`](skb-private-portal.md) and [`digilist-integration.md`](digilist-integration.md).
+Møterom is still **single-tenant per deploy**: one `DIGILIST_TENANT_ID`, one `PUBLIC_ORIGIN`, one rooms map.
+
+- SKB: `dev`/`main`, `https://skb.digilist.no` — [`skb-private-portal.md`](skb-private-portal.md)
+- Frivillighetens Hus: branch `feat/frivillighetens-hus`, `https://fhh.digilist.no` — [`fhh-private-portal.md`](fhh-private-portal.md)
+
+That already keeps Finn rom private for the configured tenant. See [`digilist-integration.md`](digilist-integration.md).
 
 ## When a second company exists
 

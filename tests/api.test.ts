@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { addDays, interval, today } from "../shared/time";
+import rooms from "../config/rooms.json";
 process.env.DATA_MODE = "demo";
 process.env.DEMO_DB_PATH = ":memory:";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
@@ -38,8 +39,13 @@ beforeAll(async () => {
     image?: string;
     imageKind?: string;
   }>;
-  expect(catalogue[0]?.imageKind).toBe("illustrative");
-  expect(catalogue[0]?.image).toMatch(/\.webp$/);
+  expect(catalogue.length).toBeGreaterThan(0);
+  if (catalogue[0]?.image) {
+    expect(catalogue[0].imageKind).toBe("illustrative");
+    expect(catalogue[0].image).toMatch(/\.webp$/);
+  } else {
+    expect(catalogue[0]?.imageKind).toBeUndefined();
+  }
 });
 describe("HTTP boundaries and complete booking lifecycle", () => {
   it("hides the optional floor plan when no approved asset is configured", async () => {
@@ -78,16 +84,17 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       await customer.get("/api/availability/slots").query({ date }).expect(200)
     ).body as Array<{ start: string; state: string }>;
     expect(all.find((slot) => slot.start === "08:00")?.state).toBe("available");
-    const tysso = (
+    const occupiedRoomId = rooms[2].id;
+    const occupied = (
       await customer
         .get("/api/availability/slots")
-        .query({ date, roomId: "tysso" })
+        .query({ date, roomId: occupiedRoomId })
         .expect(200)
     ).body as Array<{ start: string; state: string }>;
-    expect(tysso.find((slot) => slot.start === "09:00")?.state).toBe(
+    expect(occupied.find((slot) => slot.start === "09:00")?.state).toBe(
       "unavailable",
     );
-    expect(tysso.find((slot) => slot.start === "14:00")?.state).toBe(
+    expect(occupied.find((slot) => slot.start === "14:00")?.state).toBe(
       "available",
     );
   });
@@ -146,7 +153,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       date: addDays(today(), 18),
       start: "13:00",
       end: "14:00",
-      people: 2,
+      people: 1,
     };
     const quote = (
       await guest
@@ -209,7 +216,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       date: addDays(today(), 19),
       start: "10:00",
       end: "13:00",
-      people: 2,
+      people: 1,
     };
     const quote = (
       await customer
@@ -242,7 +249,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       date: addDays(today(), 12),
       start: "09:00",
       end: "10:00",
-      people: 4,
+      people: 1,
     };
     const quote = (
       await customer
@@ -302,7 +309,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       date: addDays(today(), 14),
       start: "11:00",
       end: "12:00",
-      people: 2,
+      people: 1,
     };
     const pendingRoom = (await administrator.get("/api/admin").expect(200)).body
       .rooms[1];

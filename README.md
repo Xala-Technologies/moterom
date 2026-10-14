@@ -2,7 +2,7 @@
 
 A bilingual (Norwegian Bokmål default + English) meeting-room portal for one building, using Digilist's visual language and existing booking services. Includes a working local demo and a server-side Digilist integration adapter.
 
-**Status:** review branch with a dedicated SKB development tenant and seven private room slugs documented in the repository. Authenticated staging acceptance and remaining shared-backend contracts are still open; see [the integration review](docs/architecture/moterom-digilist-review-2026-09-18.md). Expansion to other companies uses private Digilist tenants per building — see [multi-tenant private portals](docs/multi-tenant-portals.md). No Digilist deployment or customer data was changed by this review.
+**Status:** Frivillighetens Hus portal branch. Intended production origin is `https://fhh.digilist.no`. The Digilist tenant, confirmed capacities, photos and address are not in this repository yet — see [the FHH portal note](docs/fhh-private-portal.md). SKB stays on `dev`/`main` and `skb.digilist.no`. Do not point SKB hosting at this branch. Expansion rules are in [multi-tenant private portals](docs/multi-tenant-portals.md).
 
 ## Run locally
 
@@ -27,7 +27,7 @@ The test suite covers booking conflicts, idempotency, ownership, role checks, si
 
 ## Product flow
 
-- **Find a room:** seven room cards, date/time/attendee filter and an optional privately configured floor plan. Only rooms available for the entire selected interval are shown after filtering. A service failure is displayed as an error, never as a trustworthy availability result.
+- **Find a room:** room cards for the Frivillighetens Hus catalogue, date/time/attendee filter and an optional privately configured floor plan. Only rooms available for the entire selected interval are shown after filtering. A service failure is displayed as an error, never as a trustworthy availability result.
 - **Book:** choose the room and date/time → sign in if necessary → review and confirm. Availability and price are checked again on the server. A room that requires approval produces a request, not a false confirmation. After confirm, the customer sees the booking detail (cancel, calendar download, book again, and a request to change time). The original reservation remains in place until an edit is approved in Digilist.
 - **Administration:** daily overview, day/7-day room calendar, customer/reference search, status filters, approve/reject, room content/capacity/approval editing, and maintenance blocks. Admin → Brukere lists Digilist members and a local access-request inbox; **Godkjenn tilgang** grants Møterom portal access (Digilist booker sync is best-effort). Opening hours, buffers and paid listing tools stay in Digilist until wrapped APIs exist. Møterom has no payments.
 - **Mobile:** stacked booking controls, room cards, and an agenda in place of the wide admin timeline. Administrators also get header and bottom navigation to Finn rom and Administrasjon. Light/dark themes, labelled inputs, keyboard-operable dialogs, focus styles, skip link and status announcements are included.
@@ -38,34 +38,36 @@ The application uses **Inter**, Digilist's navy **#003057**, its actual theme to
 
 The unchanged files in `src/design/digilist/` and `public/digilist-logo.svg` were sourced from the private `Xala-Technologies/digilist` repository at commit `16a8025d52cc69b917f9c255cc3ef5e1637bb0c7`. See [the design source record](docs/design-source.md). Application styling is kept in `src/styles.css` so the source tokens remain reviewable. These internal brand files are not being relicensed as an open-source design system.
 
-The seven rooms and capacity ranges come from the supplied _Oversikt møterom.pdf_. The demo conservatively uses the lower capacity bound. The PDF contains two rooms called Eidefossen; they are temporarily distinguished by capacity. No equipment, prices or building address were invented. Catalogue images are licensed **illustrative** photographs, labelled in the UI and recorded in [docs/room-images.md](docs/room-images.md), until approved building photographs exist.
+Room names come from Ingvild’s specification and the 13 October 2026 meeting. Capacities, equipment, prices, address and photographs are not in those documents and are not invented here. The fifth small room is listed as **Styrerommet** until the customer confirms Styrerommet vs Syerommet. Sal 1–2 / Sal 1–3 are not separate catalogue rows until the booking engine can block overlapping zones. See [`config/rooms.json`](config/rooms.json) and [docs/fhh-private-portal.md](docs/fhh-private-portal.md).
 
-| Room               | Source capacity | Demo capacity |
-| ------------------ | --------------- | ------------- |
-| Sauda 1            | 12–14           | 12            |
-| Sauda 2            | 10–12           | 10            |
-| Tysso              | 24–26           | 24            |
-| Glomma 1           | 44–56           | 44            |
-| Glomma 2           | 26–28           | 26            |
-| Eidefossen · 12–14 | 12–14           | 12            |
-| Eidefossen · 10–12 | 10–12           | 10            |
+| Room        | Source capacity | Notes                              |
+| ----------- | --------------- | ---------------------------------- |
+| Elvebredden | unknown         |                                    |
+| Biblioteket | unknown         |                                    |
+| Salongen    | unknown         |                                    |
+| Spisestuen  | unknown         |                                    |
+| Styrerommet | unknown         | Name needs confirmation            |
+| Sal 1       | unknown         | Zone combinations not enforced     |
+| Sal 2       | unknown         | Zone combinations not enforced     |
+| Sal 3       | unknown         | Zone combinations not enforced     |
+| Bakgården   | unknown         | Internal-only rule not implemented |
 
 ## Connect Digilist
 
-1. Set a real resource `slug` for each entry in `config/rooms.json` only after the DEV SKB-test tenant rooms exist. IDs in this file are stable portal IDs; do not replace them with guessed Convex IDs. Live rooms must belong to `DIGILIST_TENANT_ID`, be published/active, `visibility=private`, and `accessChannel=tenant_portal`.
-2. Set `DATA_MODE=live`, `DIGILIST_TENANT_ID`, `DIGILIST_URL` (Convex SDK: `https://convex-api.dev.digilist.no` for isolated work), and `DIGILIST_HTTP_URL` (REST: `https://convex.dev.digilist.no`). Do not swap those two URLs. Set `ADMIN_EMAILS` to the Digilist account(s) allowed to open Møterom Admin (default for non-production: `skb@digilist.no`). Admin also requires an active Digilist tenant role (`tenant_admin`, `saksbehandler`, or legacy `owner`/`admin`/`manager`/`staff`) on that tenant.
-3. Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a trailing slash (`https://skb.digilist.no` in production, `http://localhost:4173` locally). Generate a random `SESSION_SECRET` with at least 32 characters and provide it through the deployment's secret manager.
+1. Set a real resource `slug` for each entry in `config/rooms.json` only after the DEV Frivillighetens Hus tenant rooms exist. IDs in this file are stable portal IDs; do not replace them with guessed Convex IDs. Live rooms must belong to `DIGILIST_TENANT_ID`, be published/active, `visibility=private`, and `accessChannel=tenant_portal`.
+2. Set `DATA_MODE=live`, `DIGILIST_TENANT_ID`, `DIGILIST_URL` (Convex SDK: `https://convex-api.dev.digilist.no` for isolated work), and `DIGILIST_HTTP_URL` (REST: `https://convex.dev.digilist.no`). Do not swap those two URLs. Set `ADMIN_EMAILS` to the Digilist account(s) allowed to open Møterom Admin. Admin also requires an active Digilist tenant role (`tenant_admin`, `saksbehandler`, or legacy `owner`/`admin`/`manager`/`staff`) on that tenant.
+3. Set `PUBLIC_ORIGIN` to the exact HTTPS origin, without a trailing slash (`https://fhh.digilist.no` in production, `http://localhost:4173` locally). Generate a random `SESSION_SECRET` with at least 32 characters and provide it through the deployment's secret manager.
 4. Set `BOOKING_ACCESS=members` so the portal is login-first and only Digilist building members can use rooms and booking. Access requests appear under Admin → Users; approving or removing membership is still done in Digilist.
-5. Add building name, address and contact email. Confirm room names, capacities, images, equipment, opening hours, minimum durations, turnaround time, cancellation rules and approval requirements in Digilist. Do not invent catalogue facts in this repository.
-6. Leave `PAYMENT_MODE` unset on the SKB live target. Rooms must be free/internal in Digilist. A paid quote fails closed in the BFF; the portal does not redirect to app.digilist.no. Run [staging acceptance](docs/acceptance.md). Live `skb.digilist.no` uses `DATA_MODE=live` against the isolated Digilist DEV tenant until a production Digilist tenant is approved.
+5. Add building name, address and contact email when the customer confirms them. Confirm room names, capacities, images, equipment, opening hours, minimum durations, turnaround time, cancellation rules and approval requirements in Digilist. Do not invent catalogue facts in this repository.
+6. Leave `PAYMENT_MODE` unset on `fhh.digilist.no`. A paid quote fails closed in the BFF; the portal does not redirect to app.digilist.no. Run [staging acceptance](docs/acceptance.md) against the FHH tenant once it exists.
 
 Production defaults to live mode and refuses incomplete configuration. Demo login exists only in demo mode. Running a production demo requires both `DATA_MODE=demo` and the explicit `ALLOW_DEMO_DEPLOYMENT=true`; it still requires HTTPS and a strong session secret. Never enable that setting on the customer deployment.
 
 ### Payment boundary
 
-SKB bookings are internal and free. The live adapter calls authenticated `domain/bookings:create` and refuses a Digilist quote with a total greater than zero. It does not open guest checkout or app.digilist.no. Configure the seven rooms as free in Digilist rather than zeroing prices in this repository.
+This portal still refuses paid quotes. The live adapter calls authenticated `domain/bookings:create` and refuses a Digilist quote with a total greater than zero. It does not open guest checkout or app.digilist.no. Keep rooms free in Digilist for an internal pilot, or leave them unpublished until price rules are agreed. Do not zero prices in this repository to fake a paid product.
 
-`PAYMENT_MODE=invoice` is not used on the SKB live target. This application does not create invoices, charge cards, or claim email/SMS receipts unless the corresponding service confirmed them.
+`PAYMENT_MODE=invoice` is not used on `fhh.digilist.no`. This application does not create invoices, charge cards, or claim email/SMS receipts unless the corresponding service confirmed them.
 
 ## Architecture
 

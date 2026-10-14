@@ -86,7 +86,7 @@ const input = () => ({
   date: addDays(today(), 10),
   start: "09:00",
   end: "10:00",
-  people: 2,
+  people: 1,
   title: "Teammøte",
   notes: "Agenda",
   name: member.name,

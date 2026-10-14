@@ -261,7 +261,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
       date: addDays(today(), 10),
       start: "09:00",
       end: "10:00",
-      people: 2,
+      people: 1,
     };
     mocks.query.mockImplementation(async (ref) => {
       if (getFunctionName(ref).includes("getBySlug")) return source;
@@ -339,7 +339,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
           date: addDays(today(), 10),
           start: "09:00",
           end: "10:00",
-          people: 2,
+          people: 1,
         },
         user,
       ),
@@ -391,7 +391,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
         date: addDays(today(), 10),
         start: "09:00",
         end: "10:00",
-        people: 2,
+        people: 1,
         name: user.name,
         email: user.email,
         title: "Teammøte",
