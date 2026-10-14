@@ -23,10 +23,25 @@ Do not invent these in env, Digilist, or `config/rooms.json`:
 - Building address and contact email
 - Admin emails
 - Whether Styrerommet or Syerommet is the correct fifth meeting-room name
-- Zone graph for Sal 1–3 and Bakgården
+- Digilist live zone graph (demo zones exist; production in Digilist is next)
+- Bakgården ↔ Sal 3 dependency
 - Price groups and cancellation rules
 
-Ingvild’s specification lists Elvebredden, Biblioteket, Salongen, Spisestuen and Styrerommet, plus Sal 1–3 and Bakgården. The 13 October 2026 meeting used Syerommet instead of Styrerommet. This catalogue uses **Styrerommet** with `nameNeedsConfirmation`. Sal 1–2 and Sal 1–3 are not separate bookable rows until the booking engine can block overlapping zones.
+Ingvild’s specification lists Elvebredden, Biblioteket, Salongen, Spisestuen and Styrerommet, plus Sal 1–3 and Bakgården. The 13 October 2026 meeting used Syerommet instead of Styrerommet. This catalogue uses **Styrerommet** with `nameNeedsConfirmation`. Demo catalogue includes **Sal 1–2** and **Sal 1–3** as bookable products with zone conflicts in the demo engine.
+
+## Demo vs Digilist production (zones)
+
+| Capability                       | FHH demo                     | Digilist production      |
+| -------------------------------- | ---------------------------- | ------------------------ |
+| Zone model Sal 1 / 2 / 3         | Working demo motor           | Must be verified / built |
+| Zone conflict in availability    | Yes                          | Not this delivery        |
+| Zone conflict on booking         | Yes (atomic SQLite re-check) | Not this delivery        |
+| Combined halls                   | Fixed room variants          | Must be specified        |
+| Bakgården dependency             | Not included                 | Must be clarified        |
+| Shared date picker on Finn rom   | Yes                          | FHH UI                   |
+| Automatic price for combinations | Illustrative demo rates      | Separate requirement     |
+
+Say in the customer meeting: this runs in the demo motor; Digilist production is the next build step.
 
 ## Room seed (portal ids)
 
@@ -39,9 +54,11 @@ Stable portal `id`s stay in this repository. Digilist slugs are placeholders unt
 | salongen    | Salongen    | `fhh-salongen`    | unknown  |                                                    |
 | spisestuen  | Spisestuen  | `fhh-spisestuen`  | unknown  |                                                    |
 | styrerommet | Styrerommet | `fhh-styrerommet` | unknown  | Confirm name vs Syerommet                          |
-| sal-1       | Sal 1       | `fhh-sal-1`       | unknown  | Combinations not enforced                          |
-| sal-2       | Sal 2       | `fhh-sal-2`       | unknown  | Combinations not enforced                          |
-| sal-3       | Sal 3       | `fhh-sal-3`       | unknown  | Combinations not enforced                          |
+| sal-1       | Sal 1       | `fhh-sal-1`       | unknown  | Zone conflicts in demo motor                       |
+| sal-2       | Sal 2       | `fhh-sal-2`       | unknown  | Zone conflicts in demo motor                       |
+| sal-3       | Sal 3       | `fhh-sal-3`       | unknown  | Zone conflicts in demo motor                       |
+| sal-1-2     | Sal 1–2     | `fhh-sal-1-2`     | unknown  | Combined; demo zones block Sal 1/2/1–3             |
+| sal-1-3     | Sal 1–3     | `fhh-sal-1-3`     | unknown  | Full hall; demo zones block all sal variants       |
 | bakgarden   | Bakgården   | `fhh-bakgarden`   | unknown  | `internalOnly` in demo (server-enforced)           |
 
 `capacity: 1` in `config/rooms.json` is a schema minimum so demo booking tests can run. The labels say capacity is unconfirmed. Do not treat 1 as the real room size. No photos are attached; do not reuse SKB illustrations as this building.

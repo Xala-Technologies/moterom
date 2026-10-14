@@ -238,11 +238,11 @@
     "demo_price_external": "Ekstern",
     "demo_price_per_hour": "{{amount}}/time",
     "demo_price_disclaimer": "Demo-priser. Endelig pris beregnes etter innlogging og verifisering av prisgruppe.",
-    "zone_illustration_title": "Foreslått sonelogikk (ikke aktiv i motoren)",
-    "zone_illustration_body": "Eksempel: når Sal 1 + 2 er booket, sperres overlappende soner. Sal 3 kan fortsatt være ledig. Dette bygges som P0 — demoen tillater ikke falsk sonebooking.",
-    "zone_blocked": "Blokkert",
-    "zone_free": "Ledig",
-    "zone_example_caption": "Booking av Sal 1 + 2 (foreslått oppførsel):",
+    "halls_title": "Salene",
+    "halls_body": "Salene kan leies separat eller samlet. Bookinger som bruker samme fysiske areal, blokkerer hverandre.",
+    "halls_filter_aria": "Filtrer saler",
+    "halls_filter_all": "Alle",
+    "halls_selected_date": "Valgt dato",
     "open_access_hint": "Åpent for eksterne. Logg inn for å bekrefte booking. Interne får egne priser."
   },
   "booking": {

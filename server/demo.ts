@@ -26,6 +26,13 @@ import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts"
 import { enrichBookingConversation } from "./conversationContext";
 import { DEMO_TERMS_VERSION, cancelDeadlineDaysForRoom } from "./bookingTerms";
 import { assertCanAccessRoom } from "./roomAccess";
+import { zonesOverlap } from "../shared/zones";
+
+/** Bookings/blocks that hold a zone: pending and confirmed (not cancelled/rejected). */
+function bookingHoldsZone(status: string) {
+  return !["cancelled", "rejected"].includes(status);
+}
+
 export class DemoStore {
   db: DatabaseSync;
   constructor(
@@ -40,7 +47,9 @@ export class DemoStore {
     );
     for (const room of seedRooms)
       this.db
-        .prepare("INSERT OR IGNORE INTO rooms VALUES (?, ?)")
+        .prepare(
+          "INSERT INTO rooms VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data=excluded.data",
+        )
         .run(room.id, JSON.stringify(room));
     if (seed && !this.db.prepare("SELECT id FROM bookings LIMIT 1").get()) {
       const date = addDays(today(), 1);
@@ -83,15 +92,15 @@ export class DemoStore {
         },
         {
           id: "example-2",
-          roomId: "sal-1",
-          start: "13:00",
-          end: "16:00",
+          roomId: "sal-1-2",
+          start: "10:00",
+          end: "12:00",
           name: "Ideell forening",
           email: "sal@example.invalid",
           userId: "demo-external",
           title: "Årsmøte",
           status: "pending",
-          totalPrice: 3600,
+          totalPrice: 4000,
         },
         {
           id: "example-3",
@@ -198,6 +207,24 @@ export class DemoStore {
     if (!room.portalPublished)
       throw new AppError(404, "Rommet ble ikke funnet.", "room_not_found");
   }
+
+  /** Zone + half-open time conflict against bookings and admin blocks. */
+  private zoneOccupied(
+    roomId: string,
+    span: { startTime: number; endTime: number },
+  ): boolean {
+    const bookingHit = this.all<Booking>("bookings").some(
+      (b) =>
+        bookingHoldsZone(b.status) &&
+        zonesOverlap(b.roomId, roomId) &&
+        overlaps(span, b),
+    );
+    if (bookingHit) return true;
+    return this.all<Block>("blocks").some(
+      (b) => zonesOverlap(b.roomId, roomId) && overlaps(span, b),
+    );
+  }
+
   availability(
     search: Search,
     locale: Locale = DEFAULT_LOCALE,
@@ -212,16 +239,7 @@ export class DemoStore {
           reason: translateMessage(locale, "room_not_found"),
         };
       }
-      const occupied =
-        this.all<Booking>("bookings").some(
-          (b) =>
-            b.roomId === room.id &&
-            !["cancelled", "rejected"].includes(b.status) &&
-            overlaps(span, b),
-        ) ||
-        this.all<Block>("blocks").some(
-          (b) => b.roomId === room.id && overlaps(span, b),
-        );
+      const occupied = this.zoneOccupied(room.id, span);
       const reason =
         span.startTime < Date.now()
           ? translateMessage(locale, "time_past")
@@ -294,10 +312,14 @@ export class DemoStore {
           "Du må godta leievilkårene for å bestille.",
           "terms_required",
         );
+      // Re-check zone + time inside the write lock. Availability is a hint only.
       const availability = this.availability(input).find(
         (r) => r.roomId === input.roomId,
       );
-      if (availability?.state !== "available")
+      if (
+        availability?.state !== "available" ||
+        this.zoneOccupied(room.id, interval(input))
+      )
         throw new AppError(
           409,
           availability?.reason || "Rommet er ikke ledig.",
@@ -592,26 +614,23 @@ export class DemoStore {
         "Velg et fremtidig tidspunkt.",
         "future_time_required",
       );
-    const occupied =
-      this.all<Booking>("bookings").some(
-        (b) =>
-          b.roomId === roomId &&
-          !["cancelled", "rejected"].includes(b.status) &&
-          overlaps(span, b),
-      ) ||
-      this.all<Block>("blocks").some(
-        (b) => b.roomId === roomId && overlaps(span, b),
-      );
-    if (occupied)
-      throw new AppError(
-        409,
-        "Tidsrommet overlapper en booking eller blokkering.",
-        "interval_overlaps",
-      );
-    const block: Block = { id: randomUUID(), roomId, title, ...span };
-    this.save("blocks", block);
-    this.audit(user, "block.created", block.id);
-    return block;
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      if (this.zoneOccupied(roomId, span))
+        throw new AppError(
+          409,
+          "Tidsrommet overlapper en booking eller blokkering.",
+          "interval_overlaps",
+        );
+      const block: Block = { id: randomUUID(), roomId, title, ...span };
+      this.save("blocks", block);
+      this.audit(user, "block.created", block.id);
+      this.db.exec("COMMIT");
+      return block;
+    } catch (error) {
+      if (this.db.isTransaction) this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   removeBlock(id: string, user: User) {
     this.assertAdmin(user);

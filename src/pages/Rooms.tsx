@@ -1,14 +1,23 @@
-import { useEffect, useState } from "react";
-import { CalendarDays, Map as MapIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Map as MapIcon,
+} from "lucide-react";
 import { useApi } from "../api";
 import { Button, Empty, ErrorState, Loading, Modal } from "../components/ui";
 import { RoomCard } from "../components/RoomCard";
 import { BookingConfirmModal } from "../components/BookingConfirmModal";
+import { MonthCalendar } from "../components/MonthCalendar";
 import type { RoomSlotSelection } from "../components/RoomCardSchedule";
 import type { Room, Search } from "../../shared/types";
-import { defaultSearch, today } from "../../shared/time";
+import { addDays, defaultSearch, today } from "../../shared/time";
+import { SAL_ROOM_IDS, isSalRoom } from "../../shared/zones";
 import { useApp } from "../context";
-import { useT } from "../i18n";
+import { useFormatters, useT } from "../i18n";
+
+const SAL_FILTER_ORDER = SAL_ROOM_IDS;
 
 export function readSearch(params: URLSearchParams): Search {
   const d = defaultSearch();
@@ -23,11 +32,12 @@ export function readSearch(params: URLSearchParams): Search {
 export function Rooms() {
   const { config } = useApp();
   const { t } = useT();
+  const { displayDate } = useFormatters();
   const [floorplan, setFloorplan] = useState(false);
-  // Finn rom cards open on today’s Oslo date; the booking wizard still uses
-  // defaultSearch() (tomorrow) when opened without a date.
-  const pageDate = today();
-  const [cardDates, setCardDates] = useState<Record<string, string>>({});
+  // One shared date for every card so slot picks and booking stay aligned.
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [salFilter, setSalFilter] = useState<string>("all");
+  const [dateOpen, setDateOpen] = useState(false);
   const [selections, setSelections] = useState<
     Record<string, RoomSlotSelection | null>
   >({});
@@ -38,32 +48,41 @@ export function Rooms() {
     roomId: string;
     selection: RoomSlotSelection;
   } | null>(null);
-  const [slotsRevision, setSlotsRevision] = useState<Record<string, number>>(
-    {},
-  );
+  const [slotsRevision, setSlotsRevision] = useState(0);
   const rooms = useApi<Room[]>("/rooms");
-
-  useEffect(() => {
-    setCardDates((prev) => {
-      const next: Record<string, string> = {};
-      for (const room of rooms.data || []) {
-        next[room.id] = prev[room.id] ?? pageDate;
-      }
-      return next;
-    });
-  }, [pageDate, rooms.data]);
 
   const confirmRoom = rooms.data?.find((r) => r.id === confirm?.roomId);
   const roomList = rooms.data || [];
+  const hasSalRooms = roomList.some((r) => isSalRoom(r.id));
+  const salRooms = useMemo(
+    () =>
+      SAL_FILTER_ORDER.map((id) => roomList.find((r) => r.id === id)).filter(
+        (r): r is Room => Boolean(r),
+      ),
+    [roomList],
+  );
 
-  const onBooked = (roomId: string, bookedDate: string) => {
-    setCardDates((prev) => ({ ...prev, [roomId]: bookedDate }));
-    setSelections((prev) => ({ ...prev, [roomId]: null }));
-    setSlotsRevision((prev) => ({
-      ...prev,
-      [roomId]: (prev[roomId] ?? 0) + 1,
-    }));
+  const visibleRooms = roomList.filter((room) => {
+    if (!isSalRoom(room.id)) return true;
+    if (salFilter === "all") return true;
+    return room.id === salFilter;
+  });
+
+  const changeDate = (date: string) => {
+    setSelectedDate(date);
+    setSelections({});
+    setSlotsRevision((n) => n + 1);
+    setDateOpen(false);
   };
+
+  const onBooked = () => {
+    setSelections({});
+    setConfirm(null);
+    // Zone conflicts change other halls — reload every card’s slots.
+    setSlotsRevision((n) => n + 1);
+  };
+
+  const minDate = today();
 
   return (
     <div className="container">
@@ -97,51 +116,99 @@ export function Rooms() {
         <Loading label={t("rooms.loading_rooms")} />
       ) : roomList.length ? (
         <>
-          {roomList.some((r) => r.id.startsWith("sal-")) ? (
+          {hasSalRooms ? (
             <aside
-              className="zone-illustration"
-              aria-labelledby="zone-illustration-title"
+              className="halls-filter"
+              aria-labelledby="halls-filter-title"
             >
-              <h2 id="zone-illustration-title">
-                {t("rooms.zone_illustration_title")}
-              </h2>
-              <p>{t("rooms.zone_illustration_body")}</p>
-              <p className="caption">{t("rooms.zone_example_caption")}</p>
-              <ul className="zone-illustration-grid">
-                <li>
-                  <span>Sal 1</span>
-                  <strong className="zone-blocked">
-                    {t("rooms.zone_blocked")}
-                  </strong>
-                </li>
-                <li>
-                  <span>Sal 2</span>
-                  <strong className="zone-blocked">
-                    {t("rooms.zone_blocked")}
-                  </strong>
-                </li>
-                <li>
-                  <span>Sal 3</span>
-                  <strong className="zone-free">{t("rooms.zone_free")}</strong>
-                </li>
-              </ul>
+              <h2 id="halls-filter-title">{t("rooms.halls_title")}</h2>
+              <p>{t("rooms.halls_body")}</p>
+              <div
+                className="pill-tabs halls-filter-tabs"
+                role="group"
+                aria-label={t("rooms.halls_filter_aria")}
+              >
+                <button
+                  type="button"
+                  aria-pressed={salFilter === "all"}
+                  onClick={() => setSalFilter("all")}
+                >
+                  {t("rooms.halls_filter_all")}
+                </button>
+                {salRooms.map((room) => (
+                  <button
+                    key={room.id}
+                    type="button"
+                    aria-pressed={salFilter === room.id}
+                    onClick={() => setSalFilter(room.id)}
+                  >
+                    {room.name}
+                  </button>
+                ))}
+              </div>
+              <div className="halls-filter-date">
+                <span className="halls-filter-date-label">
+                  {t("rooms.halls_selected_date")}
+                </span>
+                <div className="room-schedule-date-row">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon
+                    className="room-date-step"
+                    aria-label={t("a11y.previous_day")}
+                    disabled={selectedDate <= minDate}
+                    onClick={() => changeDate(addDays(selectedDate, -1))}
+                  >
+                    <ChevronLeft size={18} aria-hidden="true" />
+                  </Button>
+                  <button
+                    type="button"
+                    className="room-date-trigger"
+                    aria-expanded={dateOpen}
+                    aria-haspopup="dialog"
+                    aria-label={`${t("common.date")}: ${displayDate(selectedDate, true)}`}
+                    onClick={() => setDateOpen((open) => !open)}
+                  >
+                    <span>{displayDate(selectedDate, true)}</span>
+                    <CalendarDays aria-hidden size={20} />
+                  </button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon
+                    className="room-date-step"
+                    aria-label={t("a11y.next_day")}
+                    onClick={() => changeDate(addDays(selectedDate, 1))}
+                  >
+                    <ChevronRight size={18} aria-hidden="true" />
+                  </Button>
+                </div>
+                {dateOpen ? (
+                  <div
+                    className="room-date-popover halls-filter-calendar"
+                    role="dialog"
+                    aria-label={t("a11y.pick_date")}
+                  >
+                    <MonthCalendar value={selectedDate} onChange={changeDate} />
+                  </div>
+                ) : null}
+              </div>
             </aside>
           ) : null}
           <div className="rooms-grid">
-            {roomList.map((room) => (
+            {visibleRooms.map((room) => (
               <RoomCard
                 key={room.id}
                 room={room}
-                scheduleDate={cardDates[room.id] ?? pageDate}
-                onScheduleDateChange={(date) =>
-                  setCardDates((prev) => ({ ...prev, [room.id]: date }))
-                }
+                scheduleDate={selectedDate}
+                onScheduleDateChange={changeDate}
                 selection={selections[room.id] ?? null}
                 onSelectSlot={(next) => {
                   setSelections((prev) => ({ ...prev, [room.id]: next }));
                   if (next) setConfirm({ roomId: room.id, selection: next });
                 }}
-                slotsRevision={slotsRevision[room.id] ?? 0}
+                slotsRevision={slotsRevision}
               />
             ))}
           </div>
@@ -177,7 +244,7 @@ export function Rooms() {
             }))
           }
           close={() => setConfirm(null)}
-          onSuccess={() => onBooked(confirmRoom.id, confirm.selection.date)}
+          onSuccess={onBooked}
         />
       )}
     </div>

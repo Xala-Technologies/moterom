@@ -238,11 +238,11 @@
     "demo_price_external": "External",
     "demo_price_per_hour": "{{amount}}/hour",
     "demo_price_disclaimer": "Demo prices. Final price is calculated after sign-in and price-group verification.",
-    "zone_illustration_title": "Proposed zone logic (not active in the engine)",
-    "zone_illustration_body": "Example: when Hall 1 + 2 is booked, overlapping zones are blocked. Hall 3 can stay free. This is P0 — the demo does not fake zone booking.",
-    "zone_blocked": "Blocked",
-    "zone_free": "Available",
-    "zone_example_caption": "Booking Hall 1 + 2 (proposed behaviour):",
+    "halls_title": "The halls",
+    "halls_body": "Halls can be hired separately or together. Bookings that use the same floor area block each other.",
+    "halls_filter_aria": "Filter halls",
+    "halls_filter_all": "All",
+    "halls_selected_date": "Selected date",
     "open_access_hint": "Open to external bookers. Sign in to confirm. Internals get different rates."
   },
   "booking": {
