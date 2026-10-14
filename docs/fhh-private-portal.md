@@ -70,12 +70,33 @@ PUBLIC_ORIGIN=http://localhost:4173
 BUILDING_NAME=Frivillighetens Hus
 ```
 
+## Hostname status (14 October 2026)
+
+Checked from this machine:
+
+| Host              | DNS                             | HTTP                    |
+| ----------------- | ------------------------------- | ----------------------- |
+| `skb.digilist.no` | A `31.97.77.81`                 | 200, Caddy, `mode=live` |
+| `fhh.digilist.no` | no A/CNAME (SOA at one.com)     | does not resolve        |
+| `digilist.no` NS  | `ns01.one.com` / `ns02.one.com` |                         |
+
+`fhh.digilist.no` is not up. The Motereom VPS is the SKB box at `31.97.77.81`. The Digilist VPS at `72.61.23.56` is a different machine. Do not point this branch at the SKB container; that would replace SKB rooms.
+
+To get the hostname answering:
+
+1. In one.com DNS for `digilist.no`, add `fhh` A → `31.97.77.81` (same as `skb`).
+2. On that VPS, add a Caddy site for `fhh.digilist.no` and a **second** Møterom container built from `feat/frivillighetens-hus`.
+3. Until a Digilist tenant exists, that container can run demo (`DATA_MODE=demo` and `ALLOW_DEMO_DEPLOYMENT=true`) so the URL loads. Switch to live and drop the demo flag when the tenant exists. Do not leave demo on after go-live.
+
+SSH from this laptop to `31.97.77.81` with `~/.ssh/digilist_deploy` was refused (`publickey`). Deploy needs the Motereom VPS key or a one.com + Hostinger session.
+
 ## Rollout order
 
-1. Create an isolated Digilist DEV tenant (not marketplace, not SKB).
-2. Create the nine rooms as `visibility=private`, `accessChannel=tenant_portal`. Confirm whether they stay free for an internal pilot or get real prices. Paid quotes still fail in this BFF.
-3. Put the real tenant id in `DIGILIST_TENANT_ID` and the bootstrap admin in `ADMIN_EMAILS`.
-4. Confirm names, capacities, photos and address from the customer before calling the catalogue finished.
-5. Deploy this branch to `fhh.digilist.no`. Do not point SKB Hostinger at this image.
+1. DNS + Caddy + FHH container so `https://fhh.digilist.no` answers.
+2. Create an isolated Digilist DEV tenant (not marketplace, not SKB).
+3. Create the nine rooms as `visibility=private`, `accessChannel=tenant_portal`. Confirm whether they stay free for an internal pilot or get real prices. Paid quotes still fail in this BFF.
+4. Put the real tenant id in `DIGILIST_TENANT_ID` and the bootstrap admin in `ADMIN_EMAILS`.
+5. Confirm names, capacities, photos and address from the customer before calling the catalogue finished.
+6. Flip the FHH container to live. Do not rebuild the SKB image with this branch.
 
 Function gaps (zones, four price groups, catering, Service Crew) are recorded in [`frivillighetens-hus-funksjonsmatrise.md`](frivillighetens-hus-funksjonsmatrise.md).
