@@ -72,7 +72,7 @@ function NotFound() {
   );
 }
 function App() {
-  const { loading, error, refresh } = useApp();
+  const { loading, error, refresh, config } = useApp();
   if (loading) return <Loading />;
   if (error)
     return (
@@ -85,9 +85,19 @@ function App() {
       <Route element={<Shell />}>
         <Route path="login" element={<Login />} />
         <Route path="auth/callback" element={<AuthCallback />} />
+        {config?.access === "public" ? (
+          <>
+            <Route index element={<Rooms />} />
+            <Route path="rom/:id" element={<LegacyRoomRedirect />} />
+          </>
+        ) : null}
         <Route element={<RequireAuth />}>
-          <Route index element={<Rooms />} />
-          <Route path="rom/:id" element={<LegacyRoomRedirect />} />
+          {config?.access !== "public" ? (
+            <>
+              <Route index element={<Rooms />} />
+              <Route path="rom/:id" element={<LegacyRoomRedirect />} />
+            </>
+          ) : null}
           <Route path="ny-booking" element={<NewBooking />} />
           <Route path="bestill/:id" element={<Checkout />} />
           <Route path="mine-bookinger" element={<MyBookings />} />
@@ -101,8 +111,8 @@ function App() {
               </Suspense>
             }
           />
-          <Route path="*" element={<NotFound />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

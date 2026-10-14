@@ -28,6 +28,9 @@ export const bookingSchema = searchSchema.extend({
     .refine((value) => !value || value.replace(/\D/g, "").length >= 8, {
       message: "Skriv inn et gyldig telefonnummer.",
     }),
+  acceptedTerms: z.literal(true, {
+    error: "Du må godta leievilkårene for å bestille.",
+  }),
 });
 
 const clockTime = z

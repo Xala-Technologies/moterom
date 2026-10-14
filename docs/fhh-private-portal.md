@@ -6,13 +6,13 @@ SKB stays on its own deployment and `config/rooms.json` on `dev`/`main`. Do not 
 
 ## What is decided
 
-| Item          | Value                                         | Status                          |
-| ------------- | --------------------------------------------- | ------------------------------- |
-| Hostname      | `fhh.digilist.no`                             | Chosen                          |
-| Portal        | Møterom BFF + UI, same as SKB                 | This branch                     |
-| Access        | `BOOKING_ACCESS=members`                      | Same rule as other live portals |
-| Payment       | Unset. Paid Digilist quotes still fail closed | Until price rules exist         |
-| Building name | `Frivillighetens Hus`                         | Set via `BUILDING_NAME`         |
+| Item          | Value                                         | Status                                         |
+| ------------- | --------------------------------------------- | ---------------------------------------------- |
+| Hostname      | `fhh.digilist.no`                             | Chosen                                         |
+| Portal        | Møterom BFF + UI, same as SKB                 | This branch                                    |
+| Access        | Demo: `BOOKING_ACCESS=public`. Live TBD       | Demo catalogue is open; login before confirm   |
+| Payment       | Demo records illustrative totals; live unpaid | Paid Digilist quotes still fail closed in live |
+| Building name | `Frivillighetens Hus`                         | Set via `BUILDING_NAME`                        |
 
 ## What is not decided
 
@@ -42,7 +42,7 @@ Stable portal `id`s stay in this repository. Digilist slugs are placeholders unt
 | sal-1       | Sal 1       | `fhh-sal-1`       | unknown  | Combinations not enforced                          |
 | sal-2       | Sal 2       | `fhh-sal-2`       | unknown  | Combinations not enforced                          |
 | sal-3       | Sal 3       | `fhh-sal-3`       | unknown  | Combinations not enforced                          |
-| bakgarden   | Bakgården   | `fhh-bakgarden`   | unknown  | Should be internal-only; not gated yet             |
+| bakgarden   | Bakgården   | `fhh-bakgarden`   | unknown  | `internalOnly` in demo (server-enforced)           |
 
 `capacity: 1` in `config/rooms.json` is a schema minimum so demo booking tests can run. The labels say capacity is unconfirmed. Do not treat 1 as the real room size. No photos are attached; do not reuse SKB illustrations as this building.
 
@@ -62,13 +62,18 @@ SESSION_SECRET=
 
 Leave `PAYMENT_MODE` and `ALLOW_DEMO_DEPLOYMENT` unset on the customer host. Add `https://fhh.digilist.no` to Digilist `EXTRA_CORS_ORIGINS` only as an approved env change.
 
-Local demo can run without a tenant:
+Local / Hostinger demo (current `fhh.digilist.no`):
 
 ```sh
 DATA_MODE=demo
-PUBLIC_ORIGIN=http://localhost:4173
+ALLOW_DEMO_DEPLOYMENT=true
+BOOKING_ACCESS=public
+PUBLIC_ORIGIN=https://fhh.digilist.no
 BUILDING_NAME=Frivillighetens Hus
+DEMO_DB_PATH=/opt/moterom-fhh/data/demo.sqlite
 ```
+
+See [fhh-demo-isolation.md](fhh-demo-isolation.md) and [fhh-demo-walkthrough.md](fhh-demo-walkthrough.md).
 
 ## Hostname status (14 October 2026)
 

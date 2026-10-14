@@ -71,6 +71,9 @@ export function Rooms() {
         <div>
           <h1>{t("rooms.heading")}</h1>
           <p>{t("rooms.intro")}</p>
+          {config?.access === "public" ? (
+            <p className="caption">{t("rooms.open_access_hint")}</p>
+          ) : null}
           {rooms.data ? (
             <p className="page-heading-count">
               {t("rooms.room_count", { count: rooms.data.length })}
@@ -93,24 +96,56 @@ export function Rooms() {
       ) : rooms.loading ? (
         <Loading label={t("rooms.loading_rooms")} />
       ) : roomList.length ? (
-        <div className="rooms-grid">
-          {roomList.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-              scheduleDate={cardDates[room.id] ?? pageDate}
-              onScheduleDateChange={(date) =>
-                setCardDates((prev) => ({ ...prev, [room.id]: date }))
-              }
-              selection={selections[room.id] ?? null}
-              onSelectSlot={(next) => {
-                setSelections((prev) => ({ ...prev, [room.id]: next }));
-                if (next) setConfirm({ roomId: room.id, selection: next });
-              }}
-              slotsRevision={slotsRevision[room.id] ?? 0}
-            />
-          ))}
-        </div>
+        <>
+          {roomList.some((r) => r.id.startsWith("sal-")) ? (
+            <aside
+              className="zone-illustration"
+              aria-labelledby="zone-illustration-title"
+            >
+              <h2 id="zone-illustration-title">
+                {t("rooms.zone_illustration_title")}
+              </h2>
+              <p>{t("rooms.zone_illustration_body")}</p>
+              <p className="caption">{t("rooms.zone_example_caption")}</p>
+              <ul className="zone-illustration-grid">
+                <li>
+                  <span>Sal 1</span>
+                  <strong className="zone-blocked">
+                    {t("rooms.zone_blocked")}
+                  </strong>
+                </li>
+                <li>
+                  <span>Sal 2</span>
+                  <strong className="zone-blocked">
+                    {t("rooms.zone_blocked")}
+                  </strong>
+                </li>
+                <li>
+                  <span>Sal 3</span>
+                  <strong className="zone-free">{t("rooms.zone_free")}</strong>
+                </li>
+              </ul>
+            </aside>
+          ) : null}
+          <div className="rooms-grid">
+            {roomList.map((room) => (
+              <RoomCard
+                key={room.id}
+                room={room}
+                scheduleDate={cardDates[room.id] ?? pageDate}
+                onScheduleDateChange={(date) =>
+                  setCardDates((prev) => ({ ...prev, [room.id]: date }))
+                }
+                selection={selections[room.id] ?? null}
+                onSelectSlot={(next) => {
+                  setSelections((prev) => ({ ...prev, [room.id]: next }));
+                  if (next) setConfirm({ roomId: room.id, selection: next });
+                }}
+                slotsRevision={slotsRevision[room.id] ?? 0}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <Empty icon={<CalendarDays size={32} />} title={t("rooms.empty_title")}>
           <p>{t("rooms.empty_body")}</p>

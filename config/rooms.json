@@ -3,109 +3,164 @@
     "id": "elvebredden",
     "name": "Elvebredden",
     "slug": "fhh-elvebredden",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
-    "description": "Møterom på Frivillighetens Hus.",
-    "descriptionEn": "A meeting room at Frivillighetens Hus.",
+    "capacity": 12,
+    "capacityLabel": "Demo · inntil 12 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 12 (to be confirmed)",
+    "description": "Møterom på Frivillighetens Hus. Demo-priser under; endelig pris etter innlogging.",
+    "descriptionEn": "Meeting room at Frivillighetens Hus. Demo prices below; final price after sign-in.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": false,
+    "cancelDeadlineDays": 5,
+    "demoHourlyPrices": {
+      "internal": 400,
+      "ideal": 560,
+      "external": 800
+    }
   },
   {
     "id": "biblioteket",
     "name": "Biblioteket",
     "slug": "fhh-biblioteket",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
+    "capacity": 8,
+    "capacityLabel": "Demo · inntil 8 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 8 (to be confirmed)",
     "description": "Møterom på Frivillighetens Hus.",
     "descriptionEn": "A meeting room at Frivillighetens Hus.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": false,
+    "cancelDeadlineDays": 5,
+    "demoHourlyPrices": {
+      "internal": 400,
+      "ideal": 560,
+      "external": 800
+    }
   },
   {
     "id": "salongen",
     "name": "Salongen",
     "slug": "fhh-salongen",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
+    "capacity": 10,
+    "capacityLabel": "Demo · inntil 10 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 10 (to be confirmed)",
     "description": "Møterom på Frivillighetens Hus.",
     "descriptionEn": "A meeting room at Frivillighetens Hus.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": false,
+    "cancelDeadlineDays": 5,
+    "demoHourlyPrices": {
+      "internal": 400,
+      "ideal": 560,
+      "external": 800
+    }
   },
   {
     "id": "spisestuen",
     "name": "Spisestuen",
     "slug": "fhh-spisestuen",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
+    "capacity": 14,
+    "capacityLabel": "Demo · inntil 14 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 14 (to be confirmed)",
     "description": "Møterom på Frivillighetens Hus.",
     "descriptionEn": "A meeting room at Frivillighetens Hus.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": false,
+    "cancelDeadlineDays": 5,
+    "demoHourlyPrices": {
+      "internal": 400,
+      "ideal": 560,
+      "external": 800
+    }
   },
   {
     "id": "styrerommet",
     "name": "Styrerommet",
     "slug": "fhh-styrerommet",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
-    "description": "Møterom på Frivillighetens Hus.",
-    "descriptionEn": "A meeting room at Frivillighetens Hus.",
+    "capacity": 6,
+    "capacityLabel": "Demo · inntil 6 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 6 (to be confirmed)",
+    "description": "Møterom på Frivillighetens Hus. Navn bekreftes mot Syerommet.",
+    "descriptionEn": "Meeting room at Frivillighetens Hus. Name to confirm vs Syerommet.",
     "amenities": [],
     "requiresApproval": false,
-    "nameNeedsConfirmation": true
+    "cancelDeadlineDays": 5,
+    "nameNeedsConfirmation": true,
+    "demoHourlyPrices": {
+      "internal": 400,
+      "ideal": 560,
+      "external": 800
+    }
   },
   {
     "id": "sal-1",
     "name": "Sal 1",
     "slug": "fhh-sal-1",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
-    "description": "En av tre saler som kan leies hver for seg. Kombinasjoner med Sal 2 og Sal 3 er ikke i bookingmotoren ennå.",
-    "descriptionEn": "One of three halls that can be hired separately. Combinations with Sal 2 and Sal 3 are not in the booking engine yet.",
+    "capacity": 40,
+    "capacityLabel": "Demo · inntil 40 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 40 (to be confirmed)",
+    "description": "En av tre saler. Kombinasjoner (Sal 1+2 m.m.) er ikke i bookingmotoren ennå — se soneillustrasjon i demoen.",
+    "descriptionEn": "One of three halls. Combinations are not in the booking engine yet — see the demo zone illustration.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": true,
+    "cancelDeadlineDays": 30,
+    "demoHourlyPrices": {
+      "internal": 600,
+      "ideal": 840,
+      "external": 1200
+    }
   },
   {
     "id": "sal-2",
     "name": "Sal 2",
     "slug": "fhh-sal-2",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
-    "description": "En av tre saler som kan leies hver for seg. Kombinasjoner med Sal 1 og Sal 3 er ikke i bookingmotoren ennå.",
-    "descriptionEn": "One of three halls that can be hired separately. Combinations with Sal 1 and Sal 3 are not in the booking engine yet.",
+    "capacity": 40,
+    "capacityLabel": "Demo · inntil 40 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 40 (to be confirmed)",
+    "description": "En av tre saler. Kombinasjoner er ikke i bookingmotoren ennå.",
+    "descriptionEn": "One of three halls. Combinations are not in the booking engine yet.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": true,
+    "cancelDeadlineDays": 30,
+    "demoHourlyPrices": {
+      "internal": 600,
+      "ideal": 840,
+      "external": 1200
+    }
   },
   {
     "id": "sal-3",
     "name": "Sal 3",
     "slug": "fhh-sal-3",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
-    "description": "En av tre saler som kan leies hver for seg. Kombinasjoner med Sal 1 og Sal 2 er ikke i bookingmotoren ennå.",
-    "descriptionEn": "One of three halls that can be hired separately. Combinations with Sal 1 and Sal 2 are not in the booking engine yet.",
+    "capacity": 40,
+    "capacityLabel": "Demo · inntil 40 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 40 (to be confirmed)",
+    "description": "En av tre saler. Kombinasjoner er ikke i bookingmotoren ennå.",
+    "descriptionEn": "One of three halls. Combinations are not in the booking engine yet.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": true,
+    "cancelDeadlineDays": 30,
+    "demoHourlyPrices": {
+      "internal": 600,
+      "ideal": 840,
+      "external": 1200
+    }
   },
   {
     "id": "bakgarden",
     "name": "Bakgården",
     "slug": "fhh-bakgarden",
-    "capacity": 1,
-    "capacityLabel": "Kapasitet bekreftes",
-    "capacityLabelEn": "Capacity to be confirmed",
-    "description": "Uteområde som skal være forbeholdt interne bookinger. Synlighet per kundekategori er ikke implementert.",
-    "descriptionEn": "Outdoor area intended for internal bookings only. Visibility by customer category is not implemented yet.",
+    "capacity": 30,
+    "capacityLabel": "Demo · inntil 30 (bekreftes)",
+    "capacityLabelEn": "Demo · up to 30 (to be confirmed)",
+    "description": "Uteområde forbeholdt interne bookinger. Skjult for eksterne.",
+    "descriptionEn": "Outdoor area for internal bookings only. Hidden from external users.",
     "amenities": [],
-    "requiresApproval": false
+    "requiresApproval": false,
+    "cancelDeadlineDays": 5,
+    "internalOnly": true,
+    "demoHourlyPrices": {
+      "internal": 200,
+      "ideal": 280,
+      "external": 400
+    }
   }
 ]

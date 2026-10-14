@@ -210,6 +210,7 @@ export function NewBooking() {
         email: email.trim(),
         phone: phone.trim(),
         quoteToken: quote.token,
+        acceptedTerms: true as const,
       },
     };
     try {
@@ -594,7 +595,13 @@ export function NewBooking() {
                     onChange={(e) => setAccepted(e.target.checked)}
                     required
                   />
-                  <span>{t("booking.consent_checked")}</span>
+                  <span>
+                    {t("booking.terms_accept", {
+                      days:
+                        room?.cancelDeadlineDays ??
+                        (room?.requiresApproval ? 30 : 5),
+                    })}
+                  </span>
                 </label>
               </div>
             )}

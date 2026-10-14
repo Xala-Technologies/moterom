@@ -146,7 +146,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       "13:00-14:00",
     ]);
   });
-  it("lets a demo guest quote and book with name and email", async () => {
+  it("requires sign-in before quote and booking", async () => {
     const guest = request.agent(app);
     const search = {
       roomId,
@@ -155,13 +155,11 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       end: "14:00",
       people: 1,
     };
-    const quote = (
-      await guest
-        .post("/api/quote")
-        .set("Origin", origin)
-        .send(search)
-        .expect(200)
-    ).body;
+    await guest
+      .post("/api/quote")
+      .set("Origin", origin)
+      .send(search)
+      .expect(401);
     await guest
       .post("/api/bookings")
       .set("Origin", origin)
@@ -170,45 +168,13 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
         ...search,
         title: "",
         notes: "",
-        quoteToken: quote.token,
-        name: "Ola Nordmann",
-      })
-      .expect(400);
-    await guest
-      .post("/api/bookings")
-      .set("Origin", origin)
-      .set("Idempotency-Key", randomUUID())
-      .send({
-        ...search,
-        title: "",
-        notes: "",
-        quoteToken: quote.token,
+        quoteToken: "x",
         name: "Ola Nordmann",
         email: "ola@example.invalid",
-        phone: "12",
+        phone: "41234567",
+        acceptedTerms: true,
       })
-      .expect(400);
-    const created = (
-      await guest
-        .post("/api/bookings")
-        .set("Origin", origin)
-        .set("Idempotency-Key", randomUUID())
-        .send({
-          ...search,
-          title: "",
-          notes: "",
-          quoteToken: quote.token,
-          name: "Ola Nordmann",
-          email: "ola@example.invalid",
-          phone: "41234567",
-        })
-        .expect(201)
-    ).body;
-    expect(created.name).toBe("Ola Nordmann");
-    expect(created.email).toBe("ola@example.invalid");
-    expect(created.phone).toBe("41234567");
-    await guest.get(`/api/bookings/${created.id}`).expect(200);
-    await request(app).get(`/api/bookings/${created.id}`).expect(401);
+      .expect(401);
   });
   it("lets a customer quote and book a multi-hour interval", async () => {
     const search = {
@@ -236,6 +202,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
           notes: "",
           quoteToken: quote.token,
           ...contact,
+          acceptedTerms: true,
         })
         .expect(201)
     ).body;
@@ -265,6 +232,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
       notes: "",
       quoteToken: quote.token,
       ...contact,
+      acceptedTerms: true as const,
     };
     await customer
       .post("/api/bookings")
@@ -352,6 +320,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
           notes: "",
           quoteToken: approvalQuote.token,
           ...contact,
+          acceptedTerms: true,
         })
         .expect(201)
     ).body;
@@ -395,6 +364,7 @@ describe("HTTP boundaries and complete booking lifecycle", () => {
           notes: "",
           quoteToken: laterQuote.token,
           ...contact,
+          acceptedTerms: true,
         })
         .expect(201)
     ).body;

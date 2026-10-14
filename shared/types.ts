@@ -20,6 +20,19 @@ export interface Room {
   openTime?: string;
   /** Weekday closing time HH:mm (Mon–Fri). Digilist owns full schedule. */
   closeTime?: string;
+  /** When true, only internal demo users / admins may see or book the room. */
+  internalOnly?: boolean;
+  /** Cancellation notice period in days (demo terms). */
+  cancelDeadlineDays?: number;
+  /**
+   * Illustrative hourly rates for the public catalogue and demo quotes.
+   * `ideal` is display-only until that price group is implemented.
+   */
+  demoHourlyPrices?: {
+    internal: number;
+    ideal: number;
+    external: number;
+  };
 }
 export interface Search {
   date: string;
@@ -54,6 +67,11 @@ export interface User {
   adminAccess?: "full" | "operations";
   /** Effective portal role shown and edited on Admin → Brukere. */
   portalRole?: "member" | "operations" | "full";
+  /**
+   * Server-assigned demo price group. Never accept this from the client body.
+   * `internal` = intern/medlem rates; `external` = ordinær sats.
+   */
+  priceGroup?: "internal" | "external";
 }
 
 export interface Booking {
@@ -78,6 +96,10 @@ export interface Booking {
   cancellationAllowed?: boolean;
   cancellationMessage?: string;
   editRequested?: boolean;
+  /** Demo terms acceptance (version string). */
+  termsVersion?: string;
+  termsAcceptedAt?: number;
+  cancelDeadlineDays?: number;
 }
 export interface Block {
   id: string;
@@ -114,6 +136,8 @@ export interface BookingInput extends Search {
   name: string;
   email: string;
   phone?: string;
+  /** Must be true; server stores its own terms version. */
+  acceptedTerms: boolean;
 }
 export interface AdminData {
   bookings: Booking[];

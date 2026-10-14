@@ -92,6 +92,7 @@ const input = () => ({
   name: member.name,
   email: member.email,
   phone: "41234567",
+  acceptedTerms: true as const,
 });
 async function quote(body = input()) {
   return (

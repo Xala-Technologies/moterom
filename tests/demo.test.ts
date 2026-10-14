@@ -26,6 +26,7 @@ const input: BookingInput = {
   title: "",
   notes: "",
   quoteToken: "",
+  acceptedTerms: true,
   name: "Test",
   email: "test@example.invalid",
 };

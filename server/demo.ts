@@ -24,6 +24,8 @@ import { translateMessage } from "../shared/i18n/messages";
 import { DEFAULT_LOCALE, type Locale } from "../shared/i18n/locale";
 import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts";
 import { enrichBookingConversation } from "./conversationContext";
+import { DEMO_TERMS_VERSION, cancelDeadlineDaysForRoom } from "./bookingTerms";
+import { assertCanAccessRoom } from "./roomAccess";
 export class DemoStore {
   db: DatabaseSync;
   constructor(
@@ -42,51 +44,103 @@ export class DemoStore {
         .run(room.id, JSON.stringify(room));
     if (seed && !this.db.prepare("SELECT id FROM bookings LIMIT 1").get()) {
       const date = addDays(today(), 1);
-      const examples = [
+      const byId = (id: string) => seedRooms.find((r) => r.id === id);
+      const examples: Array<{
+        id: string;
+        roomId: string;
+        start: string;
+        end: string;
+        name: string;
+        email: string;
+        userId: string;
+        title: string;
+        status: string;
+        totalPrice: number;
+      }> = [
         {
-          room: 0,
+          id: "example-0",
+          roomId: "elvebredden",
           start: "10:00",
           end: "11:30",
-          name: "Kari Nordmann",
-          title: "Prosjektmøte",
+          name: "Ekstern Bedrift AS",
+          email: "ekstern@example.invalid",
+          userId: "demo-external",
+          title: "Kundemøte",
+          status: "confirmed",
+          totalPrice: 1200,
         },
         {
-          room: 2,
+          id: "example-1",
+          roomId: "salongen",
           start: "09:00",
           end: "12:00",
-          name: "Ola Hansen",
+          name: "Intern organisasjon",
+          email: "intern@example.invalid",
+          userId: "demo-internal",
           title: "Arbeidsøkt",
+          status: "confirmed",
+          totalPrice: 1200,
         },
         {
-          room: 4,
+          id: "example-2",
+          roomId: "sal-1",
           start: "13:00",
-          end: "14:00",
+          end: "16:00",
+          name: "Ideell forening",
+          email: "sal@example.invalid",
+          userId: "demo-external",
+          title: "Årsmøte",
+          status: "pending",
+          totalPrice: 3600,
+        },
+        {
+          id: "example-3",
+          roomId: "biblioteket",
+          start: "14:00",
+          end: "15:00",
           name: "Kari Nordmann",
+          email: "kari@example.invalid",
+          userId: "demo-external",
           title: "Planlegging",
+          status: "confirmed",
+          totalPrice: 800,
         },
       ];
-      for (const [i, item] of examples.entries()) {
-        const room = seedRooms[item.room];
+      for (const item of examples) {
+        const room = byId(item.roomId) || seedRooms[0];
         if (!room) continue;
         const b: Booking = {
-          id: `example-${i}`,
-          reference: `DEMO-100${i}`,
+          id: item.id,
+          reference: `DEMO-${item.id.slice(-4).toUpperCase()}`,
           roomId: room.id,
           roomName: room.name,
-          userId: i === 0 ? "demo-customer" : "demo-other",
+          userId: item.userId,
           name: item.name,
-          email: "demo@example.invalid",
+          email: item.email,
           ...interval({ date, start: item.start, end: item.end }),
           people: 6,
           title: item.title,
           notes: "",
-          status: "confirmed",
-          totalPrice: 0,
+          status: item.status,
+          totalPrice: item.totalPrice,
           currency: "NOK",
           paymentRequired: false,
           cancellationAllowed: true,
+          termsVersion: DEMO_TERMS_VERSION,
+          termsAcceptedAt: Date.now(),
+          cancelDeadlineDays: cancelDeadlineDaysForRoom(room),
         };
         this.save("bookings", b);
+      }
+      const blockRoom = byId("sal-2") || seedRooms[1];
+      if (blockRoom) {
+        const block: Block = {
+          id: "example-block-0",
+          roomId: blockRoom.id,
+          title: "Vedlikehold",
+          ...interval({ date, start: "08:00", end: "10:00" }),
+        };
+        this.save("blocks", block);
       }
     }
   }
@@ -124,6 +178,10 @@ export class DemoStore {
         capacityLabelEn:
           room.capacityLabelEn || seed?.capacityLabelEn || room.capacityLabel,
         portalPublished: room.portalPublished !== false,
+        internalOnly: room.internalOnly ?? seed?.internalOnly,
+        cancelDeadlineDays: room.cancelDeadlineDays ?? seed?.cancelDeadlineDays,
+        demoHourlyPrices: room.demoHourlyPrices ?? seed?.demoHourlyPrices,
+        requiresApproval: room.requiresApproval ?? seed?.requiresApproval,
       };
     });
   }
@@ -195,10 +253,20 @@ export class DemoStore {
       );
     return b;
   }
-  create(input: BookingInput, user: User, key: string): Booking {
+  create(
+    input: BookingInput,
+    user: User,
+    key: string,
+    quotedTotal = 0,
+  ): Booking {
     const fingerprint = createHash("sha256")
       .update(
-        JSON.stringify({ ...input, quoteToken: undefined, userId: user.id }),
+        JSON.stringify({
+          ...input,
+          quoteToken: undefined,
+          acceptedTerms: undefined,
+          userId: user.id,
+        }),
       )
       .digest("hex");
     const requestKey = `${user.id}:${key}`;
@@ -219,6 +287,13 @@ export class DemoStore {
       }
       const room = this.room(input.roomId);
       this.assertPortalPublished(room);
+      assertCanAccessRoom(room, user);
+      if (!input.acceptedTerms)
+        throw new AppError(
+          400,
+          "Du må godta leievilkårene for å bestille.",
+          "terms_required",
+        );
       const availability = this.availability(input).find(
         (r) => r.roomId === input.roomId,
       );
@@ -243,10 +318,13 @@ export class DemoStore {
         title: input.title,
         notes: input.notes,
         status: room.requiresApproval ? "pending" : "confirmed",
-        totalPrice: 0,
+        totalPrice: quotedTotal,
         currency: "NOK",
         paymentRequired: false,
         cancellationAllowed: true,
+        termsVersion: DEMO_TERMS_VERSION,
+        termsAcceptedAt: Date.now(),
+        cancelDeadlineDays: cancelDeadlineDaysForRoom(room),
       };
       this.save("bookings", booking);
       this.db

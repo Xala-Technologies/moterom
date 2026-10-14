@@ -14,7 +14,8 @@ export interface Session {
   expiresAt?: number;
   /** When true (default), cookie lasts 30 days like Digilist. */
   rememberMe?: boolean;
-  demoRole?: "customer" | "admin";
+  /** admin | internal | external; customer kept as alias for external. */
+  demoRole?: "customer" | "admin" | "internal" | "external";
   demoGuest?: { id: string; name: string; email: string };
 }
 
@@ -50,7 +51,12 @@ export async function readSession(req: Request): Promise<Session | undefined> {
       session.expiresAt = payload.expiresAt;
     if (typeof payload.rememberMe === "boolean")
       session.rememberMe = payload.rememberMe;
-    if (payload.demoRole === "customer" || payload.demoRole === "admin")
+    if (
+      payload.demoRole === "customer" ||
+      payload.demoRole === "admin" ||
+      payload.demoRole === "internal" ||
+      payload.demoRole === "external"
+    )
       session.demoRole = payload.demoRole;
     if (
       payload.demoGuest &&

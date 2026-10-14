@@ -397,6 +397,7 @@ describe("Digilist boundary contracts from the reviewed source", () => {
         title: "Teammøte",
         notes: "",
         quoteToken: "unused",
+        acceptedTerms: true,
       },
       user,
       "11111111-1111-4111-8111-111111111111",

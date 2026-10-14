@@ -192,7 +192,9 @@ export function Login() {
     otpAutoSubmitted.current = false;
   };
 
-  const demoSignIn = async (role: "customer" | "admin") => {
+  const demoSignIn = async (
+    role: "customer" | "admin" | "internal" | "external",
+  ) => {
     await post("/auth/demo", { role });
     await done("/");
   };
@@ -487,6 +489,42 @@ export function Login() {
                         type="button"
                         className="login-option"
                         disabled={busy}
+                        onClick={() => void run(() => demoSignIn("external"))}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <UserRoundPlus size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.try_as_customer")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.try_as_customer_desc")}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
+                        onClick={() => void run(() => demoSignIn("internal"))}
+                      >
+                        <span className="login-option-icon" aria-hidden="true">
+                          <UserRoundPlus size={20} strokeWidth={1.75} />
+                        </span>
+                        <span className="login-option-copy">
+                          <span className="login-option-title">
+                            {t("auth.try_as_internal")}
+                          </span>
+                          <span className="login-option-desc">
+                            {t("auth.try_as_internal_desc")}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="login-option"
+                        disabled={busy}
                         onClick={() => void run(() => demoSignIn("admin"))}
                       >
                         <span className="login-option-icon" aria-hidden="true">
@@ -498,24 +536,6 @@ export function Login() {
                           </span>
                           <span className="login-option-desc">
                             {t("auth.log_in_as_admin_desc")}
-                          </span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className="login-option"
-                        disabled={busy}
-                        onClick={() => void run(() => demoSignIn("customer"))}
-                      >
-                        <span className="login-option-icon" aria-hidden="true">
-                          <UserRoundPlus size={20} strokeWidth={1.75} />
-                        </span>
-                        <span className="login-option-copy">
-                          <span className="login-option-title">
-                            {t("auth.try_as_customer")}
-                          </span>
-                          <span className="login-option-desc">
-                            {t("auth.try_as_customer_desc")}
                           </span>
                         </span>
                       </button>

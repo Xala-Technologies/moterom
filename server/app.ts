@@ -89,6 +89,8 @@ import {
   saveDemoRoomImage,
   saveRoomImage,
 } from "./roomImage";
+import { demoQuoteTotal } from "./demoPricing";
+import { assertCanAccessRoom, filterRoomsForUser } from "./roomAccess";
 const demo =
   config.mode === "demo"
     ? new DemoStore(process.env.DEMO_DB_PATH || ".data/demo.sqlite", inventory)
@@ -466,21 +468,46 @@ async function context(
   const session = await readSession(req);
   let user: User | undefined;
   if (config.mode === "demo" && session?.demoRole) {
-    const admin = session.demoRole === "admin";
-    const email = admin ? "admin@example.invalid" : "kari@example.invalid";
+    const role = session.demoRole;
+    const admin = role === "admin";
+    const internal = admin || role === "internal";
+    // Keep legacy "customer" id for existing tests; "external" is the FHH persona.
+    const id = admin
+      ? "demo-admin"
+      : role === "internal"
+        ? "demo-internal"
+        : role === "external"
+          ? "demo-external"
+          : "demo-customer";
+    const email = admin
+      ? "admin@example.invalid"
+      : internal
+        ? "intern@example.invalid"
+        : role === "external"
+          ? "ekstern@example.invalid"
+          : "kari@example.invalid";
+    const name = admin
+      ? "Demo administrator"
+      : role === "internal"
+        ? "Intern bruker"
+        : role === "external"
+          ? "Ekstern bruker"
+          : "Kari Nordmann";
     user = withPortalRole(
       {
-        id: admin ? "demo-admin" : "demo-customer",
-        name: admin ? "Demo administrator" : "Kari Nordmann",
+        id,
+        name,
         email,
         isAdmin: admin,
         isMember: true,
         tenantRole: admin ? "tenant_admin" : "member",
+        priceGroup: internal ? "internal" : "external",
       },
       true,
       { demoPersona: true },
     );
   } else if (config.mode === "demo" && session?.demoGuest) {
+    // Guest sessions remain external; preferred demo path is internal/external roles.
     user = withPortalRole(
       {
         id: session.demoGuest.id,
@@ -489,6 +516,7 @@ async function context(
         isAdmin: false,
         isMember: true,
         tenantRole: "member",
+        priceGroup: "external",
       },
       true,
       { demoPersona: true },
@@ -558,24 +586,6 @@ async function requirePortalAdminContext(
       "portal_admin_required",
     );
   return ctx;
-}
-async function contextForQuote(req: Request, res: Response): Promise<Context> {
-  const ctx = await context(req, res, config.mode === "live");
-  if (ctx.user) return ctx;
-  if (!demo)
-    throw new AppError(401, "Logg inn for å fortsette.", "login_required");
-  const guest: User = {
-    id: `demo-guest-${randomUUID()}`,
-    name: "Gjest",
-    email: "guest@example.invalid",
-    isAdmin: false,
-    isMember: true,
-  };
-  const session: Session = {
-    demoGuest: { id: guest.id, name: guest.name, email: guest.email },
-  };
-  await writeSession(res, session);
-  return { ...ctx, session, user: guest };
 }
 const parseSearch = (value: unknown) => {
   const search = searchSchema.parse(value);
@@ -696,7 +706,9 @@ app.get("/api/session", async (req, res) => {
 });
 app.post("/api/auth/demo", async (req, res) => {
   if (!demo) throw new AppError(404, "Siden finnes ikke.", "not_found");
-  const role = z.enum(["customer", "admin"]).parse(req.body.role);
+  const role = z
+    .enum(["customer", "admin", "internal", "external"])
+    .parse(req.body.role);
   await writeSession(res, { demoRole: role });
   res.json({ success: true });
 });
@@ -871,12 +883,17 @@ app.post("/api/auth/logout", async (req, res) => {
 });
 app.get("/api/rooms", async (req, res) => {
   const ctx = await context(req, res);
-  res.json(await ctx.provider.rooms());
+  const rooms = filterRoomsForUser(await ctx.provider.rooms(), ctx.user);
+  res.json(rooms);
 });
 app.get("/api/availability", async (req, res) => {
   const ctx = await context(req, res);
   const locale = requestLocale(req);
-  res.json(await ctx.provider.availability(parseSearch(req.query), locale));
+  const rows = await ctx.provider.availability(parseSearch(req.query), locale);
+  const allowed = new Set(
+    filterRoomsForUser(await ctx.provider.rooms(), ctx.user).map((r) => r.id),
+  );
+  res.json(rows.filter((row) => allowed.has(row.roomId)));
 });
 app.get("/api/availability/slots", async (req, res) => {
   const ctx = await context(req, res);
@@ -892,6 +909,7 @@ app.get("/api/availability/slots", async (req, res) => {
   let closeTime = DEFAULT_CLOSE_TIME;
   if (roomId) {
     const room = await ctx.provider.room(roomId);
+    assertCanAccessRoom(room, ctx.user);
     openTime = room.openTime?.trim() || DEFAULT_OPEN_TIME;
     closeTime = room.closeTime?.trim() || DEFAULT_CLOSE_TIME;
   }
@@ -953,9 +971,10 @@ async function quote(ctx: Context, roomId: string, search: Search) {
   if (!ctx.user)
     throw new AppError(401, "Logg inn for å fortsette.", "login_required");
   const room = await ctx.provider.room(roomId);
+  assertCanAccessRoom(room, ctx.user);
   return demo
     ? {
-        total: 0,
+        total: demoQuoteTotal(room, search, ctx.user),
         currency: "NOK",
         priceOnRequest: false,
         requiresApproval: room.requiresApproval,
@@ -964,9 +983,11 @@ async function quote(ctx: Context, roomId: string, search: Search) {
     : (ctx.provider as Digilist).quote(roomId, search, ctx.user);
 }
 app.post("/api/quote", async (req, res) => {
-  const ctx = await contextForQuote(req, res);
+  // Final quote requires a signed-in user (demo roles or Digilist). No client price group.
+  const ctx = await context(req, res, true);
   const search = parseSearch(req.body);
   const roomId = z.string().max(100).parse(req.body.roomId);
+  // Ignore any client-supplied category / price fields.
   const availability = (
     await ctx.provider.availability(search, requestLocale(req), roomId)
   ).find((a) => a.roomId === roomId);
@@ -1002,9 +1023,15 @@ app.post("/api/quote", async (req, res) => {
   });
 });
 app.post("/api/bookings", async (req, res) => {
-  const ctx = await contextForQuote(req, res);
+  const ctx = await context(req, res, true);
   const input = bookingSchema.parse(req.body);
   const key = z.string().uuid().parse(req.headers["idempotency-key"]);
+  if (!input.acceptedTerms)
+    throw new AppError(
+      400,
+      "Du må godta leievilkårene for å bestille.",
+      "terms_required",
+    );
   if (
     config.mode === "live" &&
     input.email.trim().toLowerCase() !== ctx.user!.email.toLowerCase()
@@ -1054,21 +1081,22 @@ app.post("/api/bookings", async (req, res) => {
       "Pris eller bestillingsvilkår er endret. Kontroller bestillingen på nytt.",
       "quote_terms_changed",
     );
-  if (current.paymentMode !== "none" || current.total !== 0)
+  // Demo may record illustrative totals with paymentMode none. Live stays free-only.
+  if (current.paymentMode !== "none")
     throw new AppError(
       409,
       "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
       "skb_internal_booking_only",
     );
-  const result = await ctx.provider.create(input, ctx.user!, key);
-  if (demo && ctx.session?.demoGuest)
-    await writeSession(res, {
-      demoGuest: {
-        id: ctx.user!.id,
-        name: input.name,
-        email: input.email,
-      },
-    });
+  if (config.mode === "live" && current.total !== 0)
+    throw new AppError(
+      409,
+      "Dette rommet kan ikke bestilles med betaling i møteromsportalen. Kontakt administrator.",
+      "skb_internal_booking_only",
+    );
+  const result = demo
+    ? demo.create(input, ctx.user!, key, current.total ?? 0)
+    : await ctx.provider.create(input, ctx.user!, key);
   res.status(201).json(result);
 });
 app.get("/api/bookings", async (req, res) => {

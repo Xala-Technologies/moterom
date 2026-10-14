@@ -16,14 +16,6 @@ import {
 } from "./ui";
 import type { RoomSlotSelection } from "./RoomCardSchedule";
 
-function emailError(value: string, t: (key: string) => string) {
-  const email = value.trim();
-  if (!email) return t("validation.email_required");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return t("validation.email_invalid");
-  return;
-}
-
 export function BookingConfirmModal({
   room,
   selection,
@@ -39,18 +31,15 @@ export function BookingConfirmModal({
   close: () => void;
   onSuccess: () => void;
 }) {
-  const { user, config, refresh } = useApp();
+  const { user, refresh } = useApp();
   const { t } = useT();
   const { displayDate, money } = useFormatters();
-  const [name, setName] = useState(user?.name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
   const [quote, setQuote] = useState<Quote>();
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
   const [booking, setBooking] = useState<Booking>();
-  const [nameIssue, setNameIssue] = useState<string>();
-  const [emailIssue, setEmailIssue] = useState<string>();
   const [revision, setRevision] = useState(0);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const request = useRef<{ key: string; body: unknown } | undefined>(undefined);
   const submitting = useRef(false);
   const search = {
@@ -59,30 +48,18 @@ export function BookingConfirmModal({
     end: selection.end,
     people: 1,
   };
-  const liveUnauthed = config?.mode === "live" && !user;
-  const needsContact = !user;
-  const returnTo = `/ny-booking?${new URLSearchParams({
-    rom: room.id,
-    date: selection.date,
-    start: selection.start,
-    end: selection.end,
-    people: "1",
-    steg: "3",
-  })}`;
-
-  useEffect(() => {
-    if (user) {
-      setName(user.name);
-      setEmail(user.email);
-    }
-  }, [user]);
+  const needsLogin = !user;
+  const cancelDays =
+    room.cancelDeadlineDays ?? (room.requiresApproval ? 30 : 5);
+  const returnTo = `/?rom=${encodeURIComponent(room.id)}`;
 
   useEffect(() => {
     request.current = undefined;
+    setAcceptedTerms(false);
   }, [room.id, selection.date, selection.start, selection.end, user?.id]);
 
   useEffect(() => {
-    if (liveUnauthed || booking) return;
+    if (needsLogin || booking) return;
     const controller = new AbortController();
     setQuote(undefined);
     setError(undefined);
@@ -105,7 +82,7 @@ export function BookingConfirmModal({
       });
     return () => controller.abort();
   }, [
-    liveUnauthed,
+    needsLogin,
     booking,
     room.id,
     selection.date,
@@ -123,16 +100,11 @@ export function BookingConfirmModal({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (liveUnauthed || !quote || submitting.current) return;
-    const nextName = needsContact
-      ? name.trim()
-        ? undefined
-        : t("validation.name_required")
-      : undefined;
-    const nextEmail = needsContact ? emailError(email, t) : undefined;
-    setNameIssue(nextName);
-    setEmailIssue(nextEmail);
-    if (nextName || nextEmail) return;
+    if (needsLogin || !quote || submitting.current) return;
+    if (!acceptedTerms) {
+      setError(new Error(t("booking.terms_required")));
+      return;
+    }
     submitting.current = true;
     setBusy(true);
     setError(undefined);
@@ -143,10 +115,11 @@ export function BookingConfirmModal({
         roomId: room.id,
         title: purpose,
         notes: "",
-        name: (user?.name || name).trim(),
-        email: (user?.email || email).trim(),
+        name: (user?.name || "").trim(),
+        email: (user?.email || "").trim(),
         phone: "",
         quoteToken: quote.token,
+        acceptedTerms: true as const,
       },
     };
     try {
@@ -198,7 +171,7 @@ export function BookingConfirmModal({
             </Link>
           </div>
         </div>
-      ) : liveUnauthed ? (
+      ) : needsLogin ? (
         <div className="stack">
           <dl className="booking-confirm-summary">
             <div>
@@ -270,70 +243,16 @@ export function BookingConfirmModal({
               placeholder={t("rooms.purpose_placeholder")}
             />
           </Field>
-          {needsContact && (
-            <>
-              <Field>
-                <Label htmlFor="card-booking-name">{t("common.name")}</Label>
-                <Input
-                  id="card-booking-name"
-                  name="name"
-                  autoComplete="name"
-                  required
-                  disabled={busy || Boolean(request.current)}
-                  maxLength={100}
-                  value={name}
-                  aria-invalid={Boolean(nameIssue)}
-                  aria-describedby={
-                    nameIssue ? "card-booking-name-error" : undefined
-                  }
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setNameIssue(undefined);
-                    request.current = undefined;
-                  }}
-                />
-                {nameIssue && (
-                  <p
-                    id="card-booking-name-error"
-                    className="field-error"
-                    role="alert"
-                  >
-                    {nameIssue}
-                  </p>
-                )}
-              </Field>
-              <Field>
-                <Label htmlFor="card-booking-email">{t("common.email")}</Label>
-                <Input
-                  id="card-booking-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  disabled={busy || Boolean(request.current)}
-                  maxLength={254}
-                  value={email}
-                  aria-invalid={Boolean(emailIssue)}
-                  aria-describedby={
-                    emailIssue ? "card-booking-email-error" : undefined
-                  }
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setEmailIssue(undefined);
-                    request.current = undefined;
-                  }}
-                />
-                {emailIssue && (
-                  <p
-                    id="card-booking-email-error"
-                    className="field-error"
-                    role="alert"
-                  >
-                    {emailIssue}
-                  </p>
-                )}
-              </Field>
-            </>
+          {quote && (
+            <label className="consent">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                required
+              />
+              <span>{t("booking.terms_accept", { days: cancelDays })}</span>
+            </label>
           )}
           {error && (
             <>
@@ -351,7 +270,7 @@ export function BookingConfirmModal({
             <Button variant="secondary" type="button" onClick={close}>
               {t("common.close")}
             </Button>
-            <Button type="submit" disabled={busy || !quote}>
+            <Button type="submit" disabled={busy || !quote || !acceptedTerms}>
               {busy ? t("booking.submitting") : confirmLabel}
             </Button>
           </div>

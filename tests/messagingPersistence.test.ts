@@ -242,6 +242,7 @@ describe("message history survives reopening the database file", () => {
       title: "Persist chat",
       notes: "",
       quoteToken: "",
+      acceptedTerms: true,
       name: customer.name,
       email: customer.email,
     };
