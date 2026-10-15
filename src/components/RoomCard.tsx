@@ -3,7 +3,7 @@ import { ArrowRight, UsersRound } from "lucide-react";
 import type { Availability, Room } from "../../shared/types";
 import { RoomPhoto } from "./RoomPhoto";
 import { RoomCardSchedule, type RoomSlotSelection } from "./RoomCardSchedule";
-import { roomCopy, useFormatters, useI18nLocale, useT } from "../i18n";
+import { roomCopy, useI18nLocale, useT } from "../i18n";
 
 export function bookHref(roomId: string, query = "") {
   const params = new URLSearchParams(query);
@@ -35,10 +35,8 @@ export function RoomCard({
   slotsRevision?: number;
 }) {
   const { t } = useT();
-  const { money } = useFormatters();
   const { locale } = useI18nLocale();
   const copy = roomCopy(room, locale);
-  const ladder = room.demoHourlyPrices;
   const href = action?.to ?? bookHref(room.id, query);
   const label = action?.label ?? t("rooms.book_now");
   const ariaLabel =
@@ -73,41 +71,6 @@ export function RoomCard({
           </p>
         </div>
         <p className="room-description">{copy.description}</p>
-        {ladder ? (
-          <div
-            className="room-demo-prices"
-            aria-label={t("rooms.demo_price_ladder_title")}
-          >
-            <p className="caption">{t("rooms.demo_price_ladder_title")}</p>
-            <ul className="room-demo-price-list">
-              <li>
-                <span>{t("rooms.demo_price_internal")}</span>
-                <strong>
-                  {t("rooms.demo_price_per_hour", {
-                    amount: money(ladder.internal, "NOK"),
-                  })}
-                </strong>
-              </li>
-              <li>
-                <span>{t("rooms.demo_price_ideal")}</span>
-                <strong>
-                  {t("rooms.demo_price_per_hour", {
-                    amount: money(ladder.ideal, "NOK"),
-                  })}
-                </strong>
-              </li>
-              <li>
-                <span>{t("rooms.demo_price_external")}</span>
-                <strong>
-                  {t("rooms.demo_price_per_hour", {
-                    amount: money(ladder.external, "NOK"),
-                  })}
-                </strong>
-              </li>
-            </ul>
-            <p className="caption">{t("rooms.demo_price_disclaimer")}</p>
-          </div>
-        ) : null}
         <div
           className="amenities"
           aria-hidden={room.amenities.length === 0 ? true : undefined}

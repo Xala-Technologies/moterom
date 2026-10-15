@@ -1096,24 +1096,6 @@ a.brand {
   border-radius: 5px;
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
 }
-.room-demo-prices {
-  margin: 0 0 12px;
-  padding: 12px 0 0;
-  border-top: 1px solid var(--ds-color-neutral-border-subtle, #e5e7eb);
-}
-.room-demo-price-list {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-.room-demo-price-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--ds-font-size-sm, 0.875rem);
-}
 .room-schedule-busy-reason {
   margin: 8px 0 0;
   font-size: var(--ds-font-size-sm, 0.875rem);
