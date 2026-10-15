@@ -16,7 +16,7 @@ Verify before the customer meeting. Two hostnames on the same VPS are not enough
 3. `curl -s https://fhh.digilist.no/api/config` → `mode=demo`, `access=public`.
 4. `curl -s https://skb.digilist.no/api/config` → `mode=live`, `access=members`, SKB building name.
 5. Create a demo booking on FHH; it must **not** appear in SKB admin or Digilist production.
-6. Rebuild only `moterom-fhh`. Do not rebuild the SKB image from `feat/frivillighetens-hus`.
+6. Rebuild only `moterom-fhh`. Do not rebuild the SKB image from `frivillighetens-hus`.
 
 ## Local
 

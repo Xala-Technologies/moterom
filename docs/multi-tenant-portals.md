@@ -59,7 +59,7 @@ flowchart LR
 Møterom is still **single-tenant per deploy**: one `DIGILIST_TENANT_ID`, one `PUBLIC_ORIGIN`, one rooms map.
 
 - SKB: `dev`/`main`, `https://skb.digilist.no` — [`skb-private-portal.md`](skb-private-portal.md)
-- Frivillighetens Hus: branch `feat/frivillighetens-hus`, `https://fhh.digilist.no` — [`fhh-private-portal.md`](fhh-private-portal.md)
+- Frivillighetens Hus: lasting tenant branch `frivillighetens-hus` (not `main`), `https://fhh.digilist.no` — [`fhh-private-portal.md`](fhh-private-portal.md)
 
 That already keeps Finn rom private for the configured tenant. See [`digilist-integration.md`](digilist-integration.md).
 

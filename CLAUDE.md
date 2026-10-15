@@ -6,7 +6,9 @@ Meeting-room booking for one building. Digilist is the design source and the liv
 
 Read `README.md`, `CONTRIBUTING.md`, `docs/`, `config/rooms.json`, and the files you will change. Inspect the current branch, `dev`, `main`, and open PRs. Do not rebuild from an empty or outdated branch.
 
-Day-to-day work lands on `dev`. Open a feature PR into `dev`. Release with `dev` → `main`.
+Day-to-day SKB work lands on `dev`. Open a feature PR into `dev`. Release with `dev` → `main`.
+
+Frivillighetens Hus uses the lasting tenant branch `frivillighetens-hus` (deployed to `fhh.digilist.no`). Do not merge FHH work into `main` unless explicitly asked. Do not treat it as a short-lived `feat/` branch.
 
 ## Design
 

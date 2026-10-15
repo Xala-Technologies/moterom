@@ -99,7 +99,7 @@ See [fhh-demo-isolation.md](fhh-demo-isolation.md) and [fhh-demo-walkthrough.md]
 | `skb.digilist.no` | A `31.97.77.81` | 200, Caddy TLS, `mode=live` (container `moterom`)     |
 | `fhh.digilist.no` | A `31.97.77.81` | 200, Caddy TLS, `mode=demo` (container `moterom-fhh`) |
 
-Both portals share Hostinger VPS `srv1154093` / `31.97.77.81`. SKB stays in `/opt/moterom`. FHH is `/opt/moterom-fhh` from branch `feat/frivillighetens-hus`. Do not rebuild the SKB image with this branch.
+Both portals share Hostinger VPS `srv1154093` / `31.97.77.81`. SKB stays in `/opt/moterom`. FHH is `/opt/moterom-fhh` from the lasting tenant branch `frivillighetens-hus` (not `main`). Do not rebuild the SKB image with this branch.
 
 FHH is on **demo** until a Digilist tenant, rooms and `ADMIN_EMAILS` exist. Then edit `/opt/moterom-fhh/.env` to live, unset `ALLOW_DEMO_DEPLOYMENT`, set tenant URLs and ids, and rebuild.
 
