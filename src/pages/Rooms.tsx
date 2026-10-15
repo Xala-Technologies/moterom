@@ -58,7 +58,7 @@ export function Rooms() {
 
   const onBooked = () => {
     setSelections(resetSlotSelections());
-    setConfirm(null);
+    // Keep the confirm modal open so it can show the registered booking.
     // Zone conflicts change other halls — reload every card’s slots.
     setSlotsRevision((n) => n + 1);
   };
