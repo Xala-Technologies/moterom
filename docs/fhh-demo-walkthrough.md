@@ -17,7 +17,7 @@ Kjører i **demomotoren** (SQLite). Si i møtet: produksjon i Digilist er neste 
 
 Følger nettsidens produkter (Sal 1, 2, 3, 1–2, 1–3). **Sal 2–3 finnes ikke.** Sal 1 og Sal 2 er kun for interne (som på nettsiden — bekreftes før prod).
 
-1. Under **Salene**: velg **Sal 1–2** → book kl. 10–12 (ekstern OK; godta vilkår).
+1. På Finn rom: book **Sal 1–2** kl. 10–12 (ekstern OK; godta vilkår).
 2. Vis at Sal 1–3 blir utilgjengelig med forklaring om overlappende del av salen.
 3. Vis at Sal 3 fortsatt er ledig og kan bookes.
 4. Kanseller Sal 1–2 → soner frigjøres; Sal 1–3 kan bookes igjen.

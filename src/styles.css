@@ -1114,46 +1114,6 @@ a.brand {
   gap: 12px;
   font-size: var(--ds-font-size-sm, 0.875rem);
 }
-.halls-filter {
-  margin: 0 0 24px;
-  padding: 16px 20px;
-  border: 1px solid var(--ds-color-neutral-border-default);
-  border-radius: 8px;
-  background: var(--ds-color-neutral-background-subtle, #f8fafc);
-}
-.halls-filter h2 {
-  margin: 0 0 8px;
-  font-size: var(--ds-font-size-md, 1.05rem);
-}
-.halls-filter-lead {
-  margin: 0 0 12px;
-  max-width: 52rem;
-}
-.halls-filter-tabs {
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-.halls-product-hint {
-  margin: 0 0 14px;
-  max-width: 52rem;
-  font-size: var(--ds-font-size-sm, 0.875rem);
-}
-.halls-filter-date {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
-}
-.halls-filter-date-label {
-  font-size: var(--ds-font-size-sm, 0.875rem);
-  font-weight: 600;
-  color: var(--ds-color-neutral-text-default);
-}
-.halls-filter-calendar {
-  left: 0;
-  right: auto;
-}
 .room-schedule-busy-reason {
   margin: 8px 0 0;
   font-size: var(--ds-font-size-sm, 0.875rem);
