@@ -126,9 +126,10 @@ export function BookingConfirmModal({
       const created = await post<Booking>("/bookings", request.current.body, {
         "Idempotency-Key": request.current.key,
       });
-      await refresh();
+      // Show the in-modal confirmation before any parent refresh work.
       setBooking(created);
       onSuccess();
+      await refresh();
     } catch (err) {
       setError(err as Error);
       if (err instanceof ApiError && err.code === "quote_expired") {
