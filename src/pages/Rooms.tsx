@@ -13,22 +13,11 @@ import { MonthCalendar } from "../components/MonthCalendar";
 import type { RoomSlotSelection } from "../components/RoomCardSchedule";
 import type { Room, Search } from "../../shared/types";
 import { addDays, defaultSearch, today } from "../../shared/time";
-import {
-  PHYSICAL_SAL_ZONES,
-  SAL_ROOM_IDS,
-  isSalRoom,
-  selectedPhysicalZones,
-} from "../../shared/zones";
+import { SAL_ROOM_IDS, isSalRoom } from "../../shared/zones";
 import { useApp } from "../context";
 import { useFormatters, useT } from "../i18n";
 
 const SAL_FILTER_ORDER = SAL_ROOM_IDS;
-
-const ZONE_LABELS: Record<(typeof PHYSICAL_SAL_ZONES)[number], string> = {
-  "sal-1": "Sal 1",
-  "sal-2": "Sal 2",
-  "sal-3": "Sal 3",
-};
 
 /** Drop in-progress slot picks when the shared halls date changes. */
 export function resetSlotSelections(): Record<
@@ -88,8 +77,6 @@ export function Rooms() {
       ),
     [roomList],
   );
-
-  const highlightedZones = selectedPhysicalZones(salFilter);
 
   const productHintKey =
     salFilter === "sal-1-2"
@@ -163,34 +150,6 @@ export function Rooms() {
             >
               <h2 id="halls-filter-title">{t("rooms.halls_title")}</h2>
               <p className="halls-filter-lead">{t("rooms.halls_body")}</p>
-              <p className="caption">{t("rooms.halls_zones_caption")}</p>
-              <div
-                className="halls-zone-strip"
-                role="group"
-                aria-label={t("rooms.halls_zones_aria")}
-              >
-                {PHYSICAL_SAL_ZONES.map((zoneId) => {
-                  const selected = highlightedZones.has(zoneId);
-                  return (
-                    <div
-                      key={zoneId}
-                      className={`halls-zone-cell${selected ? " is-selected" : ""}`}
-                    >
-                      <span className="halls-zone-name">
-                        {ZONE_LABELS[zoneId]}
-                      </span>
-                      <span className="halls-zone-state">
-                        {selected
-                          ? t("rooms.halls_zone_selected")
-                          : t("rooms.halls_zone_not_selected")}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="caption halls-zone-note">
-                {t("rooms.halls_zones_illustration_note")}
-              </p>
               <div
                 className="pill-tabs halls-filter-tabs"
                 role="group"
@@ -218,9 +177,11 @@ export function Rooms() {
                   </button>
                 ))}
               </div>
-              <p className="halls-product-hint" role="status">
-                {t(productHintKey)}
-              </p>
+              {salFilter !== "all" ? (
+                <p className="halls-product-hint" role="status">
+                  {t(productHintKey)}
+                </p>
+              ) : null}
               <div className="halls-filter-date">
                 <span className="halls-filter-date-label">
                   {t("rooms.halls_selected_date")}
