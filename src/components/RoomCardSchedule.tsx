@@ -211,6 +211,10 @@ export function RoomCardSchedule({
                     ? { start: selection.start, end: selection.end }
                     : null;
                 const pressed = Boolean(current && slotInRange(slot, current));
+                const busyTitle =
+                  slot.state === "unavailable" && slot.reason
+                    ? slot.reason
+                    : undefined;
                 return (
                   <button
                     type="button"
@@ -225,6 +229,7 @@ export function RoomCardSchedule({
                           : "is-unavailable"
                     }
                     aria-pressed={pressed}
+                    title={busyTitle}
                     aria-label={
                       slot.state === "available"
                         ? pressed
@@ -232,7 +237,9 @@ export function RoomCardSchedule({
                           : label
                         : slot.state === "error"
                           ? t("a11y.slot_unknown", { label })
-                          : t("a11y.slot_unavailable", { label })
+                          : busyTitle
+                            ? `${label}. ${busyTitle}`
+                            : t("a11y.slot_unavailable", { label })
                     }
                     disabled={slot.state !== "available"}
                     onClick={() => {
@@ -253,6 +260,16 @@ export function RoomCardSchedule({
                 );
               })}
             </div>
+            {(() => {
+              const busy = (slots.data || []).find(
+                (slot) => slot.state === "unavailable" && slot.reason,
+              );
+              return busy?.reason ? (
+                <p className="room-schedule-busy-reason" role="status">
+                  {busy.reason}
+                </p>
+              ) : null;
+            })()}
             {slots.data?.every((slot) => slot.state !== "available") && (
               <p className="muted" role="status">
                 {t("booking.no_slots")}

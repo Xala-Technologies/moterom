@@ -101,6 +101,8 @@ const nb: Record<string, string> = {
   room_busy: "Opptatt i det valgte tidsrommet.",
   room_busy_partial: "Opptatt i deler av tidsrommet.",
   room_busy_slot: "Rommet er opptatt i dette tidsrommet.",
+  hall_zone_busy:
+    "En annen del av salen er allerede reservert på dette tidspunktet.",
   no_rooms_slot: "Ingen ledige rom i dette tidsrommet.",
   slot_not_bookable: "Tidsrommet kan ikke bestilles.",
   time_past: "Tidspunktet har passert.",
@@ -246,6 +248,7 @@ const en: Record<string, string> = {
   room_busy: "Busy in the selected time slot.",
   room_busy_partial: "Busy for part of the time slot.",
   room_busy_slot: "The room is busy in this time slot.",
+  hall_zone_busy: "Another part of the hall is already reserved at this time.",
   no_rooms_slot: "No rooms are available in this time slot.",
   slot_not_bookable: "This time slot cannot be booked.",
   time_past: "The time has already passed.",

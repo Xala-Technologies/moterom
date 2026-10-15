@@ -954,14 +954,18 @@ app.get("/api/availability/slots", async (req, res) => {
           reason: translateMessage(locale, "availability_fetch_failed"),
         };
       const free = relevant.some((item) => item.state === "available");
+      const busyReason = relevant.find(
+        (item) => item.state !== "available" && item.reason,
+      )?.reason;
       return {
         ...slot,
         state: free ? ("available" as const) : ("unavailable" as const),
         reason: free
           ? undefined
-          : roomId
-            ? translateMessage(locale, "room_busy_slot")
-            : translateMessage(locale, "no_rooms_slot"),
+          : busyReason ||
+            (roomId
+              ? translateMessage(locale, "room_busy_slot")
+              : translateMessage(locale, "no_rooms_slot")),
       };
     }),
   );

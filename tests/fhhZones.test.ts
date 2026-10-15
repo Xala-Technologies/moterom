@@ -2,6 +2,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { addDays, today } from "../shared/time";
+import { selectedPhysicalZones } from "../shared/zones";
+import { resetSlotSelections } from "../src/pages/Rooms";
 
 process.env.DATA_MODE = "demo";
 process.env.DEMO_DB_PATH = ":memory:";
@@ -60,14 +62,22 @@ async function book(
 
 describe("FHH hall zone conflicts", () => {
   let day = 40;
+  let external: ReturnType<typeof request.agent>;
+  let externalB: ReturnType<typeof request.agent>;
+  let internal: ReturnType<typeof request.agent>;
+  let admin: ReturnType<typeof request.agent>;
 
   beforeAll(async () => {
     const rooms = (await request(app).get("/api/rooms").expect(200))
-      .body as Array<{
-      id: string;
-    }>;
+      .body as Array<{ id: string }>;
     expect(rooms.some((r) => r.id === "sal-1-2")).toBe(true);
     expect(rooms.some((r) => r.id === "sal-1-3")).toBe(true);
+    expect(rooms.some((r) => r.id === "sal-1")).toBe(false);
+    expect(rooms.some((r) => r.id === "sal-2")).toBe(false);
+    external = await login("external");
+    externalB = await login("external");
+    internal = await login("internal");
+    admin = await login("admin");
   });
 
   function nextDate() {
@@ -75,8 +85,13 @@ describe("FHH hall zone conflicts", () => {
     return addDays(today(), day);
   }
 
+  it("rejects external booking of Sal 1 via API", async () => {
+    const res = await book(external, "sal-1", nextDate(), "10:00", "11:00");
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("room_internal_only");
+  });
+
   it("allows Sal 3 while Sal 1–2 is booked, blocks Sal 1 / Sal 1–3", async () => {
-    const external = await login("external");
     const date = nextDate();
     expect(
       (await book(external, "sal-1-2", date, "10:00", "12:00")).status,
@@ -84,7 +99,7 @@ describe("FHH hall zone conflicts", () => {
     expect((await book(external, "sal-3", date, "10:00", "12:00")).status).toBe(
       201,
     );
-    expect((await book(external, "sal-1", date, "11:00", "13:00")).status).toBe(
+    expect((await book(internal, "sal-1", date, "11:00", "13:00")).status).toBe(
       409,
     );
     expect(
@@ -93,18 +108,16 @@ describe("FHH hall zone conflicts", () => {
   });
 
   it("allows a booking that starts when Sal 1–2 ends (half-open)", async () => {
-    const external = await login("external");
     const date = nextDate();
     expect(
       (await book(external, "sal-1-2", date, "10:00", "12:00")).status,
     ).toBe(201);
-    expect((await book(external, "sal-1", date, "12:00", "13:00")).status).toBe(
+    expect((await book(internal, "sal-1", date, "12:00", "13:00")).status).toBe(
       201,
     );
   });
 
   it("allows Sal 1–2 while Sal 3 is booked", async () => {
-    const external = await login("external");
     const date = nextDate();
     expect((await book(external, "sal-3", date, "10:00", "12:00")).status).toBe(
       201,
@@ -115,25 +128,30 @@ describe("FHH hall zone conflicts", () => {
   });
 
   it("blocks every hall variant when Sal 1–3 is booked", async () => {
-    const external = await login("external");
     const date = nextDate();
     expect(
       (await book(external, "sal-1-3", date, "10:00", "12:00")).status,
     ).toBe(201);
-    for (const roomId of ["sal-1", "sal-2", "sal-3", "sal-1-2"] as const) {
-      expect(
-        (await book(external, roomId, date, "10:00", "11:00")).status,
-      ).toBe(409);
-    }
+    expect((await book(internal, "sal-1", date, "10:00", "11:00")).status).toBe(
+      409,
+    );
+    expect((await book(internal, "sal-2", date, "10:00", "11:00")).status).toBe(
+      409,
+    );
+    expect((await book(external, "sal-3", date, "10:00", "11:00")).status).toBe(
+      409,
+    );
+    expect(
+      (await book(external, "sal-1-2", date, "10:00", "11:00")).status,
+    ).toBe(409);
   });
 
   it("holds pending Sal 1–2 against Sal 1; cancel frees the zone", async () => {
-    const external = await login("external");
     const date = nextDate();
     const created = await book(external, "sal-1-2", date, "10:00", "12:00");
     expect(created.status).toBe(201);
     expect(created.body.status).toBe("pending");
-    expect((await book(external, "sal-1", date, "10:00", "11:00")).status).toBe(
+    expect((await book(internal, "sal-1", date, "10:00", "11:00")).status).toBe(
       409,
     );
     await external
@@ -141,14 +159,12 @@ describe("FHH hall zone conflicts", () => {
       .set("Origin", origin)
       .send({})
       .expect(200);
-    expect((await book(external, "sal-1", date, "10:00", "11:00")).status).toBe(
+    expect((await book(internal, "sal-1", date, "10:00", "11:00")).status).toBe(
       201,
     );
   });
 
   it("blocks Sal 1–3 when admin blocks Sal 3", async () => {
-    const admin = await login("admin");
-    const external = await login("external");
     const date = nextDate();
     await admin
       .post("/api/admin/blocks")
@@ -170,9 +186,25 @@ describe("FHH hall zone conflicts", () => {
     ).toBe(201);
   });
 
+  it("returns zone busy reason on overlapping slots", async () => {
+    const date = nextDate();
+    expect(
+      (await book(external, "sal-1-2", date, "10:00", "12:00")).status,
+    ).toBe(201);
+    const slots = (
+      await request(app)
+        .get("/api/availability/slots")
+        .query({ date, roomId: "sal-1-3" })
+        .expect(200)
+    ).body as Array<{ start: string; state: string; reason?: string }>;
+    const busy = slots.find((s) => s.start === "10:00");
+    expect(busy?.state).toBe("unavailable");
+    expect(busy?.reason).toMatch(
+      /annen del av salen|another part of the hall/i,
+    );
+  });
+
   it("allows only one of two concurrent overlapping zone bookings", async () => {
-    const a = await login("external");
-    const b = await login("external");
     const date = nextDate();
     const searchA = {
       roomId: "sal-1",
@@ -189,13 +221,21 @@ describe("FHH hall zone conflicts", () => {
       people: 1,
     };
     const quoteA = (
-      await a.post("/api/quote").set("Origin", origin).send(searchA).expect(200)
+      await internal
+        .post("/api/quote")
+        .set("Origin", origin)
+        .send(searchA)
+        .expect(200)
     ).body;
     const quoteB = (
-      await b.post("/api/quote").set("Origin", origin).send(searchB).expect(200)
+      await externalB
+        .post("/api/quote")
+        .set("Origin", origin)
+        .send(searchB)
+        .expect(200)
     ).body;
     const [r1, r2] = await Promise.all([
-      a
+      internal
         .post("/api/bookings")
         .set("Origin", origin)
         .set("Idempotency-Key", randomUUID())
@@ -208,7 +248,7 @@ describe("FHH hall zone conflicts", () => {
           email: "a@example.invalid",
           acceptedTerms: true,
         }),
-      b
+      externalB
         .post("/api/bookings")
         .set("Origin", origin)
         .set("Idempotency-Key", randomUUID())
@@ -222,16 +262,14 @@ describe("FHH hall zone conflicts", () => {
           acceptedTerms: true,
         }),
     ]);
-    const statuses = [r1.status, r2.status].sort();
-    expect(statuses).toEqual([201, 409]);
+    expect([r1.status, r2.status].sort()).toEqual([201, 409]);
   });
 
   it("returns the same booking for a repeated idempotency key", async () => {
-    const external = await login("external");
     const date = nextDate();
     const key = randomUUID();
     const search = {
-      roomId: "sal-2",
+      roomId: "sal-3",
       date,
       start: "14:00",
       end: "15:00",
@@ -266,5 +304,14 @@ describe("FHH hall zone conflicts", () => {
     expect(first.status).toBe(201);
     expect(second.status).toBe(201);
     expect(second.body.id).toBe(first.body.id);
+  });
+
+  it("maps product filters to selected zones without implying busy", () => {
+    expect([...selectedPhysicalZones("sal-1-2")].sort()).toEqual([
+      "sal-1",
+      "sal-2",
+    ]);
+    expect(selectedPhysicalZones("all").size).toBe(0);
+    expect(resetSlotSelections()).toEqual({});
   });
 });

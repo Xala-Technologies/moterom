@@ -54,8 +54,8 @@ Stable portal `id`s stay in this repository. Digilist slugs are placeholders unt
 | salongen    | Salongen    | `fhh-salongen`    | unknown  |                                                    |
 | spisestuen  | Spisestuen  | `fhh-spisestuen`  | unknown  |                                                    |
 | styrerommet | Styrerommet | `fhh-styrerommet` | unknown  | Confirm name vs Syerommet                          |
-| sal-1       | Sal 1       | `fhh-sal-1`       | unknown  | Zone conflicts in demo motor                       |
-| sal-2       | Sal 2       | `fhh-sal-2`       | unknown  | Zone conflicts in demo motor                       |
+| sal-1       | Sal 1       | `fhh-sal-1`       | unknown  | Demo: `internalOnly` (confirm with customer)       |
+| sal-2       | Sal 2       | `fhh-sal-2`       | unknown  | Demo: `internalOnly` (confirm with customer)       |
 | sal-3       | Sal 3       | `fhh-sal-3`       | unknown  | Zone conflicts in demo motor                       |
 | sal-1-2     | Sal 1–2     | `fhh-sal-1-2`     | unknown  | Combined; demo zones block Sal 1/2/1–3             |
 | sal-1-3     | Sal 1–3     | `fhh-sal-1-3`     | unknown  | Full hall; demo zones block all sal variants       |

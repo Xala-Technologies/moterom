@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { zonesOverlap } from "../shared/zones";
+import {
+  selectedPhysicalZones,
+  zonesForProduct,
+  zonesOverlap,
+} from "../shared/zones";
 
 describe("zonesOverlap", () => {
   it("treats matching non-sal rooms as overlap and distinct ones as free", () => {
@@ -14,5 +18,11 @@ describe("zonesOverlap", () => {
     expect(zonesOverlap("sal-1-2", "sal-3")).toBe(false);
     expect(zonesOverlap("sal-1", "sal-2")).toBe(false);
     expect(zonesOverlap("sal-1-3", "sal-3")).toBe(true);
+  });
+
+  it("exposes product zone sets for the UX stripe", () => {
+    expect(zonesForProduct("sal-1-3")).toEqual(["sal-1", "sal-2", "sal-3"]);
+    expect(selectedPhysicalZones("sal-1-2").has("sal-3")).toBe(false);
+    expect(selectedPhysicalZones("sal-1-2").has("sal-1")).toBe(true);
   });
 });

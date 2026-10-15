@@ -26,7 +26,7 @@ import { annotateMessagesWithReadReceipts } from "../shared/messageReadReceipts"
 import { enrichBookingConversation } from "./conversationContext";
 import { DEMO_TERMS_VERSION, cancelDeadlineDaysForRoom } from "./bookingTerms";
 import { assertCanAccessRoom } from "./roomAccess";
-import { zonesOverlap } from "../shared/zones";
+import { isSalRoom, zonesOverlap } from "../shared/zones";
 
 /** Bookings/blocks that hold a zone: pending and confirmed (not cancelled/rejected). */
 function bookingHoldsZone(status: string) {
@@ -240,13 +240,16 @@ export class DemoStore {
         };
       }
       const occupied = this.zoneOccupied(room.id, span);
+      const busyReason = isSalRoom(room.id)
+        ? translateMessage(locale, "hall_zone_busy")
+        : translateMessage(locale, "room_busy_partial");
       const reason =
         span.startTime < Date.now()
           ? translateMessage(locale, "time_past")
           : search.people > room.capacity
             ? translateMessage(locale, "too_many_participants")
             : occupied
-              ? translateMessage(locale, "room_busy_partial")
+              ? busyReason
               : undefined;
       return {
         roomId: room.id,

@@ -13,11 +13,38 @@ import { MonthCalendar } from "../components/MonthCalendar";
 import type { RoomSlotSelection } from "../components/RoomCardSchedule";
 import type { Room, Search } from "../../shared/types";
 import { addDays, defaultSearch, today } from "../../shared/time";
-import { SAL_ROOM_IDS, isSalRoom } from "../../shared/zones";
+import {
+  PHYSICAL_SAL_ZONES,
+  SAL_ROOM_IDS,
+  isSalRoom,
+  selectedPhysicalZones,
+} from "../../shared/zones";
 import { useApp } from "../context";
 import { useFormatters, useT } from "../i18n";
 
 const SAL_FILTER_ORDER = SAL_ROOM_IDS;
+
+const ZONE_LABELS: Record<(typeof PHYSICAL_SAL_ZONES)[number], string> = {
+  "sal-1": "Sal 1",
+  "sal-2": "Sal 2",
+  "sal-3": "Sal 3",
+};
+
+/** Drop in-progress slot picks when the shared halls date changes. */
+export function resetSlotSelections(): Record<
+  string,
+  RoomSlotSelection | null
+> {
+  return {};
+}
+
+export function productChipLabel(
+  roomId: string,
+  name: string,
+  heleSalen: string,
+): string {
+  return roomId === "sal-1-3" ? heleSalen : name;
+}
 
 export function readSearch(params: URLSearchParams): Search {
   const d = defaultSearch();
@@ -62,6 +89,19 @@ export function Rooms() {
     [roomList],
   );
 
+  const highlightedZones = selectedPhysicalZones(salFilter);
+
+  const productHintKey =
+    salFilter === "sal-1-2"
+      ? "rooms.halls_hint_sal_1_2"
+      : salFilter === "sal-1-3"
+        ? "rooms.halls_hint_sal_1_3"
+        : salFilter === "sal-1" ||
+            salFilter === "sal-2" ||
+            salFilter === "sal-3"
+          ? "rooms.halls_hint_single"
+          : "rooms.halls_hint_all";
+
   const visibleRooms = roomList.filter((room) => {
     if (!isSalRoom(room.id)) return true;
     if (salFilter === "all") return true;
@@ -70,13 +110,13 @@ export function Rooms() {
 
   const changeDate = (date: string) => {
     setSelectedDate(date);
-    setSelections({});
+    setSelections(resetSlotSelections());
     setSlotsRevision((n) => n + 1);
     setDateOpen(false);
   };
 
   const onBooked = () => {
-    setSelections({});
+    setSelections(resetSlotSelections());
     setConfirm(null);
     // Zone conflicts change other halls — reload every card’s slots.
     setSlotsRevision((n) => n + 1);
@@ -122,7 +162,35 @@ export function Rooms() {
               aria-labelledby="halls-filter-title"
             >
               <h2 id="halls-filter-title">{t("rooms.halls_title")}</h2>
-              <p>{t("rooms.halls_body")}</p>
+              <p className="halls-filter-lead">{t("rooms.halls_body")}</p>
+              <p className="caption">{t("rooms.halls_zones_caption")}</p>
+              <div
+                className="halls-zone-strip"
+                role="group"
+                aria-label={t("rooms.halls_zones_aria")}
+              >
+                {PHYSICAL_SAL_ZONES.map((zoneId) => {
+                  const selected = highlightedZones.has(zoneId);
+                  return (
+                    <div
+                      key={zoneId}
+                      className={`halls-zone-cell${selected ? " is-selected" : ""}`}
+                    >
+                      <span className="halls-zone-name">
+                        {ZONE_LABELS[zoneId]}
+                      </span>
+                      <span className="halls-zone-state">
+                        {selected
+                          ? t("rooms.halls_zone_selected")
+                          : t("rooms.halls_zone_not_selected")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="caption halls-zone-note">
+                {t("rooms.halls_zones_illustration_note")}
+              </p>
               <div
                 className="pill-tabs halls-filter-tabs"
                 role="group"
@@ -142,10 +210,17 @@ export function Rooms() {
                     aria-pressed={salFilter === room.id}
                     onClick={() => setSalFilter(room.id)}
                   >
-                    {room.name}
+                    {productChipLabel(
+                      room.id,
+                      room.name,
+                      t("rooms.halls_filter_full"),
+                    )}
                   </button>
                 ))}
               </div>
+              <p className="halls-product-hint" role="status">
+                {t(productHintKey)}
+              </p>
               <div className="halls-filter-date">
                 <span className="halls-filter-date-label">
                   {t("rooms.halls_selected_date")}

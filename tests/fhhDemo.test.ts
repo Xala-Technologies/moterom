@@ -41,8 +41,9 @@ describe("FHH demo acceptance", () => {
     }>;
     elvebredden = rooms.find((r) => r.id === "elvebredden")!.id;
     bakgarden = "bakgarden";
-    sal1 = rooms.find((r) => r.id === "sal-1")!.id;
+    sal1 = "sal-1";
     expect(rooms.some((r) => r.id === "bakgarden")).toBe(false);
+    expect(rooms.some((r) => r.id === "sal-1")).toBe(false);
     expect(
       rooms.find((r) => r.id === "elvebredden")?.demoHourlyPrices,
     ).toMatchObject({
@@ -133,8 +134,9 @@ describe("FHH demo acceptance", () => {
   it("holds pending sal bookings in availability and stores terms", async () => {
     const external = await login("external");
     const admin = await login("admin");
+    // Sal 3 is public; Sal 1/2 are internal-only.
     const search = {
-      roomId: sal1,
+      roomId: "sal-3",
       date: addDays(today(), 23),
       start: "10:00",
       end: "11:00",
@@ -183,7 +185,7 @@ describe("FHH demo acceptance", () => {
     const slots = (
       await request(app)
         .get("/api/availability/slots")
-        .query({ date: search.date, roomId: sal1 })
+        .query({ date: search.date, roomId: "sal-3" })
         .expect(200)
     ).body as Array<{ start: string; state: string }>;
     expect(slots.find((s) => s.start === "10:00")?.state).toBe("unavailable");
@@ -195,5 +197,24 @@ describe("FHH demo acceptance", () => {
         .expect(200)
     ).body;
     expect(confirmed.status).toBe("confirmed");
+  });
+
+  it("hides Sal 1 from external and rejects direct quote", async () => {
+    const external = await login("external");
+    const rooms = (await external.get("/api/rooms").expect(200)).body as Array<{
+      id: string;
+    }>;
+    expect(rooms.some((r) => r.id === "sal-1")).toBe(false);
+    await external
+      .post("/api/quote")
+      .set("Origin", origin)
+      .send({
+        roomId: sal1,
+        date: addDays(today(), 24),
+        start: "10:00",
+        end: "11:00",
+        people: 1,
+      })
+      .expect(403);
   });
 });

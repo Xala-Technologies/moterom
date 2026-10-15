@@ -1125,13 +1125,53 @@ a.brand {
   margin: 0 0 8px;
   font-size: var(--ds-font-size-md, 1.05rem);
 }
-.halls-filter > p {
-  margin: 0 0 12px;
+.halls-filter-lead {
+  margin: 0 0 8px;
   max-width: 52rem;
+}
+.halls-zone-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+.halls-zone-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--ds-color-neutral-border-default);
+  background: var(--ds-color-neutral-background-default, #fff);
+  text-align: center;
+}
+.halls-zone-cell.is-selected {
+  border-color: var(--ds-color-accent-border-strong, #003057);
+  background: var(--ds-color-accent-surface-tinted, #e8eef3);
+}
+.halls-zone-name {
+  font-weight: 600;
+  font-size: var(--ds-font-size-sm, 0.875rem);
+}
+.halls-zone-state {
+  font-size: var(--ds-font-size-xs, 0.75rem);
+  color: var(--ds-color-neutral-text-subtle, #5b6875);
+}
+.halls-zone-cell.is-selected .halls-zone-state {
+  color: var(--ds-color-accent-text-default, #003057);
+  font-weight: 600;
+}
+.halls-zone-note {
+  margin: 0 0 12px;
 }
 .halls-filter-tabs {
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
+}
+.halls-product-hint {
+  margin: 0 0 14px;
+  max-width: 52rem;
+  font-size: var(--ds-font-size-sm, 0.875rem);
 }
 .halls-filter-date {
   position: relative;
@@ -1148,6 +1188,11 @@ a.brand {
 .halls-filter-calendar {
   left: 0;
   right: auto;
+}
+.room-schedule-busy-reason {
+  margin: 8px 0 0;
+  font-size: var(--ds-font-size-sm, 0.875rem);
+  color: var(--ds-color-neutral-text-default);
 }
 .room-card-footer {
   display: flex;
