@@ -156,107 +156,183 @@ export class OrganizationStore {
        CREATE INDEX IF NOT EXISTS membership_requests_status
          ON membership_requests (status, created);`,
     );
-    this.seedIfEmpty();
+    this.ensureSeedOrganizations();
   }
 
-  private seedIfEmpty() {
-    const count = this.db
-      .prepare(`SELECT COUNT(*) AS n FROM organizations`)
-      .get() as { n: number };
-    if (count.n > 0) return;
+  /**
+   * Keep demo orgs on real Frivillighetsregisteret numbers/names.
+   * Runs on every open so older demo DBs (synthetic numbers / "Ukjent …")
+   * are repaired without wiping memberships.
+   */
+  private ensureSeedOrganizations() {
     const now = Date.now();
     const kfukId = "org-kfuk";
     const fnId = "org-frivillighet-norge";
     const memberId = "org-kfuk-member";
     const idealId = "org-demo-ideal";
 
-    const insert = this.db.prepare(
-      `INSERT INTO organizations
-       (id, organization_number, name, is_internal_tenant, registry_status,
-        registry_source, registry_checked_at, manual_ideal_eligible,
-        registry_snapshot, created, updated)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-    insert.run(
-      kfukId,
+    const seeds: Array<{
+      id: string;
+      organizationNumber: string;
+      name: string;
+      isInternalTenant: number;
+    }> = [
+      {
+        id: kfukId,
+        organizationNumber: "957914330",
+        name: "KFUK-KFUM Norge",
+        isInternalTenant: 1,
+      },
+      {
+        id: fnId,
+        organizationNumber: "988144800",
+        name: "Frivillighet Norge",
+        isInternalTenant: 1,
+      },
+      {
+        id: memberId,
+        organizationNumber: "971274018",
+        name: "Norges KFUK KFUM Speidere",
+        isInternalTenant: 0,
+      },
+      {
+        id: idealId,
+        organizationNumber: "919181206",
+        name: "Frivillighetens Hus",
+        isInternalTenant: 0,
+      },
+    ];
+
+    const snapshot = JSON.stringify({
+      fixture: true,
+      registrertIFrivillighetsregisteret: true,
+    });
+
+    for (const seed of seeds) {
+      const byId = this.getOrganization(seed.id);
+      const byNumber = this.getByOrgNumber(seed.organizationNumber);
+      if (byId) {
+        if (byNumber && byNumber.id !== seed.id) {
+          // Another row already owns the real number — keep seed row
+          // but refresh name/registry without colliding on UNIQUE.
+          this.db
+            .prepare(
+              `UPDATE organizations SET
+                 name = ?,
+                 registry_status = 'verified',
+                 registry_source = 'demo_fixture',
+                 registry_checked_at = ?,
+                 registry_snapshot = ?,
+                 is_internal_tenant = ?,
+                 updated = ?
+               WHERE id = ?`,
+            )
+            .run(seed.name, now, snapshot, seed.isInternalTenant, now, seed.id);
+        } else {
+          this.db
+            .prepare(
+              `UPDATE organizations SET
+                 organization_number = ?,
+                 name = ?,
+                 registry_status = 'verified',
+                 registry_source = 'demo_fixture',
+                 registry_checked_at = ?,
+                 registry_snapshot = ?,
+                 is_internal_tenant = ?,
+                 updated = ?
+               WHERE id = ?`,
+            )
+            .run(
+              seed.organizationNumber,
+              seed.name,
+              now,
+              snapshot,
+              seed.isInternalTenant,
+              now,
+              seed.id,
+            );
+        }
+      } else if (!byNumber) {
+        this.db
+          .prepare(
+            `INSERT INTO organizations
+             (id, organization_number, name, is_internal_tenant, registry_status,
+              registry_source, registry_checked_at, manual_ideal_eligible,
+              registry_snapshot, created, updated)
+             VALUES (?, ?, ?, ?, 'verified', 'demo_fixture', ?, 0, ?, ?, ?)`,
+          )
+          .run(
+            seed.id,
+            seed.organizationNumber,
+            seed.name,
+            seed.isInternalTenant,
+            now,
+            snapshot,
+            now,
+            now,
+          );
+      }
+    }
+
+    // Drop leftover rows that used the old synthetic demo numbers.
+    for (const obsolete of [
       "970189009",
-      "Norges KFUK-KFUM",
-      1,
-      "unchecked",
-      "none",
-      null,
-      0,
-      null,
-      now,
-      now,
-    );
-    insert.run(
-      fnId,
       "912345602",
-      "Frivillighet Norge",
-      1,
-      "unchecked",
-      "none",
-      null,
-      0,
-      null,
-      now,
-      now,
-    );
-    insert.run(
-      memberId,
       "918720405",
-      "KFUM-tilknyttet organisasjon",
-      0,
-      "unchecked",
-      "none",
-      null,
-      0,
-      null,
-      now,
-      now,
-    );
-    // Matches BRREG_MODE=fixture entry 971277882.
-    insert.run(
-      idealId,
       "971277882",
-      "Demo Ideell Organisasjon",
-      0,
-      "verified",
-      "demo_fixture",
-      now,
-      0,
-      JSON.stringify({
-        fixture: true,
-        registrertIFrivillighetsregisteret: true,
-      }),
-      now,
-      now,
-    );
+    ]) {
+      const row = this.getByOrgNumber(obsolete);
+      if (
+        row &&
+        !seeds.some((s) => s.id === row.id) &&
+        (row.name.startsWith("Ukjent organisasjon") ||
+          row.name === "Demo Ideell Organisasjon" ||
+          row.name === "KFUM-tilknyttet organisasjon" ||
+          row.name === "Norges KFUK-KFUM")
+      ) {
+        this.db.prepare(`DELETE FROM organizations WHERE id = ?`).run(row.id);
+      }
+    }
 
-    this.db
+    const relationExists = this.db
       .prepare(
-        `INSERT INTO organization_relations
-         (id, child_organization_id, parent_organization_id, kind, status, created, updated)
-         VALUES (?, ?, ?, 'member_of', 'approved', ?, ?)`,
+        `SELECT id FROM organization_relations
+         WHERE child_organization_id = ? AND parent_organization_id = ?`,
       )
-      .run(randomUUID(), memberId, kfukId, now, now);
+      .get(memberId, kfukId);
+    if (!relationExists) {
+      this.db
+        .prepare(
+          `INSERT INTO organization_relations
+           (id, child_organization_id, parent_organization_id, kind, status, created, updated)
+           VALUES (?, ?, ?, 'member_of', 'approved', ?, ?)`,
+        )
+        .run(randomUUID(), memberId, kfukId, now, now);
+    }
 
-    this.db
+    const membershipExists = this.db
       .prepare(
-        `INSERT INTO organization_memberships
-         (id, organization_id, user_id, email, name, role, status, created, updated)
-         VALUES (?, ?, ?, ?, ?, 'representative', 'approved', ?, ?)`,
+        `SELECT id FROM organization_memberships
+         WHERE organization_id = ? AND user_id = ?`,
       )
-      .run(
-        randomUUID(),
-        kfukId,
-        "demo-internal",
-        "intern@example.invalid",
-        "Intern bruker",
-        now,
-        now,
-      );
+      .get(kfukId, "demo-internal");
+    if (!membershipExists) {
+      this.db
+        .prepare(
+          `INSERT INTO organization_memberships
+           (id, organization_id, user_id, email, name, role, status, created, updated)
+           VALUES (?, ?, ?, ?, ?, 'representative', 'approved', ?, ?)`,
+        )
+        .run(
+          randomUUID(),
+          kfukId,
+          "demo-internal",
+          "intern@example.invalid",
+          "Intern bruker",
+          now,
+          now,
+        );
+    }
   }
 
   audit(

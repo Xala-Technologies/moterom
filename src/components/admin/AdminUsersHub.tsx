@@ -39,6 +39,29 @@ function registryLabel(
   return t("admin.orgs.registry_unchecked");
 }
 
+function registryBadgeLabel(
+  org: Organization,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (org.registryStatus === "verified")
+    return t("admin.orgs.registry_badge_verified");
+  if (org.registryStatus === "not_registered")
+    return t("admin.orgs.registry_badge_not_registered");
+  if (org.registryStatus === "verification_failed")
+    return t("admin.orgs.registry_badge_failed");
+  return t("admin.orgs.registry_badge_unchecked");
+}
+
+function sourceLabel(
+  source: Organization["registrySource"],
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (source === "brreg") return t("admin.orgs.source_brreg");
+  if (source === "demo_fixture") return t("admin.orgs.source_demo_fixture");
+  if (source === "manual_fhh") return t("admin.orgs.source_manual_fhh");
+  return t("admin.orgs.source_none");
+}
+
 export function AdminUsersHub({
   accessResult,
   onMembersChanged,
@@ -302,16 +325,19 @@ export function AdminUsersHub({
                           })}
                         </p>
                       </div>
-                      <Status
-                        status={
-                          org.registryStatus === "verified"
-                            ? "confirmed"
-                            : org.registryStatus === "verification_failed"
-                              ? "pending"
-                              : "cancelled"
-                        }
-                      />
+                      <span
+                        className={`admin-org-registry-badge admin-org-registry-badge--${org.registryStatus}`}
+                      >
+                        {registryBadgeLabel(org, t)}
+                      </span>
                     </div>
+                    {org.registryStatus === "verified" ? (
+                      <p className="admin-org-registry-banner" role="status">
+                        {org.registrySource === "demo_fixture"
+                          ? t("admin.orgs.registry_banner_demo")
+                          : t("admin.orgs.registry_banner_verified")}
+                      </p>
+                    ) : null}
                     <dl className="admin-org-meta">
                       <div>
                         <dt>{t("admin.orgs.meta_registry")}</dt>
@@ -319,7 +345,7 @@ export function AdminUsersHub({
                       </div>
                       <div>
                         <dt>{t("admin.orgs.meta_source")}</dt>
-                        <dd>{org.registrySource}</dd>
+                        <dd>{sourceLabel(org.registrySource, t)}</dd>
                       </div>
                       <div>
                         <dt>{t("admin.orgs.meta_checked")}</dt>

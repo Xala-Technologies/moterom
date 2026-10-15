@@ -15,13 +15,41 @@ type FixtureEntry = {
   inFrivillighetsregisteret: boolean;
 };
 
-/** Known demo org numbers (valid Modulus-11) for offline fixture mode. */
+/**
+ * Real Norwegian organisations used in the FHH demo.
+ * Numbers are valid Modulus-11 and match Enhetsregisteret;
+ * Frivillighetsregisteret flags match live Brreg checks (2026-10).
+ */
 const FIXTURES: Record<string, FixtureEntry> = {
-  // Synthetic valid-format numbers for demo only — not real entities.
-  "971277882": {
-    name: "Demo Ideell Organisasjon",
+  "957914330": {
+    name: "KFUK-KFUM Norge",
     inFrivillighetsregisteret: true,
   },
+  "988144800": {
+    name: "Frivillighet Norge",
+    inFrivillighetsregisteret: true,
+  },
+  "971274018": {
+    name: "Norges KFUK KFUM Speidere",
+    inFrivillighetsregisteret: true,
+  },
+  "919181206": {
+    name: "Frivillighetens Hus",
+    inFrivillighetsregisteret: true,
+  },
+  "871033552": {
+    name: "Norsk Folkehjelp",
+    inFrivillighetsregisteret: true,
+  },
+  "954877841": {
+    name: "Norges Speiderforbund",
+    inFrivillighetsregisteret: true,
+  },
+  "944384448": {
+    name: "Stiftelsen Kirkens Bymisjon",
+    inFrivillighetsregisteret: true,
+  },
+  // Negative path for tests / walkthrough (not a real entity).
   "999999999": {
     name: "Demo Uregistrert AS",
     inFrivillighetsregisteret: false,
@@ -50,7 +78,7 @@ export async function lookupOrganization(
     if (!fixture) {
       return {
         organizationNumber,
-        name: `Ukjent organisasjon ${organizationNumber}`,
+        name: `Organisasjonsnummer ${organizationNumber}`,
         registryStatus: "not_registered",
         registrySource: "demo_fixture",
         snapshot: JSON.stringify({ fixture: true, found: false }),
@@ -65,6 +93,7 @@ export async function lookupOrganization(
       registrySource: "demo_fixture",
       snapshot: JSON.stringify({
         fixture: true,
+        navn: fixture.name,
         registrertIFrivillighetsregisteret: fixture.inFrivillighetsregisteret,
       }),
     };

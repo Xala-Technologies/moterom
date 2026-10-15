@@ -49,13 +49,21 @@ describe("FHH organisations and Brønnøysund", () => {
         isInternalTenant: boolean;
       }>;
     };
-    kfukId = payload.organizations.find((o) => o.name.includes("KFUK"))!.id;
+    kfukId = payload.organizations.find((o) =>
+      o.name.includes("KFUK-KFUM Norge"),
+    )!.id;
     idealId = payload.organizations.find((o) =>
-      o.name.includes("Demo Ideell"),
+      o.name.includes("Frivillighetens Hus"),
     )!.id;
     expect(
       payload.organizations.find((o) => o.id === idealId)?.registrySource,
     ).toBe("demo_fixture");
+    expect(
+      payload.organizations.find((o) => o.id === idealId)?.registryStatus,
+    ).toBe("verified");
+    expect(
+      payload.organizations.find((o) => o.id === idealId)?.organizationNumber,
+    ).toBe("919181206");
     const rooms = (await request(app).get("/api/rooms").expect(200))
       .body as Array<{
       id: string;
@@ -113,9 +121,10 @@ describe("FHH organisations and Brønnøysund", () => {
       await external
         .post("/api/organizations/verify")
         .set("Origin", origin)
-        .send({ organizationNumber: "971277882" })
+        .send({ organizationNumber: "871033552" })
         .expect(200)
     ).body;
+    expect(org.name).toBe("Norsk Folkehjelp");
     expect(org.registryStatus).toBe("verified");
     expect(org.registrySource).toBe("demo_fixture");
     const mine = (await external.get("/api/me/organizations").expect(200))
@@ -131,12 +140,12 @@ describe("FHH organisations and Brønnøysund", () => {
     await agent
       .post("/api/organizations/verify")
       .set("Origin", origin)
-      .send({ organizationNumber: "971277882" })
+      .send({ organizationNumber: "871033552" })
       .expect(200);
     await agent
       .post("/api/organizations/verify")
       .set("Origin", origin)
-      .send({ organizationNumber: "971 277 882" })
+      .send({ organizationNumber: "871 033 552" })
       .expect(200);
     const after = (await admin.get("/api/admin/organizations").expect(200)).body
       .organizations.length;

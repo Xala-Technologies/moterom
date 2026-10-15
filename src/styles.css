@@ -5679,6 +5679,57 @@ button.admin-bl-menu-trigger:disabled {
   gap: 12px;
   align-items: flex-start;
 }
+.admin-org-registry-badge {
+  flex-shrink: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--ds-border-radius-md, 4px);
+  font-size: var(--ds-font-size-xs, 0.75rem);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.admin-org-registry-badge--verified {
+  background: color-mix(
+    in srgb,
+    var(--ds-color-success-base-default, #06893a) 14%,
+    transparent
+  );
+  color: var(--ds-color-success-text-default, #06893a);
+}
+.admin-org-registry-badge--not_registered {
+  background: var(--ds-color-neutral-surface-tinted, #f0f0f0);
+  color: var(--ds-color-neutral-text-subtle);
+}
+.admin-org-registry-badge--verification_failed {
+  background: color-mix(
+    in srgb,
+    var(--ds-color-warning-base-default, #c77700) 16%,
+    transparent
+  );
+  color: var(--ds-color-warning-text-default, #8b5a00);
+}
+.admin-org-registry-badge--unchecked {
+  background: var(--ds-color-neutral-surface-tinted, #f0f0f0);
+  color: var(--ds-color-neutral-text-subtle);
+}
+.admin-org-registry-banner {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--ds-border-radius-md, 4px);
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--ds-color-success-base-default, #06893a) 35%,
+      transparent
+    );
+  background: color-mix(
+    in srgb,
+    var(--ds-color-success-base-default, #06893a) 8%,
+    transparent
+  );
+  color: var(--ds-color-neutral-text-default);
+  font-size: var(--ds-font-size-sm, 0.875rem);
+}
 .admin-org-meta {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));

@@ -41,12 +41,12 @@ Lite tid på design. De var allerede positive visuelt.
 
 På **Admin → Brukere** finnes faner for organisasjoner og representanter.
 
-1. Logg inn som intern → book Elvebredden «på vegne av» Norges KFUK-KFUM → 400 kr (intern).
-2. Logg inn som ekstern → i bekreftelsesdialogen søk org.nr `971277882` (demo-fixture) → be om å representere → ingen ideell pris før admin godkjenner.
+1. Logg inn som intern → book Elvebredden «på vegne av» KFUK-KFUM Norge (`957 914 330`) → 400 kr (intern).
+2. Logg inn som ekstern → i bekreftelsesdialogen søk org.nr `919 181 206` (Frivillighetens Hus) eller `871 033 552` (Norsk Folkehjelp) → be om å representere → ingen ideell pris før admin godkjenner.
 3. Admin godkjenner forespørselen → ekstern får ideell 560 kr når de velger organisasjonen.
-4. Registerstatus skiller **Demo-verifisering**, Brønnøysund, manuell FHH og «Kunne ikke verifiseres».
+4. Registerstatus viser tydelig **Registrert i Frivillighetsregisteret** (demo eller Brønnøysund), manuell FHH og «Kunne ikke verifiseres».
 
-`BRREG_MODE=fixture` er standard i demo/CI. Sett `BRREG_MODE=live` for ekte Enhetsregister-oppslag.
+Demo-seed (reelle org.nr som er i Frivillighetsregisteret): KFUK-KFUM Norge, Frivillighet Norge, Norges KFUK KFUM Speidere, Frivillighetens Hus. `BRREG_MODE=fixture` er standard i demo/CI. Sett `BRREG_MODE=live` for ekte Enhetsregister-oppslag.
 
 ## Ærlige gap (si høyt)
 
