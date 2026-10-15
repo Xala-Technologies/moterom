@@ -141,6 +141,7 @@ export function Status({ status }: { status: string }) {
     reserved: t("common.status.reserved"),
     blocked: t("common.status.blocked"),
     approved: t("common.status.approved"),
+    revoked: t("common.status.cancelled"),
     active: t("admin.members.active"),
     invited: t("admin.members.invited"),
   };

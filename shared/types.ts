@@ -26,10 +26,11 @@ export interface Room {
   cancelDeadlineDays?: number;
   /**
    * Illustrative hourly rates for the public catalogue and demo quotes.
-   * `ideal` is display-only until that price group is implemented.
+   * `member` defaults to `internal` when omitted.
    */
   demoHourlyPrices?: {
     internal: number;
+    member?: number;
     ideal: number;
     external: number;
   };
@@ -69,9 +70,84 @@ export interface User {
   portalRole?: "member" | "operations" | "full";
   /**
    * Server-assigned demo price group. Never accept this from the client body.
-   * `internal` = intern/medlem rates; `external` = ordinær sats.
+   * Prefer organisation entitlements when booking on behalf of an org.
    */
-  priceGroup?: "internal" | "external";
+  priceGroup?: PriceCategory;
+}
+
+/** Demo / FHH customer price categories derived from org entitlements. */
+export type PriceCategory = "internal" | "member" | "ideal" | "external";
+
+export type RegistryStatus =
+  "verified" | "not_registered" | "verification_failed" | "unchecked";
+
+export type RegistrySource = "brreg" | "manual_fhh" | "demo_fixture" | "none";
+
+export type MembershipStatus = "pending" | "approved" | "rejected" | "revoked";
+
+export type OrganizationRelationKind = "member_of";
+
+export interface Organization {
+  id: string;
+  organizationNumber: string;
+  name: string;
+  isInternalTenant: boolean;
+  registryStatus: RegistryStatus;
+  registrySource: RegistrySource;
+  registryCheckedAt: number | null;
+  /** FHH manual ideal eligibility — does not overwrite registryStatus. */
+  manualIdealEligible: boolean;
+  registrySnapshot?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OrganizationRelation {
+  id: string;
+  childOrganizationId: string;
+  parentOrganizationId: string;
+  kind: OrganizationRelationKind;
+  status: MembershipStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OrganizationMembership {
+  id: string;
+  organizationId: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: "representative" | "org_admin";
+  status: MembershipStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MembershipRequest {
+  id: string;
+  kind: "represent_organization" | "organization_relation";
+  organizationId?: string;
+  parentOrganizationId?: string;
+  childOrganizationId?: string;
+  userId?: string;
+  email: string;
+  name: string;
+  status: MembershipStatus;
+  note: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OrgAuditEvent {
+  id: string;
+  at: number;
+  actorUserId: string;
+  actorEmail: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  detail: string;
 }
 
 export interface Booking {
@@ -138,6 +214,8 @@ export interface BookingInput extends Search {
   phone?: string;
   /** Must be true; server stores its own terms version. */
   acceptedTerms: boolean;
+  /** Organisation represented for this booking (server-validated). */
+  organizationId?: string;
 }
 export interface AdminData {
   bookings: Booking[];

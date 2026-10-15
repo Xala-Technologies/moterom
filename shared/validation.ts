@@ -31,6 +31,8 @@ export const bookingSchema = searchSchema.extend({
   acceptedTerms: z.literal(true, {
     error: "Du må godta leievilkårene for å bestille.",
   }),
+  /** Organisation the user books on behalf of — re-validated on the server. */
+  organizationId: z.string().trim().min(1).max(100).optional(),
 });
 
 const clockTime = z

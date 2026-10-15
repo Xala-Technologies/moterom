@@ -91,9 +91,18 @@ import {
 } from "./roomImage";
 import { demoQuoteTotal } from "./demoPricing";
 import { assertCanAccessRoom, filterRoomsForUser } from "./roomAccess";
+import { OrganizationStore } from "./organizations";
+import { lookupOrganization, searchOrganizations } from "./brreg";
+import { resolveOrgBookingPrice } from "./orgEntitlements";
 const demo =
   config.mode === "demo"
     ? new DemoStore(process.env.DEMO_DB_PATH || ".data/demo.sqlite", inventory)
+    : undefined;
+const organizations =
+  config.mode === "demo"
+    ? new OrganizationStore(
+        process.env.ORGANIZATIONS_DB_PATH || ".data/organizations.sqlite",
+      )
     : undefined;
 const accessRequests = new AccessRequestStore(
   process.env.ACCESS_REQUESTS_DB_PATH || ".data/access_requests.sqlite",
@@ -457,6 +466,29 @@ app.use("/api/access-requests", (req, _res, next) => {
       : undefined,
   );
 });
+app.use(
+  ["/api/organizations/search", "/api/organizations/verify"],
+  (_req, _res, next) => {
+    const key = `orgs:${_req.ip || "unknown"}`;
+    const now = Date.now();
+    const previous = attempts.get(key);
+    const entry =
+      previous && previous.expires > now
+        ? previous
+        : { count: 0, expires: now + 60000 };
+    entry.count++;
+    attempts.set(key, entry);
+    next(
+      entry.count > 30
+        ? new AppError(
+            429,
+            "For mange organisasjonsoppslag. Vent et minutt og prøv igjen.",
+            "too_many_attempts",
+          )
+        : undefined,
+    );
+  },
+);
 async function context(
   req: Request,
   res: Response,
@@ -883,7 +915,11 @@ app.post("/api/auth/logout", async (req, res) => {
 });
 app.get("/api/rooms", async (req, res) => {
   const ctx = await context(req, res);
-  const rooms = filterRoomsForUser(await ctx.provider.rooms(), ctx.user);
+  const rooms = filterRoomsForUser(
+    await ctx.provider.rooms(),
+    ctx.user,
+    organizations,
+  );
   res.json(rooms);
 });
 app.get("/api/availability", async (req, res) => {
@@ -891,7 +927,9 @@ app.get("/api/availability", async (req, res) => {
   const locale = requestLocale(req);
   const rows = await ctx.provider.availability(parseSearch(req.query), locale);
   const allowed = new Set(
-    filterRoomsForUser(await ctx.provider.rooms(), ctx.user).map((r) => r.id),
+    filterRoomsForUser(await ctx.provider.rooms(), ctx.user, organizations).map(
+      (r) => r.id,
+    ),
   );
   res.json(rows.filter((row) => allowed.has(row.roomId)));
 });
@@ -909,7 +947,7 @@ app.get("/api/availability/slots", async (req, res) => {
   let closeTime = DEFAULT_CLOSE_TIME;
   if (roomId) {
     const room = await ctx.provider.room(roomId);
-    assertCanAccessRoom(room, ctx.user);
+    assertCanAccessRoom(room, ctx.user, organizations);
     openTime = room.openTime?.trim() || DEFAULT_OPEN_TIME;
     closeTime = room.closeTime?.trim() || DEFAULT_CLOSE_TIME;
   }
@@ -971,26 +1009,53 @@ app.get("/api/availability/slots", async (req, res) => {
   );
   res.json(slots);
 });
-async function quote(ctx: Context, roomId: string, search: Search) {
+async function quote(
+  ctx: Context,
+  roomId: string,
+  search: Search,
+  organizationId?: string,
+) {
   if (!ctx.user)
     throw new AppError(401, "Logg inn for å fortsette.", "login_required");
   const room = await ctx.provider.room(roomId);
-  assertCanAccessRoom(room, ctx.user);
-  return demo
-    ? {
-        total: demoQuoteTotal(room, search, ctx.user),
-        currency: "NOK",
-        priceOnRequest: false,
-        requiresApproval: room.requiresApproval,
-        paymentMode: "none" as const,
-      }
-    : (ctx.provider as Digilist).quote(roomId, search, ctx.user);
+  assertCanAccessRoom(room, ctx.user, organizations);
+  if (demo && organizations) {
+    const priced = resolveOrgBookingPrice(
+      organizations,
+      ctx.user,
+      organizationId,
+      room,
+      search,
+    );
+    return {
+      total: priced.total,
+      currency: "NOK",
+      priceOnRequest: false,
+      requiresApproval: room.requiresApproval,
+      paymentMode: "none" as const,
+      priceCategory: priced.category,
+      organizationId: priced.organizationId,
+    };
+  }
+  if (demo) {
+    return {
+      total: demoQuoteTotal(room, search, ctx.user),
+      currency: "NOK",
+      priceOnRequest: false,
+      requiresApproval: room.requiresApproval,
+      paymentMode: "none" as const,
+    };
+  }
+  return (ctx.provider as Digilist).quote(roomId, search, ctx.user);
 }
 app.post("/api/quote", async (req, res) => {
   // Final quote requires a signed-in user (demo roles or Digilist). No client price group.
   const ctx = await context(req, res, true);
   const search = parseSearch(req.body);
   const roomId = z.string().max(100).parse(req.body.roomId);
+  const organizationId = req.body.organizationId
+    ? z.string().trim().min(1).max(100).parse(req.body.organizationId)
+    : undefined;
   // Ignore any client-supplied category / price fields.
   const availability = (
     await ctx.provider.availability(search, requestLocale(req), roomId)
@@ -1007,7 +1072,7 @@ app.post("/api/quote", async (req, res) => {
       availability?.reason || "Rommet kan ikke bestilles.",
       "room_not_bookable",
     );
-  const result = await quote(ctx, roomId, search);
+  const result = await quote(ctx, roomId, search, organizationId);
   const token = await signQuote({
     userId: ctx.user!.id,
     roomId,
@@ -1015,6 +1080,8 @@ app.post("/api/quote", async (req, res) => {
     total: result.total,
     currency: result.currency,
     requiresApproval: result.requiresApproval,
+    // Identity binding only — entitlements are re-loaded from DB on book.
+    organizationId: organizationId || null,
   });
   // The signed quote contains only review data. Never expose backend internals.
   res.json({
@@ -1024,6 +1091,8 @@ app.post("/api/quote", async (req, res) => {
     requiresApproval: result.requiresApproval,
     paymentMode: result.paymentMode,
     token,
+    priceCategory: "priceCategory" in result ? result.priceCategory : undefined,
+    organizationId: organizationId || undefined,
   });
 });
 app.post("/api/bookings", async (req, res) => {
@@ -1074,7 +1143,21 @@ app.post("/api/bookings", async (req, res) => {
       "Bestillingen tilhører en annen bruker.",
       "booking_belongs_to_other",
     );
-  const current = await quote(ctx, input.roomId, input);
+  const claimOrg =
+    typeof claims.organizationId === "string"
+      ? claims.organizationId
+      : claims.organizationId === null
+        ? undefined
+        : undefined;
+  const bookOrg = input.organizationId || undefined;
+  if ((claimOrg || undefined) !== (bookOrg || undefined))
+    throw new AppError(
+      409,
+      "Organisasjonen er endret. Kontroller bestillingen på nytt.",
+      "booking_changed",
+    );
+  // Re-validate representation and recompute price from live DB entitlements.
+  const current = await quote(ctx, input.roomId, input, bookOrg);
   if (
     current.total !== claims.total ||
     current.currency !== claims.currency ||
@@ -1257,6 +1340,185 @@ app.get("/api/bookings/:id/calendar.ics", async (req, res) => {
     .attachment("moterom.ics")
     .send(folded.join("\r\n") + "\r\n");
 });
+function requireDemoOrgs(): OrganizationStore {
+  if (!organizations)
+    throw new AppError(
+      503,
+      "Organisasjoner er bare tilgjengelig i FHH-demo.",
+      "organizations_demo_only",
+    );
+  return organizations;
+}
+
+app.get("/api/organizations/search", async (req, res) => {
+  await context(req, res, true);
+  requireDemoOrgs();
+  const q = z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .parse(req.query.q || "");
+  res.json(await searchOrganizations(q));
+});
+
+app.post("/api/organizations/verify", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const store = requireDemoOrgs();
+  const organizationNumber = z
+    .string()
+    .trim()
+    .min(9)
+    .max(20)
+    .parse(req.body.organizationNumber);
+  const lookup = await lookupOrganization(organizationNumber);
+  const org = store.upsertFromRegistry(lookup);
+  store.audit(
+    { id: ctx.user!.id, email: ctx.user!.email },
+    "registry_verify",
+    "organization",
+    org.id,
+    `${lookup.registryStatus}:${lookup.registrySource}`,
+  );
+  // Public verify never grants representation or price rights.
+  res.json(org);
+});
+
+app.post("/api/organizations/represent", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const store = requireDemoOrgs();
+  const organizationId = z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .parse(req.body.organizationId);
+  if (!store.getOrganization(organizationId))
+    throw new AppError(404, "Organisasjonen finnes ikke.", "org_not_found");
+  const request = store.createRepresentRequest({
+    organizationId,
+    userId: ctx.user!.id,
+    email: ctx.user!.email,
+    name: ctx.user!.name,
+    note: z.string().trim().max(500).optional().parse(req.body.note) || "",
+  });
+  res.status(201).json(request);
+});
+
+app.get("/api/me/organizations", async (req, res) => {
+  const ctx = await context(req, res, true);
+  const store = requireDemoOrgs();
+  const memberships = store.approvedMembershipsForUser(ctx.user!.id);
+  res.json(
+    memberships
+      .map((m) => {
+        const org = store.getOrganization(m.organizationId);
+        if (!org) return null;
+        return { membership: m, organization: org };
+      })
+      .filter(Boolean),
+  );
+});
+
+app.get("/api/admin/organizations", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  if (!canManagePortal(ctx.user!))
+    throw new AppError(
+      403,
+      "Krever portaladministrator.",
+      "portal_admin_required",
+    );
+  const store = requireDemoOrgs();
+  res.json({
+    organizations: store.listOrganizations(),
+    relations: store.listRelations(),
+    memberships: store.listMemberships(),
+    requests: store.listRequests(),
+    audit: store.listAudit(50),
+  });
+});
+
+app.post("/api/admin/organizations/:id/manual-ideal", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  if (!canManagePortal(ctx.user!))
+    throw new AppError(
+      403,
+      "Krever portaladministrator.",
+      "portal_admin_required",
+    );
+  const store = requireDemoOrgs();
+  const eligible = z.boolean().parse(req.body.eligible);
+  const org = store.setManualIdeal(req.params.id, eligible, {
+    id: ctx.user!.id,
+    email: ctx.user!.email,
+  });
+  res.json(org);
+});
+
+app.post("/api/admin/organizations/:id/recheck", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  if (!canManagePortal(ctx.user!))
+    throw new AppError(
+      403,
+      "Krever portaladministrator.",
+      "portal_admin_required",
+    );
+  const store = requireDemoOrgs();
+  const existing = store.getOrganization(req.params.id);
+  if (!existing)
+    throw new AppError(404, "Organisasjonen finnes ikke.", "org_not_found");
+  const lookup = await lookupOrganization(existing.organizationNumber);
+  const org = store.upsertFromRegistry(lookup);
+  store.audit(
+    { id: ctx.user!.id, email: ctx.user!.email },
+    "registry_recheck",
+    "organization",
+    org.id,
+    `${lookup.registryStatus}:${lookup.registrySource}`,
+  );
+  res.json(org);
+});
+
+app.patch("/api/admin/memberships/:id", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  if (!canManagePortal(ctx.user!))
+    throw new AppError(
+      403,
+      "Krever portaladministrator.",
+      "portal_admin_required",
+    );
+  const store = requireDemoOrgs();
+  const status = z
+    .enum(["pending", "approved", "rejected", "revoked"])
+    .parse(req.body.status);
+  res.json(
+    store.setMembershipStatus(req.params.id, status, {
+      id: ctx.user!.id,
+      email: ctx.user!.email,
+    }),
+  );
+});
+
+app.patch("/api/admin/membership-requests/:id", async (req, res) => {
+  const ctx = await context(req, res, true, true);
+  if (!canManagePortal(ctx.user!))
+    throw new AppError(
+      403,
+      "Krever portaladministrator.",
+      "portal_admin_required",
+    );
+  const store = requireDemoOrgs();
+  const status = z
+    .enum(["pending", "approved", "rejected", "revoked"])
+    .parse(req.body.status);
+  res.json(
+    store.setRequestStatus(req.params.id, status, {
+      id: ctx.user!.id,
+      email: ctx.user!.email,
+    }),
+  );
+});
+
 app.post("/api/access-requests", async (req, res) => {
   if (config.access !== "members")
     throw new AppError(

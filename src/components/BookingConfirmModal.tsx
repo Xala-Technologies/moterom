@@ -2,7 +2,13 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, post, ApiError } from "../api";
 import { useApp } from "../context";
-import type { Booking, Quote, Room } from "../../shared/types";
+import type {
+  Booking,
+  Organization,
+  OrganizationMembership,
+  Quote,
+  Room,
+} from "../../shared/types";
 import { useFormatters, useT } from "../i18n";
 import {
   Button,
@@ -12,9 +18,15 @@ import {
   Label,
   Loading,
   Modal,
+  Select,
   Status,
 } from "./ui";
 import type { RoomSlotSelection } from "./RoomCardSchedule";
+
+type MyOrgRow = {
+  membership: OrganizationMembership;
+  organization: Organization;
+};
 
 export function BookingConfirmModal({
   room,
@@ -31,7 +43,7 @@ export function BookingConfirmModal({
   close: () => void;
   onSuccess: () => void;
 }) {
-  const { user, refresh } = useApp();
+  const { user, refresh, config } = useApp();
   const { t } = useT();
   const { displayDate, money } = useFormatters();
   const [quote, setQuote] = useState<Quote>();
@@ -40,6 +52,13 @@ export function BookingConfirmModal({
   const [booking, setBooking] = useState<Booking>();
   const [revision, setRevision] = useState(0);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [myOrgs, setMyOrgs] = useState<MyOrgRow[]>([]);
+  const [organizationId, setOrganizationId] = useState("");
+  const [orgQuery, setOrgQuery] = useState("");
+  const [orgHits, setOrgHits] = useState<
+    Array<{ organizationNumber: string; name: string }>
+  >([]);
+  const [orgBusy, setOrgBusy] = useState(false);
   const request = useRef<{ key: string; body: unknown } | undefined>(undefined);
   const submitting = useRef(false);
   const search = {
@@ -52,11 +71,30 @@ export function BookingConfirmModal({
   const cancelDays =
     room.cancelDeadlineDays ?? (room.requiresApproval ? 30 : 5);
   const returnTo = `/?rom=${encodeURIComponent(room.id)}`;
+  const demoOrgs = config?.mode === "demo";
 
   useEffect(() => {
     request.current = undefined;
     setAcceptedTerms(false);
   }, [room.id, selection.date, selection.start, selection.end, user?.id]);
+
+  useEffect(() => {
+    if (needsLogin || !demoOrgs || booking) return;
+    const controller = new AbortController();
+    api<MyOrgRow[]>("/me/organizations", { signal: controller.signal })
+      .then((rows) => {
+        if (controller.signal.aborted) return;
+        setMyOrgs(rows);
+        setOrganizationId((prev) => {
+          if (prev && rows.some((r) => r.organization.id === prev)) return prev;
+          return rows[0]?.organization.id || "";
+        });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMyOrgs([]);
+      });
+    return () => controller.abort();
+  }, [needsLogin, demoOrgs, booking, user?.id, revision]);
 
   useEffect(() => {
     if (needsLogin || booking) return;
@@ -65,7 +103,11 @@ export function BookingConfirmModal({
     setError(undefined);
     api<Quote>("/quote", {
       method: "POST",
-      body: JSON.stringify({ ...search, roomId: room.id }),
+      body: JSON.stringify({
+        ...search,
+        roomId: room.id,
+        ...(organizationId ? { organizationId } : {}),
+      }),
       signal: controller.signal,
     })
       .then((value) => {
@@ -75,6 +117,7 @@ export function BookingConfirmModal({
           request.current.body = {
             ...(request.current.body as Record<string, unknown>),
             quoteToken: value.token,
+            ...(organizationId ? { organizationId } : {}),
           };
       })
       .catch((e) => {
@@ -90,6 +133,7 @@ export function BookingConfirmModal({
     selection.end,
     user?.id,
     revision,
+    organizationId,
   ]);
 
   const confirmLabel = quote?.requiresApproval
@@ -120,6 +164,7 @@ export function BookingConfirmModal({
         phone: "",
         quoteToken: quote.token,
         acceptedTerms: true as const,
+        ...(organizationId ? { organizationId } : {}),
       },
     };
     try {
@@ -227,6 +272,109 @@ export function BookingConfirmModal({
               </div>
             )}
           </dl>
+          {demoOrgs && myOrgs.length > 0 ? (
+            <Field>
+              <Label htmlFor="card-booking-org">
+                {t("booking.book_on_behalf")}
+              </Label>
+              <Select
+                id="card-booking-org"
+                value={organizationId}
+                disabled={busy || Boolean(request.current)}
+                onChange={(e) => {
+                  setOrganizationId(e.target.value);
+                  request.current = undefined;
+                }}
+              >
+                {myOrgs.map((row) => (
+                  <option key={row.organization.id} value={row.organization.id}>
+                    {row.organization.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          {demoOrgs && myOrgs.length === 0 ? (
+            <div className="stack">
+              <p className="caption">{t("booking.ideal_join_intro")}</p>
+              <Field>
+                <Label htmlFor="card-org-search">
+                  {t("booking.ideal_search_label")}
+                </Label>
+                <Input
+                  id="card-org-search"
+                  value={orgQuery}
+                  maxLength={120}
+                  disabled={orgBusy || busy}
+                  onChange={(e) => setOrgQuery(e.target.value)}
+                  placeholder={t("booking.ideal_search_placeholder")}
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={orgBusy || orgQuery.trim().length < 2}
+                onClick={() => {
+                  void (async () => {
+                    setOrgBusy(true);
+                    setError(undefined);
+                    try {
+                      const hits = await api<
+                        Array<{ organizationNumber: string; name: string }>
+                      >(
+                        `/organizations/search?q=${encodeURIComponent(orgQuery.trim())}`,
+                      );
+                      setOrgHits(hits);
+                    } catch (e) {
+                      setError(e as Error);
+                    } finally {
+                      setOrgBusy(false);
+                    }
+                  })();
+                }}
+              >
+                {t("booking.ideal_search")}
+              </Button>
+              {orgHits.map((hit) => (
+                <div key={hit.organizationNumber} className="row-actions">
+                  <span>
+                    {hit.name} ({hit.organizationNumber})
+                  </span>
+                  <Button
+                    type="button"
+                    data-size="sm"
+                    disabled={orgBusy}
+                    onClick={() => {
+                      void (async () => {
+                        setOrgBusy(true);
+                        setError(undefined);
+                        try {
+                          const org = await post<Organization>(
+                            "/organizations/verify",
+                            {
+                              organizationNumber: hit.organizationNumber,
+                            },
+                          );
+                          await post("/organizations/represent", {
+                            organizationId: org.id,
+                          });
+                          setOrgHits([]);
+                          setOrgQuery("");
+                          setRevision((n) => n + 1);
+                        } catch (e) {
+                          setError(e as Error);
+                        } finally {
+                          setOrgBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    {t("booking.ideal_request")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <Field>
             <Label htmlFor="card-booking-purpose">
               {t("rooms.purpose_label")}{" "}

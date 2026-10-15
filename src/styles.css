@@ -5650,6 +5650,50 @@ button.admin-bl-menu-trigger:disabled {
   font-size: var(--ds-font-size-sm, var(--ds-font-size-2, 0.875rem));
   color: var(--ds-color-neutral-text-subtle);
 }
+.admin-users-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.admin-users-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.admin-users-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--ds-color-neutral-border-subtle);
+  border-radius: var(--ds-border-radius-md, 8px);
+  background: var(--ds-color-neutral-background-default);
+}
+.admin-users-summary strong {
+  font-size: var(--ds-font-size-xl, 1.25rem);
+  color: var(--ds-color-neutral-text-default);
+}
+.admin-org-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.admin-org-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+.admin-org-meta dt {
+  font-size: var(--ds-font-size-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--ds-color-neutral-text-subtle);
+}
+.admin-org-meta dd {
+  margin: 2px 0 0;
+}
 .admin-users {
   display: flex;
   flex-direction: column;

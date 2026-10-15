@@ -5,6 +5,8 @@ import { addDays, today } from "../shared/time";
 
 process.env.DATA_MODE = "demo";
 process.env.DEMO_DB_PATH = ":memory:";
+process.env.ORGANIZATIONS_DB_PATH = ":memory:";
+process.env.BRREG_MODE = "fixture";
 process.env.ACCESS_REQUESTS_DB_PATH = ":memory:";
 process.env.MESSAGING_LOCAL_DB_PATH = ":memory:";
 process.env.PORTAL_ROLES_DB_PATH = ":memory:";

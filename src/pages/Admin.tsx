@@ -86,8 +86,7 @@ import type {
 import { compareAgenda } from "../../shared/bookingOrder";
 import { addDays, defaultSearch, today, toSearch } from "../../shared/time";
 import { AdminInsights } from "./AdminInsights";
-import { AdminAccessRequests } from "../components/admin/AdminAccessRequests";
-import { AdminMembers } from "../components/admin/AdminMembers";
+import { AdminUsersHub } from "../components/admin/AdminUsersHub";
 import { AdminMessages } from "../components/admin/AdminMessages";
 import { AdminSettings } from "../components/admin/AdminSettings";
 import { canManagePortal } from "../../shared/adminAccess";
@@ -976,15 +975,13 @@ export function Admin() {
               </div>
             )}
             {section === "users" && (
-              <div className="stack">
-                <AdminMembers key={membersRevision} />
-                <AdminAccessRequests
-                  result={accessResult}
-                  onMembersChanged={() =>
-                    setMembersRevision((value) => value + 1)
-                  }
-                />
-              </div>
+              <AdminUsersHub
+                key={membersRevision}
+                accessResult={accessResult}
+                onMembersChanged={() =>
+                  setMembersRevision((value) => value + 1)
+                }
+              />
             )}
             {section === "messages" && (
               <AdminMessages
