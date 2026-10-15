@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Mail,
   Phone,
@@ -348,9 +348,13 @@ export function Login() {
       <div className="login-left">
         <div className="login-main">
           <div className="login-brand-wrap">
-            <div className="login-logo-link" aria-hidden="true">
+            <Link
+              to="/"
+              className="login-logo-link"
+              aria-label={t("a11y.brand_home")}
+            >
               <BrandMark />
-            </div>
+            </Link>
           </div>
 
           {membersOnly ? (
